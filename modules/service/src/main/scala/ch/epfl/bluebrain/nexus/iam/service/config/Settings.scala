@@ -25,7 +25,8 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[HttpConfig](config, "app.http"),
     loadConfigOrThrow[RuntimeConfig](config, "app.runtime"),
     loadConfigOrThrow[ClusterConfig](config, "app.cluster"),
-    loadConfigOrThrow[PersistenceConfig](config, "app.persistence")
+    loadConfigOrThrow[PersistenceConfig](config, "app.persistence"),
+    loadConfigOrThrow[AuthConfig](config, "app.auth")
   )
 
 }

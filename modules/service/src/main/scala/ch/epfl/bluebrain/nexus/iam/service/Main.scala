@@ -19,6 +19,7 @@ import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration._
 import scala.util.Success
 
+// $COVERAGE-OFF$
 object Main {
 
   @SuppressWarnings(Array("UnusedMethodParameter"))
@@ -68,3 +69,4 @@ object Main {
     }
   }
 }
+// $COVERAGE-ON$

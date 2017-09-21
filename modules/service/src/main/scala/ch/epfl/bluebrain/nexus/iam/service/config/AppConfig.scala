@@ -22,7 +22,8 @@ final case class AppConfig(description: DescriptionConfig,
                            http: HttpConfig,
                            runtime: RuntimeConfig,
                            cluster: ClusterConfig,
-                           persistence: PersistenceConfig)
+                           persistence: PersistenceConfig,
+                           auth: AuthConfig)
 
 object AppConfig {
 

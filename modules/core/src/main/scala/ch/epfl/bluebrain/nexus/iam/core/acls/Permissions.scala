@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import cats.kernel.Semigroup
+import io.circe.{Decoder, Encoder}
 
 /**
   * Type definition that represents a set of permissions.
@@ -100,4 +101,8 @@ object Permissions {
     * @return Semigroup typeclass instance for Permissions
     */
   implicit def semigroupInstance: Semigroup[Permissions] = (x: Permissions, y: Permissions) => x ++ y
+
+  implicit val permissionsEncoder: Encoder[Permissions] = Encoder.encodeSet[Permission].contramap[Permissions](_.set)
+
+  implicit val permissionsDecoder: Decoder[Permissions] = Decoder.decodeSet[Permission].emap(p => Right(Permissions(p)))
 }
