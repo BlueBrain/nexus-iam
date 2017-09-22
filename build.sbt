@@ -39,7 +39,6 @@ lazy val service = project
       serviceCommon,
       sourcingAkka,
       "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion.value,
-      "com.github.dnvriend"   %% "akka-persistence-jdbc"      % akkaPersistenceJDBCVersion.value,
       "com.github.pureconfig" %% "pureconfig"                 % pureconfigVersion,
       "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion,
       "com.typesafe.akka"     %% "akka-http"                  % akkaHttpVersion.value,
