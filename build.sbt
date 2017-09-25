@@ -94,4 +94,4 @@ lazy val kamonDeps = Seq(
 )
 
 addCommandAlias("review", ";clean;coverage;scapegoat;test;coverageReport;coverageAggregate")
-addCommandAlias("rel", ";release with-defaults")
+addCommandAlias("rel",    ";release with-defaults skip-tests")
