@@ -14,6 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.StaticRoutes
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
+import kamon.Kamon
 
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration._
@@ -24,6 +25,8 @@ object Main {
 
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
+    Kamon.start()
+
     // generic implicits
     val config    = ConfigFactory.load()
     val appConfig = new Settings(config).appConfig
@@ -67,6 +70,7 @@ object Main {
     cluster.joinSeedNodes(seeds.toList)
 
     as.registerOnTermination {
+      Kamon.shutdown()
       cluster.leave(cluster.selfAddress)
     }
     // attempt to leave the cluster before shutting down
