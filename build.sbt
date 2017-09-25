@@ -1,5 +1,3 @@
-import sbt.Keys.name
-
 /* Project definitions */
 
 val commonsVersion    = "0.4.3"

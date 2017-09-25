@@ -70,8 +70,8 @@ object Main {
     cluster.joinSeedNodes(seeds.toList)
 
     as.registerOnTermination {
-      Kamon.shutdown()
       cluster.leave(cluster.selfAddress)
+      Kamon.shutdown()
     }
     // attempt to leave the cluster before shutting down
     val _ = sys.addShutdownHook {
