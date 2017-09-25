@@ -1,11 +1,13 @@
 /* Project definitions */
 
-val commonsVersion = "0.4.0"
+val commonsVersion    = "0.4.3"
+val pureconfigVersion = "0.7.2"
 
 lazy val commonTypes     = nexusDep("common-types", commonsVersion)
 lazy val sourcingCore    = nexusDep("sourcing-core", commonsVersion)
 lazy val sourcingMemTest = nexusDep("sourcing-mem", commonsVersion, Test)
 lazy val sourcingAkka    = nexusDep("sourcing-akka", commonsVersion)
+lazy val serviceCommon   = nexusDep("service-commons", commonsVersion)
 
 lazy val core = project
   .in(file("modules/core"))
@@ -28,9 +30,30 @@ lazy val core = project
 lazy val service = project
   .in(file("modules/service"))
   .dependsOn(core)
-  .enablePlugins(ServicePackagingPlugin)
+  .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
   .settings(buildInfoSettings, packagingSettings)
-  .settings(name := "iam-service", moduleName := "iam-service")
+  .settings(
+    name := "iam-service",
+    moduleName := "iam-service",
+    libraryDependencies ++= Seq(
+      serviceCommon,
+      sourcingAkka,
+      "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion.value,
+      "com.github.pureconfig" %% "pureconfig"                 % pureconfigVersion,
+      "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion,
+      "com.typesafe.akka"     %% "akka-http"                  % akkaHttpVersion.value,
+      "com.typesafe.akka"     %% "akka-persistence-cassandra" % akkaPersistenceCassandraVersion.value,
+      "de.heikoseeberger"     %% "akka-http-circe"            % akkaHttpCirceVersion.value,
+      "com.chuusai"           %% "shapeless"                  % shapelessVersion.value,
+      "io.circe"              %% "circe-parser"               % circeVersion.value,
+      "io.circe"              %% "circe-java8"                % circeVersion.value,
+      "io.circe"              %% "circe-generic-extras"       % circeVersion.value,
+      "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersistenceInMemVersion.value % Test,
+      "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion.value % Test,
+      "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion.value % Test,
+      "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test
+    )
+  )
 
 lazy val root = project
   .in(file("."))

@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import Permission.valid
 import cats.Show
+import io.circe._
 
 /**
   * Wraps a permission string, e.g. ''own'', ''read'', ''write''.
@@ -36,4 +37,17 @@ object Permission {
 
   implicit val permissionShow: Show[Permission] = Show.show { case Permission(value) => value }
 
+  implicit val permissionKeyEncoder: KeyEncoder[Permission] = KeyEncoder.encodeKeyString.contramap(_.value)
+
+  implicit val permissionKeyDecoder: KeyDecoder[Permission] = KeyDecoder.instance {
+    case str @ valid() => Some(Permission(str))
+    case _             => None
+  }
+
+  implicit val permissionEncoder: Encoder[Permission] = Encoder.encodeString.contramap[Permission](_.value)
+
+  implicit val permissionDecoder: Decoder[Permission] = Decoder.decodeString.emap {
+    case str @ valid() => Right(Permission(str))
+    case _             => Left("Illegal permission format")
+  }
 }
