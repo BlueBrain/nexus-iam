@@ -15,7 +15,7 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
       val appConfig = new Settings(valid).appConfig
 
       appConfig.description.name shouldEqual "iam"
-      assert(!appConfig.description.environment.isEmpty)
+      appConfig.description.environment shouldEqual "local"
 
       appConfig.instance.interface shouldEqual "127.0.0.1"
 

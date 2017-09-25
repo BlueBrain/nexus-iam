@@ -1,7 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.service.config
 
-import java.util.UUID
-
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 
@@ -27,12 +25,7 @@ final case class AppConfig(description: DescriptionConfig,
 
 object AppConfig {
 
-  private val defaultEnvironment = {
-    val unique = UUID.randomUUID.toString.toLowerCase.replaceAll("-", "")
-    s"local-$unique"
-  }
-
-  final case class DescriptionConfig(name: String, environment: String = defaultEnvironment) {
+  final case class DescriptionConfig(name: String, environment: String) {
     val version: String = BuildInfo.version
     val ActorSystemName = s"$name-${version.replaceAll("\\.", "-")}-$environment"
   }
@@ -43,7 +36,10 @@ object AppConfig {
 
   final case class RuntimeConfig(defaultTimeout: Duration)
 
-  final case class ClusterConfig(passivationTimeout: Duration, shards: Int)
+  final case class ClusterConfig(passivationTimeout: Duration, shards: Int, seeds: Option[String]) {
+    lazy val seedAddresses: Set[String] =
+      seeds.map(_.split(",").toSet).getOrElse(Set.empty[String])
+  }
 
   final case class PersistenceConfig(journalPlugin: String, snapshotStorePlugin: String, queryJournalPlugin: String)
 

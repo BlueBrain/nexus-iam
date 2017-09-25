@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
 import akka.http.scaladsl.Http
@@ -59,6 +59,12 @@ object Main {
         case _ => Await.result(as.terminate(), 3.seconds)
       }
     })
+
+    val provided = appConfig.cluster.seedAddresses
+      .map(addr => AddressFromURIString(s"akka.tcp://${appConfig.description.ActorSystemName}@$addr"))
+    val seeds = if (provided.isEmpty) Set(cluster.selfAddress) else provided
+
+    cluster.joinSeedNodes(seeds.toList)
 
     as.registerOnTermination {
       cluster.leave(cluster.selfAddress)
