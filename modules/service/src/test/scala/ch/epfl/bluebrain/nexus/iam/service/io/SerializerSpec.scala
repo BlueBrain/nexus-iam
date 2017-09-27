@@ -13,7 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
-import ch.epfl.bluebrain.nexus.service.commons.io.UTF8
+import ch.epfl.bluebrain.nexus.commons.service.io.UTF8
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 import shapeless.Typeable
 

@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import ch.epfl.bluebrain.nexus.common.types.Err
+import ch.epfl.bluebrain.nexus.commons.types.Err
 import ch.epfl.bluebrain.nexus.iam.core.acls.Rejection
 
 sealed trait CommonRejections extends Rejection
@@ -43,7 +43,7 @@ object CommonRejections {
   final case class IllegalPermissionString(override val message: String) extends Err(message) with CommonRejections
 
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-  final case class MissingParameters(val missingParams: Seq[String])
+  final case class MissingParameters(missingParams: Seq[String])
       extends Err(s"""Missing query parameters: ${missingParams.mkString(", ")}""")
       with CommonRejections
 }

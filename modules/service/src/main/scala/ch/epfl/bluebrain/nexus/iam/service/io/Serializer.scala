@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.io
 
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event
-import ch.epfl.bluebrain.nexus.service.commons.io.AkkaCoproductSerializer
+import ch.epfl.bluebrain.nexus.commons.service.io.AkkaCoproductSerializer
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
 import io.circe.java8.time._

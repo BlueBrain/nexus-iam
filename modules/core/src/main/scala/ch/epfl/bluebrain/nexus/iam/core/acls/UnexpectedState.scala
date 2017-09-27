@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.common.types.Err
+import ch.epfl.bluebrain.nexus.commons.types.Err
 import shapeless.Typeable
 
 /**
