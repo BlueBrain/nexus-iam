@@ -3,8 +3,8 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import ch.epfl.bluebrain.nexus.iam.service.io.CirceSerialization._
 import ch.epfl.bluebrain.nexus.iam.service.types._
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
 

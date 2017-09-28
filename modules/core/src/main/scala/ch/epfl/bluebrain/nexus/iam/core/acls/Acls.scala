@@ -11,7 +11,7 @@ import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls.PermissionAggregate
 import ch.epfl.bluebrain.nexus.iam.core.acls.Command._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Rejection._
+import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
@@ -152,7 +152,7 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
 
 object Acls {
 
-  type PermissionAggregate[F[_]] = Aggregate.Aux[F, String, Event, State, Command, Rejection]
+  type PermissionAggregate[F[_]] = Aggregate.Aux[F, String, Event, State, Command, CommandRejection]
 
   /**
     * The initial state of an ACL.
@@ -167,19 +167,19 @@ object Acls {
     * @param cmd   the command to be evaluated
     * @return either a rejection or emit an event
     */
-  final def eval(state: State, cmd: Command): Either[Rejection, Event] = {
+  final def eval(state: State, cmd: Command): Either[CommandRejection, Event] = {
 
-    def clear(c: ClearPermissions): Either[Rejection, Event] = state match {
+    def clear(c: ClearPermissions): Either[CommandRejection, Event] = state match {
       case Initial    => Left(CannotClearNonexistentPermissions)
       case _: Current => Right(PermissionsCleared(c.path, c.meta))
     }
 
-    def remove(c: RemovePermissions): Either[Rejection, Event] = state match {
+    def remove(c: RemovePermissions): Either[CommandRejection, Event] = state match {
       case Current(_, mapping) if mapping.contains(c.identity) => Right(PermissionsRemoved(c.path, c.identity, c.meta))
       case _                                                   => Left(CannotRemoveForNonexistentIdentity)
     }
 
-    def add(c: AddPermissions): Either[Rejection, Event] = state match {
+    def add(c: AddPermissions): Either[CommandRejection, Event] = state match {
       case Initial =>
         if (c.permissions.isEmpty) Left(CannotAddVoidPermissions)
         else Right(PermissionsAdded(c.path, c.identity, c.permissions, c.meta))
@@ -193,7 +193,7 @@ object Acls {
         }
     }
 
-    def subtract(c: SubtractPermissions): Either[Rejection, Event] = state match {
+    def subtract(c: SubtractPermissions): Either[CommandRejection, Event] = state match {
       case Initial => Left(CannotSubtractFromNonexistentPermissions)
       case Current(_, mapping) =>
         mapping.get(c.identity) match {

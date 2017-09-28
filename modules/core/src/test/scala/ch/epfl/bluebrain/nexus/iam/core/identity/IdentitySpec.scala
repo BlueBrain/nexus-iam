@@ -12,11 +12,13 @@ import scala.util._
 class IdentitySpec extends WordSpecLike with Matchers with Inspectors {
 
   private val values = List(
-    ("{}", Anonymous),
-    ("""{"origin":"http://localhost/realm"}""", AuthenticatedRef(Uri("http://localhost/realm"))),
-    ("""{"origin":"http://localhost/realm","group":"some-group"}""",
+    ("""{"type":"Anonymous"}""", Anonymous),
+    ("""{"origin":"http://localhost/realm","type":"AuthenticatedRef"}""",
+     AuthenticatedRef(Uri("http://localhost/realm"))),
+    ("""{"origin":"http://localhost/realm","group":"some-group","type":"GroupRef"}""",
      GroupRef(Uri("http://localhost/realm"), "some-group")),
-    ("""{"origin":"http://localhost/realm","subject":"alice"}""", UserRef(Uri("http://localhost/realm"), "alice"))
+    ("""{"origin":"http://localhost/realm","subject":"alice","type":"UserRef"}""",
+     UserRef(Uri("http://localhost/realm"), "alice"))
   )
 
   "An Identity" should {
@@ -24,9 +26,6 @@ class IdentitySpec extends WordSpecLike with Matchers with Inspectors {
       forAll(values) {
         case (json, id) => decode[Identity](json) shouldEqual Right(id)
       }
-
-      decode[Identity]("""{"origin":"http://localhost/realm","group":"will-be-ignored","subject":"bob"}""") shouldEqual
-        Right(UserRef(Uri("http://localhost/realm"), "bob"))
     }
     "be encoded to Json properly" in {
       forAll(values) {
@@ -36,7 +35,7 @@ class IdentitySpec extends WordSpecLike with Matchers with Inspectors {
     "not be decoded when origin URI is bogus" in {
       decode[Identity]("""{"origin":"föó://bar","subject":"bob"}""") match {
         case Right(_) => fail()
-        case Left(e) => e shouldBe a[DecodingFailure]
+        case Left(e)  => e shouldBe a[DecodingFailure]
       }
     }
   }

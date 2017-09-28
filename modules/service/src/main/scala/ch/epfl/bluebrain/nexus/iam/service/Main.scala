@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
+import java.time.Clock
+
 import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
@@ -8,15 +10,18 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import cats.instances.future._
+import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
+import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
-import ch.epfl.bluebrain.nexus.iam.service.routes.CustomRejectionHandler.instance
-import ch.epfl.bluebrain.nexus.iam.service.routes.StaticRoutes
+import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, StaticRoutes}
+import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 
-import scala.concurrent.{Await, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.util.Success
 
@@ -35,7 +40,8 @@ object Main {
     implicit val ec: ExecutionContextExecutor = as.dispatcher
     implicit val mt: ActorMaterializer        = ActorMaterializer()
 
-    val logger = Logging(as, getClass)
+    val logger           = Logging(as, getClass)
+    val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
@@ -45,14 +51,19 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
 
+      val clock     = Clock.systemUTC
+      val aggregate = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl       = Acls[Future](aggregate, clock)
+
       // configure routes
       val staticRoutes = StaticRoutes(appConfig.description.name,
                                       appConfig.description.version,
                                       appConfig.http.publicUri,
                                       appConfig.http.prefix).routes
 
+      val aclsRoutes = new AclsRoutes(acl).routes
       val route = handleRejections(corsRejectionHandler) {
-        cors(corsSettings)(staticRoutes)
+        cors(corsSettings)(staticRoutes ~ aclsRoutes)
       }
 
       // bind to http

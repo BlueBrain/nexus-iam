@@ -1,8 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.core.identity
 
-import akka.http.scaladsl.model.{IllegalUriException, Uri}
+import akka.http.scaladsl.model.Uri
 import cats.Show
 import io.circe._
+import io.circe.generic.extras._
+import io.circe.generic.extras.semiauto._
+
+import scala.util.Try
 
 /**
   * Base enumeration type for identity classes.
@@ -52,36 +56,17 @@ object Identity {
 
   implicit val identityShow: Show[Identity] = Show.fromToString[Identity]
 
-  implicit val identityDecoder: Decoder[Identity] = Decoder.instance { cursor =>
-    try {
-      for {
-        o <- cursor.downField("origin").as[Option[String]]
-        s <- cursor.downField("subject").as[Option[String]]
-        g <- cursor.downField("group").as[Option[String]]
-      } yield {
-        o match {
-          case None => Anonymous
-          case Some(origin) =>
-            val uri = Uri(origin)
-            (s, g) match {
-              case (None, None)        => AuthenticatedRef(uri)
-              case (None, Some(group)) => GroupRef(uri, group)
-              case (Some(subject), _)  => UserRef(uri, subject)
-            }
-        }
-      }
-    } catch {
-      case e: IllegalUriException => Left(DecodingFailure(e.getMessage, cursor.history))
-    }
-  }
+  /**
+    * The discriminator is enough to give us a Json representation (the name of the class)
+    */
+  implicit val config: Configuration = Configuration.default.withDiscriminator("type")
 
-  implicit val identityEncoder: Encoder[Identity] = Encoder.encodeJson.contramap[Identity] {
-    case Anonymous                => Json.obj()
-    case AuthenticatedRef(origin) => Json.obj("origin" -> Json.fromString(origin.toString))
-    case GroupRef(origin, group) =>
-      Json.obj("origin" -> Json.fromString(origin.toString), "group" -> Json.fromString(group))
-    case UserRef(origin, subject) =>
-      Json.obj("origin" -> Json.fromString(origin.toString), "subject" -> Json.fromString(subject))
-  }
+  implicit val uriDecoder: Decoder[Uri] = Decoder.decodeString.emapTry(origin => Try(Uri(origin)))
+
+  implicit val uriEncoder: Encoder[Uri] = Encoder.encodeString.contramap(_.toString)
+
+  implicit val identityDecoder: Decoder[Identity] = deriveDecoder[Identity]
+
+  implicit val identityEncoder: Encoder[Identity] = deriveEncoder[Identity]
 
 }

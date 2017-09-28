@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.http.scaladsl.model.Uri
 import cats.instances.try_._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Rejection._
+import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State._
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
