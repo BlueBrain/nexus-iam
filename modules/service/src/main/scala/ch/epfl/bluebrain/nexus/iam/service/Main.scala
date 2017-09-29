@@ -11,19 +11,21 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.instances.future._
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.directives.PrefixDirectives._
-import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, StaticRoutes}
+import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.Success
 
 // $COVERAGE-OFF$
@@ -43,6 +45,7 @@ object Main {
 
     val logger           = Logging(as, getClass)
     val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
+    implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
@@ -53,6 +56,7 @@ object Main {
     // cluster join hook
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
+      val baseUri = appConfig.http.publicUri
 
       val clock     = Clock.systemUTC
       val aggregate = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
@@ -67,8 +71,9 @@ object Main {
       }
 
       val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
+      val authRoutes = uriPrefix(apiUri)(AuthRoutes(appConfig.oidc).routes)
       val route = handleRejections(corsRejectionHandler) {
-        cors(corsSettings)(staticRoutes ~ aclsRoutes)
+        cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
       }
 
       // bind to http

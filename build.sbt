@@ -3,6 +3,7 @@
 val commonsVersion = "0.4.3"
 
 lazy val commonTypes     = nexusDep("common-types", commonsVersion)
+lazy val commonsHttp     = nexusDep("commons-http", commonsVersion)
 lazy val sourcingCore    = nexusDep("sourcing-core", commonsVersion)
 lazy val sourcingMemTest = nexusDep("sourcing-mem", commonsVersion, Test)
 lazy val sourcingAkka    = nexusDep("sourcing-akka", commonsVersion)
@@ -38,6 +39,7 @@ lazy val service = project
     libraryDependencies ++= kamonDeps ++ Seq(
       serviceCommon,
       sourcingAkka,
+      commonsHttp,
       "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion.value,
       "com.github.pureconfig" %% "pureconfig"                 % pureconfigVersion.value,
       "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion.value,
