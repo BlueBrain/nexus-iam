@@ -28,10 +28,7 @@ class AclsRoutes(acl: Acls[Future]) extends DefaultRoutes("acls") {
       extractResourcePath { path =>
         put {
           entity(as[AccessControlList]) { list =>
-            val results = list.acl.map { ac =>
-              acl.add(path, ac.identity, ac.permissions)
-            }
-            onSuccess(Future.sequence(results)) { _ =>
+            onSuccess(acl.create(path, list.toMap)) { _ =>
               complete(StatusCodes.NoContent)
             }
           }

@@ -43,6 +43,27 @@ class AclsSpec extends WordSpecLike with Matchers {
       acls.fetch(path, Anonymous) shouldEqual Success(Some(OwnRead))
     }
 
+    "not create empty permissions mapping" in {
+      val path = genPath(genId)
+      acls.create(path, Map()) shouldEqual Failure(CommandRejected(CannotCreateVoidPermissions))
+    }
+
+    "not create permissions mapping if it already exists" in {
+      val path = genPath(genId)
+      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(
+        Map(Anonymous                 -> OwnRead, alice -> OwnReadWrite))
+      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Failure(
+        CommandRejected(CannotCreateExistingPermissions))
+    }
+
+    "create permissions" in {
+      val path = genPath(genId)
+      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(
+        Map(Anonymous                 -> OwnRead, alice -> OwnReadWrite))
+      acls.fetch(path, Anonymous) shouldEqual Success(Some(OwnRead))
+      acls.fetch(path, alice) shouldEqual Success(Some(OwnReadWrite))
+    }
+
     "not add empty set of permissions" in {
       val path = genPath(genId)
       acls.add(path, Anonymous, Permissions()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))

@@ -25,6 +25,16 @@ sealed trait Command extends Product with Serializable {
 object Command {
 
   /**
+    * Command definition signifying an attempt to create the argument ''mapping'' of permissions for one or several
+    * identities on a ''path''.
+    *
+    * @param path        the path on which the permissions should change
+    * @param mapping     the mapping between identities and their respective permissions to be created
+    * @param meta        the command metadata
+    */
+  final case class CreatePermissions(path: Path, mapping: Map[Identity, Permissions], meta: Meta) extends Command
+
+  /**
     * Command definition signifying an attempt to add the argument ''permissions'' to the current collection
     * of permissions for ''identity'' on ''path''.
     *

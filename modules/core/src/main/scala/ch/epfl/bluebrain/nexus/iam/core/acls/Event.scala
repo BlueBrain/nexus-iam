@@ -42,6 +42,15 @@ object Event {
   final case class PermissionsRemoved(path: Path, identity: Identity, meta: Meta) extends Event
 
   /**
+    * Event definition signifying an initial creation of permissions on ''path''.
+    *
+    * @param path        the path on which the permissions have been created
+    * @param mapping     the mapping between identities and permissions
+    * @param meta        the event metadata
+    */
+  final case class PermissionsCreated(path: Path, mapping: Map[Identity, Permissions], meta: Meta) extends Event
+
+  /**
     * Event definition signifying an addition patch of permissions for ''identity'' on ''path''.
     *
     * @param path        the path on which the permissions have been added
