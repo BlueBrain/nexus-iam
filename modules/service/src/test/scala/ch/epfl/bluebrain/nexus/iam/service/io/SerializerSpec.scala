@@ -71,8 +71,8 @@ object SerializerSpec {
   private val permissions = Permissions(Own, Read, Write)
 
   private val pathString        = s""""${path.repr}""""
-  private val identityString    = s"""{"origin":"http://localhost/realm","group":"some-group"}"""
-  private val authorString      = s"""{"origin":"http://localhost/realm","subject":"alice"}"""
+  private val identityString    = s"""{"origin":"http://localhost/realm","group":"some-group","type":"GroupRef"}"""
+  private val authorString      = s"""{"origin":"http://localhost/realm","subject":"alice","type":"UserRef"}"""
   private val metaString        = s"""{"author":$authorString,"instant":"1970-01-01T00:00:00.001Z"}"""
   private val permissionsString = s"""["own","read","write"]"""
 

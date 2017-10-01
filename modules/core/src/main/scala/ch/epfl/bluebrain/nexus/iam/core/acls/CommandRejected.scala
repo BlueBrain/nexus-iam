@@ -8,4 +8,4 @@ import ch.epfl.bluebrain.nexus.common.types.Err
   * @param rejection a descriptive rejection type
   */
 @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-final case class CommandRejected(rejection: Rejection) extends Err("Command rejected")
+final case class CommandRejected(rejection: CommandRejection) extends Err("Command rejected")
