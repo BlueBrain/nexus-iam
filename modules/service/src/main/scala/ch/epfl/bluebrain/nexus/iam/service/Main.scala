@@ -61,7 +61,7 @@ object Main {
                                       appConfig.http.publicUri,
                                       appConfig.http.prefix).routes
 
-      val aclsRoutes = new AclsRoutes(acl).routes
+      val aclsRoutes = AclsRoutes(acl).routes
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes)
       }

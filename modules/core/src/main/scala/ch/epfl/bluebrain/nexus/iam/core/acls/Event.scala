@@ -45,10 +45,10 @@ object Event {
     * Event definition signifying an initial creation of permissions on ''path''.
     *
     * @param path        the path on which the permissions have been created
-    * @param mapping     the mapping between identities and permissions
+    * @param acl         the list of pairs of identities and permissions
     * @param meta        the event metadata
     */
-  final case class PermissionsCreated(path: Path, mapping: Map[Identity, Permissions], meta: Meta) extends Event
+  final case class PermissionsCreated(path: Path, acl: AccessControlList, meta: Meta) extends Event
 
   /**
     * Event definition signifying an addition patch of permissions for ''identity'' on ''path''.

@@ -104,22 +104,21 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
     * Creates initial permissions ''mapping'' on a ''path''
     *
     * @param path        the path
-    * @param mapping     the identity to permissions mapping to create
+    * @param acl         the identity to permissions mapping to create
     * @param caller      the implicit identity calling this action
-    * @return the resulting permissions mapping on this path for all identities, in an ''F[_]'' context
+    * @return Unit in an ''F[_]'' context if the action was successful
     */
-  def create(path: Path, mapping: Map[Identity, Permissions])(
-      implicit caller: Identity): F[Map[Identity, Permissions]] = {
-    log.debug(s"Adding permissions mapping '$mapping' for path '${path.show}'")
-    agg.eval(path.show, CreatePermissions(path, mapping, meta)).flatMap {
+  def create(path: Path, acl: AccessControlList)(implicit caller: Identity): F[Unit] = {
+    log.debug(s"Adding permissions mapping '$acl' for path '${path.show}'")
+    agg.eval(path.show, CreatePermissions(path, acl, meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
         log.error("Received an unexpected Initial state", th)
         F.raiseError(th)
       case Right(Current(_, _)) =>
-        log.debug(s"AddPermissions succeeded for path '${path.show}''")
-        F.pure(mapping)
+        log.debug(s"CreatePermissions succeeded for path '${path.show}''")
+        F.pure(())
     }
   }
 
@@ -204,16 +203,15 @@ object Acls {
 
     def create(c: CreatePermissions): Either[CommandRejection, Event] = state match {
       case Initial =>
-        if (c.mapping.isEmpty) Left(CannotCreateVoidPermissions)
-        else Right(PermissionsCreated(c.path, c.mapping, c.meta))
+        if (c.acl.hasVoidPermissions) Left(CannotCreateVoidPermissions)
+        else Right(PermissionsCreated(c.path, c.acl, c.meta))
       case _ =>
         Left(CannotCreateExistingPermissions)
     }
 
     def add(c: AddPermissions): Either[CommandRejection, Event] = state match {
-      case Initial =>
-        if (c.permissions.isEmpty) Left(CannotAddVoidPermissions)
-        else Right(PermissionsAdded(c.path, c.identity, c.permissions, c.meta))
+      case _ if c.permissions.isEmpty => Left(CannotAddVoidPermissions)
+      case Initial                    => Right(PermissionsAdded(c.path, c.identity, c.permissions, c.meta))
       case Current(_, mapping) =>
         mapping.get(c.identity) match {
           case Some(existing) =>
@@ -260,7 +258,7 @@ object Acls {
     */
   final def next(state: State, event: Event): State = (state, event) match {
     case (Initial, PermissionsAdded(path, id, perms, _))             => Current(path, Map(id -> perms))
-    case (Initial, PermissionsCreated(path, mapping, _))             => Current(path, mapping)
+    case (Initial, PermissionsCreated(path, acl, _))                 => Current(path, acl.toMap)
     case (Initial, _: Event)                                         => Initial
     case (_: Current, PermissionsCleared(path, _))                   => Current(path, Map.empty)
     case (c: Current, _: PermissionsCreated)                         => c

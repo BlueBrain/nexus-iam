@@ -45,27 +45,27 @@ class AclsSpec extends WordSpecLike with Matchers {
 
     "not create empty permissions mapping" in {
       val path = genPath(genId)
-      acls.create(path, Map()) shouldEqual Failure(CommandRejected(CannotCreateVoidPermissions))
+      acls.create(path, AccessControlList()) shouldEqual Failure(CommandRejected(CannotCreateVoidPermissions))
     }
 
     "not create permissions mapping if it already exists" in {
       val path = genPath(genId)
-      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(
-        Map(Anonymous                 -> OwnRead, alice -> OwnReadWrite))
-      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Failure(
+      acls.create(path, AccessControlList(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
+      acls.create(path, AccessControlList(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Failure(
         CommandRejected(CannotCreateExistingPermissions))
     }
 
     "create permissions" in {
       val path = genPath(genId)
-      acls.create(path, Map(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(
-        Map(Anonymous                 -> OwnRead, alice -> OwnReadWrite))
+      acls.create(path, AccessControlList(Anonymous -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
       acls.fetch(path, Anonymous) shouldEqual Success(Some(OwnRead))
       acls.fetch(path, alice) shouldEqual Success(Some(OwnReadWrite))
     }
 
     "not add empty set of permissions" in {
       val path = genPath(genId)
+      acls.add(path, Anonymous, Permissions()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
+      acls.create(path, AccessControlList(alice -> OwnReadWrite)) shouldEqual Success(())
       acls.add(path, Anonymous, Permissions()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
       acls.add(path, Anonymous, OwnRead) shouldEqual Success(OwnRead)
       acls.add(path, Anonymous, OwnRead) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))

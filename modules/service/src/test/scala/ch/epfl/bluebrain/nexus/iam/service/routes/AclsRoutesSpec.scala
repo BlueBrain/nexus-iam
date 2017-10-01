@@ -18,7 +18,6 @@ import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
-import ch.epfl.bluebrain.nexus.iam.service.types._
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
@@ -78,9 +77,20 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
     }
 
-    "reject adding empty permissions" in {
+    "reject creating empty permissions" in {
       val path = Path(s"/some/$rand")
       Put(s"/acls${path.repr}", AccessControlList(Anonymous -> Permissions())) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadRequest
+        responseAs[Error].code shouldEqual classNameOf[CannotCreateVoidPermissions.type]
+      }
+    }
+
+    "reject adding empty permissions" in {
+      val path = Path(s"/some/$rand")
+      Put(s"/acls${path.repr}", AccessControlList(alice -> ownReadWrite)) ~> routes ~> check {
+        status shouldEqual StatusCodes.Created
+      }
+      Post(s"/acls${path.repr}", AccessControl(Anonymous, Permissions())) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
       }
@@ -89,7 +99,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
     "clear permissions" in {
       val path = Path(s"/some/$rand")
       Put(s"/acls${path.repr}", AccessControlList(Anonymous -> ownReadWrite, alice -> readWrite)) ~> routes ~> check {
-        status shouldEqual StatusCodes.NoContent
+        status shouldEqual StatusCodes.Created
       }
       Delete(s"/acls${path.repr}") ~> routes ~> check {
         status shouldEqual StatusCodes.NoContent
@@ -103,7 +113,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
     "create and get permissions" in {
       val path = Path(s"/some/$rand")
       Put(s"/acls${path.repr}", AccessControlList(someGroup -> ownReadWrite, alice -> readWrite, Anonymous -> read)) ~> routes ~> check {
-        status shouldEqual StatusCodes.NoContent
+        status shouldEqual StatusCodes.Created
       }
       Get(s"/acls${path.repr}?all=true") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
@@ -122,14 +132,15 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
     "add permissions" in {
       val path = Path(s"/some/$rand")
       Put(s"/acls${path.repr}", AccessControlList(Anonymous -> ownReadWrite)) ~> routes ~> check {
-        status shouldEqual StatusCodes.NoContent
+        status shouldEqual StatusCodes.Created
       }
       Get(s"/acls${path.repr}") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Permissions] shouldEqual ownReadWrite
       }
       Post(s"/acls${path.repr}", AccessControl(alice, readWrite)) ~> routes ~> check {
-        status shouldEqual StatusCodes.NoContent
+        status shouldEqual StatusCodes.OK
+        responseAs[Permissions] shouldEqual readWrite
       }
       Get(s"/acls${path.repr}?all=true") ~> routes ~> check {
         status shouldEqual StatusCodes.OK

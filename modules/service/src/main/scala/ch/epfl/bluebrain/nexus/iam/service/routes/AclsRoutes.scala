@@ -3,13 +3,15 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.Directives._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
+import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Permissions._
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
-import ch.epfl.bluebrain.nexus.iam.service.types.{AccessControl, AccessControlList}
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
+import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
+import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe.Decoder
 import io.circe.generic.auto._
 
 import scala.concurrent.Future
@@ -28,15 +30,15 @@ class AclsRoutes(acl: Acls[Future]) extends DefaultRoutes("acls") {
       extractResourcePath { path =>
         put {
           entity(as[AccessControlList]) { list =>
-            onSuccess(acl.create(path, list.toMap)) { _ =>
-              complete(StatusCodes.NoContent)
+            onSuccess(acl.create(path, list)) {
+              complete(StatusCodes.Created)
             }
           }
         } ~
           post {
             entity(as[AccessControl]) { ac =>
-              onSuccess(acl.add(path, ac.identity, ac.permissions)) { _ =>
-                complete(StatusCodes.NoContent)
+              onSuccess(acl.add(path, ac.identity, ac.permissions)) { result =>
+                complete(StatusCodes.OK -> result)
               }
             }
           } ~
@@ -59,5 +61,27 @@ class AclsRoutes(acl: Acls[Future]) extends DefaultRoutes("acls") {
           }
       }
     }
+  }
+}
+
+object AclsRoutes {
+
+  def apply(acl: Acls[Future]): AclsRoutes = new AclsRoutes(acl)
+
+  implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
+    val fields = cursor.fields.toSeq.flatten
+    if (!fields.contains("permissions"))
+      throw WrongOrInvalidJson(Some("Missing field 'permissions' in payload"))
+    else if (!fields.contains("identity"))
+      throw WrongOrInvalidJson(Some("Missing field 'identity' in payload"))
+    else
+      cursor.downField("permissions").as[Permissions] match {
+        case Left(df) => throw IllegalPermissionString(df.message)
+        case Right(permissions) =>
+          cursor.downField("identity").as[Identity] match {
+            case Left(df)        => throw IllegalIdentityFormat(df.message, "identity")
+            case Right(identity) => Right(AccessControl(identity, permissions))
+          }
+      }
   }
 }

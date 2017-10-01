@@ -29,10 +29,10 @@ object Command {
     * identities on a ''path''.
     *
     * @param path        the path on which the permissions should change
-    * @param mapping     the mapping between identities and their respective permissions to be created
+    * @param acl         the list of pairs of identities and their respective permissions to be created
     * @param meta        the command metadata
     */
-  final case class CreatePermissions(path: Path, mapping: Map[Identity, Permissions], meta: Meta) extends Command
+  final case class CreatePermissions(path: Path, acl: AccessControlList, meta: Meta) extends Command
 
   /**
     * Command definition signifying an attempt to add the argument ''permissions'' to the current collection
