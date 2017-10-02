@@ -50,6 +50,7 @@ object ExceptionHandling {
   private implicit val config: Configuration = Configuration.default.withDiscriminator("code")
 
   private implicit val commandStatusFrom: StatusFrom[CommandRejection] = StatusFrom {
+    case CannotCreateVoidPermissions              => BadRequest
     case CannotAddVoidPermissions                 => BadRequest
     case CannotSubtractVoidPermissions            => BadRequest
     case CannotSubtractAllPermissions             => BadRequest
@@ -57,6 +58,7 @@ object ExceptionHandling {
     case CannotSubtractForNonexistentIdentity     => NotFound
     case CannotRemoveForNonexistentIdentity       => NotFound
     case CannotClearNonexistentPermissions        => NotFound
+    case CannotCreateExistingPermissions          => Conflict
   }
 
   private implicit val commonRejectionsStatusFrom: StatusFrom[CommonRejections] = StatusFrom(_ => BadRequest)
