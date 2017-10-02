@@ -14,6 +14,7 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
+import ch.epfl.bluebrain.nexus.iam.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
@@ -45,6 +46,8 @@ object Main {
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
+    val baseUri = appConfig.http.publicUri
+    val apiUri  = baseUri.copy(path = baseUri.path / appConfig.http.prefix)
     val cluster = Cluster(as)
 
     // cluster join hook
@@ -56,12 +59,14 @@ object Main {
       val acl       = Acls[Future](aggregate, clock)
 
       // configure routes
-      val staticRoutes = StaticRoutes(appConfig.description.name,
-                                      appConfig.description.version,
-                                      appConfig.http.publicUri,
-                                      appConfig.http.prefix).routes
+      val staticRoutes = uriPrefix(baseUri) {
+        StaticRoutes(appConfig.description.name,
+                     appConfig.description.version,
+                     appConfig.http.publicUri,
+                     appConfig.http.prefix).routes
+      }
 
-      val aclsRoutes = AclsRoutes(acl).routes
+      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes)
       }
