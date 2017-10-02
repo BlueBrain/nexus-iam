@@ -53,7 +53,8 @@ lazy val service = project
       "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersistenceInMemVersion.value % Test,
       "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion.value % Test,
       "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion.value % Test,
-      "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test
+      "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test,
+      "org.mockito"            % "mockito-core"               % "2.10.0" % Test
     )
   )
   .settings(

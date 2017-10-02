@@ -1,12 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import akka.http.scaladsl.model.HttpMethods
+import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.Authorization
 import akka.http.scaladsl.server.Directives._
-
-import scala.collection.immutable
-import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
@@ -20,20 +17,20 @@ class AuthRoutes(config: OidcConfig)(implicit  cl: UntypedHttpClient[Future]) {
       pathPrefix("oauth2") {
         (get & path("authorize") & parameter('redirect.?)) { redirectUri =>
           val upstreamUri = config.authorizeEndpoint
-              .withQuery(Query(redirectUri))
-          complete(cl(HttpRequest(uri = upstreamUri)))
+              .withQuery(
+                  redirectUri.map(uri => Query("redirect" -> uri)).getOrElse(Query.Empty))
+          complete(cl(Get(upstreamUri)))
         } ~
         (get & path("token") & parameters(('code, 'state))) { (code, state) =>
-          val upstreamUri = config.authorizeEndpoint
+          val upstreamUri = config.tokenEndpoint
             .withQuery(Query(
               "code"  -> code,
               "state" -> state))
-          complete(cl(HttpRequest(method = HttpMethods.POST, uri = upstreamUri)))
+          complete(cl(Get(upstreamUri)))
         } ~
         (get & path("userinfo")) {
-          optionalHeaderValueByType[Authorization](()) { (authHeader: Option[Authorization]) =>
-            val ah = authHeader.toSeq.to[immutable.Seq]
-            complete(cl(HttpRequest(uri = config.userinfoEndpoint, headers = ah)))
+          headerValueByType[Authorization](()) { authHeader =>
+            complete(cl(Get(config.userinfoEndpoint).addHeader(authHeader)))
           }
         }
     }

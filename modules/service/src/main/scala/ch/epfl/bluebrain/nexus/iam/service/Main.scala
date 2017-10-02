@@ -56,7 +56,6 @@ object Main {
     // cluster join hook
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
-      val baseUri = appConfig.http.publicUri
 
       val clock     = Clock.systemUTC
       val aggregate = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
