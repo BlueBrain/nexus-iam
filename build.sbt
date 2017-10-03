@@ -16,6 +16,7 @@ lazy val core = project
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
       sourcingCore,
+      commonsHttp,
       "com.typesafe.akka"  %% "akka-http"            % akkaHttpVersion.value,
       "com.chuusai"        %% "shapeless"            % shapelessVersion.value,
       "io.circe"           %% "circe-core"           % circeVersion.value,
@@ -24,7 +25,8 @@ lazy val core = project
       sourcingMemTest,
       "io.circe"      %% "circe-parser"         % circeVersion.value     % Test,
       "io.circe"      %% "circe-generic-extras" % circeVersion.value     % Test,
-      "org.scalatest" %% "scalatest"            % scalaTestVersion.value % Test
+      "org.scalatest" %% "scalatest"            % scalaTestVersion.value % Test,
+      "org.mockito"    % "mockito-core"         % "2.10.0"               % Test
     )
   )
 

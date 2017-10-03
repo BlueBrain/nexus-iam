@@ -15,6 +15,7 @@ import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
+import ch.epfl.bluebrain.nexus.iam.core.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
@@ -42,10 +43,10 @@ object Main {
     implicit val as: ActorSystem              = ActorSystem(appConfig.description.ActorSystemName, config)
     implicit val ec: ExecutionContextExecutor = as.dispatcher
     implicit val mt: ActorMaterializer        = ActorMaterializer()
+    implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
 
     val logger           = Logging(as, getClass)
     val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
-    implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
@@ -57,9 +58,10 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
 
-      val clock     = Clock.systemUTC
-      val aggregate = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
-      val acl       = Acls[Future](aggregate, clock)
+      val clock                = Clock.systemUTC
+      val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl                  = Acls[Future](aggregate, clock)
+      val downStreamAuthClient = DownstreamAuthClient()
 
       // configure routes
       val staticRoutes = uriPrefix(baseUri) {
@@ -70,7 +72,7 @@ object Main {
       }
 
       val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
-      val authRoutes = uriPrefix(apiUri)(AuthRoutes(appConfig.oidc).routes)
+      val authRoutes = uriPrefix(apiUri)(AuthRoutes(appConfig.oidc, downStreamAuthClient).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
       }

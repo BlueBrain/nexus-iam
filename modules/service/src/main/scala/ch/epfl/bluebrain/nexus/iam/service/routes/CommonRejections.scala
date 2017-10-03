@@ -41,4 +41,8 @@ object CommonRejections {
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
   final case class IllegalPermissionString(override val message: String) extends Err(message) with CommonRejections
+
+  @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
+  final case class MissingParameters(val missingParams: Seq[String])
+    extends Err(s"""Missing query parameters: ${missingParams.mkString(", ")}""") with CommonRejections
 }
