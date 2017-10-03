@@ -84,6 +84,15 @@ class AuthRoutesSpec
       response.status shouldBe StatusCodes.BadRequest
     }
   }
+  "reject request to token endpoint without state" in {
+    val query = Query(
+      "code" -> UUID.randomUUID().toString
+    )
+
+    Get(s"/oauth2/token?${query.toString}") ~> routes ~> check {
+      response.status shouldBe StatusCodes.BadRequest
+    }
+  }
 
   "forward requests to userinfo endpoint and return the downstream response" in {
     val authHeader = Authorization(OAuth2BearerToken(UUID.randomUUID().toString))
