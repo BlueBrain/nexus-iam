@@ -3,6 +3,7 @@
 val commonsVersion = "0.4.3"
 
 lazy val commonTypes     = nexusDep("common-types", commonsVersion)
+lazy val commonsHttp     = nexusDep("commons-http", commonsVersion)
 lazy val sourcingCore    = nexusDep("sourcing-core", commonsVersion)
 lazy val sourcingMemTest = nexusDep("sourcing-mem", commonsVersion, Test)
 lazy val sourcingAkka    = nexusDep("sourcing-akka", commonsVersion)
@@ -15,6 +16,7 @@ lazy val core = project
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
       sourcingCore,
+      commonsHttp,
       "com.typesafe.akka"  %% "akka-http"            % akkaHttpVersion.value,
       "com.chuusai"        %% "shapeless"            % shapelessVersion.value,
       "io.circe"           %% "circe-core"           % circeVersion.value,
@@ -23,7 +25,8 @@ lazy val core = project
       sourcingMemTest,
       "io.circe"      %% "circe-parser"         % circeVersion.value     % Test,
       "io.circe"      %% "circe-generic-extras" % circeVersion.value     % Test,
-      "org.scalatest" %% "scalatest"            % scalaTestVersion.value % Test
+      "org.scalatest" %% "scalatest"            % scalaTestVersion.value % Test,
+      "org.mockito"   % "mockito-core"          % "2.10.0"               % Test
     )
   )
 
@@ -38,6 +41,7 @@ lazy val service = project
     libraryDependencies ++= kamonDeps ++ Seq(
       serviceCommon,
       sourcingAkka,
+      commonsHttp,
       "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion.value,
       "com.github.pureconfig" %% "pureconfig"                 % pureconfigVersion.value,
       "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion.value,
@@ -51,7 +55,8 @@ lazy val service = project
       "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersistenceInMemVersion.value % Test,
       "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion.value % Test,
       "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion.value % Test,
-      "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test
+      "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test,
+      "org.mockito"           % "mockito-core"                % "2.10.0" % Test
     )
   )
   .settings(

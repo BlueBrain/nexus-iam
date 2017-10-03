@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.headers.Authorization
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
@@ -38,6 +39,14 @@ object RejectionHandling {
       .handleAll[MethodRejection] { methodRejections =>
         val names = methodRejections.map(_.supported.name)
         complete(MethodNotAllowed -> (MethodNotSupported(names): CommonRejections))
+      }
+      .handleAll[MissingQueryParamRejection] { rejections =>
+        val missingParameters = rejections.map(_.parameterName)
+        complete(BadRequest -> MissingParameters(missingParameters))
+      }
+      .handle {
+        case MissingHeaderRejection(Authorization.name) =>
+          complete(Unauthorized)
       }
       .result()
 

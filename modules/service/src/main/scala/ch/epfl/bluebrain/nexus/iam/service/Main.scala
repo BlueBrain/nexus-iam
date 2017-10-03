@@ -11,19 +11,22 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.instances.future._
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
+import ch.epfl.bluebrain.nexus.iam.core.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.directives.PrefixDirectives._
-import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, StaticRoutes}
+import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.Success
 
 // $COVERAGE-OFF$
@@ -37,9 +40,10 @@ object Main {
     val config    = ConfigFactory.load()
     val appConfig = new Settings(config).appConfig
 
-    implicit val as: ActorSystem              = ActorSystem(appConfig.description.ActorSystemName, config)
-    implicit val ec: ExecutionContextExecutor = as.dispatcher
-    implicit val mt: ActorMaterializer        = ActorMaterializer()
+    implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
+    implicit val ec: ExecutionContextExecutor  = as.dispatcher
+    implicit val mt: ActorMaterializer         = ActorMaterializer()
+    implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
 
     val logger           = Logging(as, getClass)
     val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
@@ -54,9 +58,10 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
 
-      val clock     = Clock.systemUTC
-      val aggregate = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
-      val acl       = Acls[Future](aggregate, clock)
+      val clock                = Clock.systemUTC
+      val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl                  = Acls[Future](aggregate, clock)
+      val downStreamAuthClient = DownstreamAuthClient()
 
       // configure routes
       val staticRoutes = uriPrefix(baseUri) {
@@ -67,8 +72,9 @@ object Main {
       }
 
       val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
+      val authRoutes = uriPrefix(apiUri)(AuthRoutes(appConfig.oidc, downStreamAuthClient).routes)
       val route = handleRejections(corsRejectionHandler) {
-        cors(corsSettings)(staticRoutes ~ aclsRoutes)
+        cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
       }
 
       // bind to http

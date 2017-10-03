@@ -21,7 +21,8 @@ final case class AppConfig(description: DescriptionConfig,
                            runtime: RuntimeConfig,
                            cluster: ClusterConfig,
                            persistence: PersistenceConfig,
-                           auth: AuthConfig)
+                           auth: AuthConfig,
+                           oidc: OidcConfig)
 
 object AppConfig {
 
@@ -44,5 +45,7 @@ object AppConfig {
   final case class PersistenceConfig(journalPlugin: String, snapshotStorePlugin: String, queryJournalPlugin: String)
 
   final case class AuthConfig(adminGroups: Set[String])
+
+  final case class OidcConfig(authorizeEndpoint: Uri, tokenEndpoint: Uri, userinfoEndpoint: Uri)
 
 }
