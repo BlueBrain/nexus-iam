@@ -26,7 +26,7 @@ lazy val core = project
       "io.circe"      %% "circe-parser"         % circeVersion.value     % Test,
       "io.circe"      %% "circe-generic-extras" % circeVersion.value     % Test,
       "org.scalatest" %% "scalatest"            % scalaTestVersion.value % Test,
-      "org.mockito"    % "mockito-core"         % "2.10.0"               % Test
+      "org.mockito"   % "mockito-core"          % "2.10.0"               % Test
     )
   )
 
@@ -56,7 +56,7 @@ lazy val service = project
       "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion.value % Test,
       "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion.value % Test,
       "org.scalatest"         %% "scalatest"                  % scalaTestVersion.value % Test,
-      "org.mockito"            % "mockito-core"               % "2.10.0" % Test
+      "org.mockito"           % "mockito-core"                % "2.10.0" % Test
     )
   )
   .settings(

@@ -15,27 +15,24 @@ import scala.concurrent.Future
   * @param config           OIDC provider config
   * @param downstreamClient OIDC provider client
   */
-class AuthRoutes(config: OidcConfig, downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2"){
+class AuthRoutes(config: OidcConfig, downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2") {
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?)) { redirectUri =>
       val upstreamUri = config.authorizeEndpoint
-        .withQuery(
-          redirectUri.map(uri => Query("redirect" -> uri)).getOrElse(Query.Empty))
+        .withQuery(redirectUri.map(uri => Query("redirect" -> uri)).getOrElse(Query.Empty))
       complete(downstreamClient.forward(Get(upstreamUri)))
     } ~
-    (get & path("token") & parameters(('code, 'state))) { (code, state) =>
-      val upstreamUri = config.tokenEndpoint
-        .withQuery(Query(
-          "code" -> code,
-          "state" -> state))
-      complete(downstreamClient.forward(Get(upstreamUri)))
-     } ~
-     (get & path("userinfo")) {
-       headerValueByType[Authorization](()) { authHeader =>
-         complete(downstreamClient.forward(Get(config.userinfoEndpoint).addHeader(authHeader)))
-       }
-    }
+      (get & path("token") & parameters(('code, 'state))) { (code, state) =>
+        val upstreamUri = config.tokenEndpoint
+          .withQuery(Query("code" -> code, "state" -> state))
+        complete(downstreamClient.forward(Get(upstreamUri)))
+      } ~
+      (get & path("userinfo")) {
+        headerValueByType[Authorization](()) { authHeader =>
+          complete(downstreamClient.forward(Get(config.userinfoEndpoint).addHeader(authHeader)))
+        }
+      }
 }
 
 object AuthRoutes {

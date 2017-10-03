@@ -1,6 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-
 import java.util.UUID
 
 import akka.http.scaladsl.model.Uri.Query
@@ -18,20 +17,21 @@ import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
 import scala.concurrent.Future
 
-class AuthRoutesSpec extends WordSpecLike
-  with Matchers
-  with BeforeAndAfter
-  with ScalatestRouteTest
-  with MockitoSugar
-  with TableDrivenPropertyChecks
-  with ScalaFutures {
+class AuthRoutesSpec
+    extends WordSpecLike
+    with Matchers
+    with BeforeAndAfter
+    with ScalatestRouteTest
+    with MockitoSugar
+    with TableDrivenPropertyChecks
+    with ScalaFutures {
 
   private val oidcConfig = new OidcConfig(
     "http://example.com/authorize",
     "http://example.com/token",
     "http://example.com/userinfo",
   )
-  val cl = mock[DownstreamAuthClient[Future]]
+  val cl     = mock[DownstreamAuthClient[Future]]
   val routes = AuthRoutes(oidcConfig, cl).routes
 
   before {
@@ -51,7 +51,7 @@ class AuthRoutesSpec extends WordSpecLike
   }
 
   "forward GET requests with redirect to authorize endpoint and return the downstream response" in {
-    val query = Query("redirect" -> "https://redirect.example.com/redirect")
+    val query            = Query("redirect" -> "https://redirect.example.com/redirect")
     val forwardedRequest = Get(oidcConfig.authorizeEndpoint.withQuery(query))
 
     when(cl.forward(forwardedRequest))
@@ -63,7 +63,7 @@ class AuthRoutesSpec extends WordSpecLike
 
   "forward requests to token endpoint and return the downstream response" in {
     val query = Query(
-      "code" -> UUID.randomUUID().toString,
+      "code"  -> UUID.randomUUID().toString,
       "state" -> UUID.randomUUID().toString
     )
     val forwardedRequest = Get(oidcConfig.tokenEndpoint.withQuery(query))

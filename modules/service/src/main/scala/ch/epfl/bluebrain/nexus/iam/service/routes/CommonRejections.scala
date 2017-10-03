@@ -44,5 +44,6 @@ object CommonRejections {
 
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
   final case class MissingParameters(val missingParams: Seq[String])
-    extends Err(s"""Missing query parameters: ${missingParams.mkString(", ")}""") with CommonRejections
+      extends Err(s"""Missing query parameters: ${missingParams.mkString(", ")}""")
+      with CommonRejections
 }

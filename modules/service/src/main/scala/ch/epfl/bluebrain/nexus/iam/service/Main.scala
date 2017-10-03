@@ -40,9 +40,9 @@ object Main {
     val config    = ConfigFactory.load()
     val appConfig = new Settings(config).appConfig
 
-    implicit val as: ActorSystem              = ActorSystem(appConfig.description.ActorSystemName, config)
-    implicit val ec: ExecutionContextExecutor = as.dispatcher
-    implicit val mt: ActorMaterializer        = ActorMaterializer()
+    implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
+    implicit val ec: ExecutionContextExecutor  = as.dispatcher
+    implicit val mt: ActorMaterializer         = ActorMaterializer()
     implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
 
     val logger           = Logging(as, getClass)
