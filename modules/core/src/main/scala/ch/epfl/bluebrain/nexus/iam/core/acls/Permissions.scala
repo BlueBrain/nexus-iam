@@ -92,7 +92,7 @@ object Permissions {
   /**
     * Convenience factory method to construct a [[ch.epfl.bluebrain.nexus.iam.core.acls.Permissions]] instance from var args.
     *
-    * @param items a non-empty permissions set to be in the resulting instance
+    * @param items a non-empty permissions set to be included in the resulting instance
     * @return a new __Permissions__ instance
     */
   def apply(items: Permission*): Permissions = {
