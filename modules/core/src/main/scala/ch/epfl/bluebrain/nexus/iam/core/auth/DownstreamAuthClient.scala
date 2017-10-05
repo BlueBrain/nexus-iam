@@ -1,9 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.core.auth
 
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import cats.MonadError
+import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
+import journal.Logger
 
 /**
   * Downstream authentication provider client which executes the requests and returns successful responses and maps
@@ -13,23 +15,28 @@ import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
   */
 class DownstreamAuthClient[F[_]](implicit F: MonadError[F, Throwable], cl: UntypedHttpClient[F]) {
 
+  private val log = Logger[this.type]
+
   /**
     * Executes the requests and map the response to correct error code we want to respond with.
+    *
     * @param  request the request to execute
     * @return the response in an ''F'' context
     */
   def forward(request: HttpRequest): F[HttpResponse] = {
-    F.recoverWith(cl(request)) {
-      case e @ UnexpectedUnsuccessfulHttpResponse(response) =>
-        response.status match {
-          case StatusCodes.BadRequest          => F.pure(HttpResponse(StatusCodes.InternalServerError))
-          case StatusCodes.Unauthorized        => F.pure(HttpResponse(StatusCodes.Unauthorized))
-          case StatusCodes.Forbidden           => F.pure(HttpResponse(StatusCodes.Forbidden))
-          case StatusCodes.InternalServerError => F.pure(HttpResponse(StatusCodes.BadGateway))
-          case StatusCodes.BadGateway          => F.pure(HttpResponse(StatusCodes.BadGateway))
-          case StatusCodes.GatewayTimeout      => F.pure(HttpResponse(StatusCodes.GatewayTimeout))
-          case _                               => F.raiseError(e)
-        }
+    def mapFailed(resp: HttpResponse): HttpResponse = resp.status match {
+      case Unauthorized                     => HttpResponse(Unauthorized)
+      case Forbidden                        => HttpResponse(Forbidden)
+      case InternalServerError | BadGateway => HttpResponse(BadGateway)
+      case GatewayTimeout                   => HttpResponse(GatewayTimeout)
+      case _                                => HttpResponse(InternalServerError)
+    }
+
+    cl(request) map {
+      case resp if resp.status.isSuccess() => resp
+      case resp =>
+        log.warn(s"""Unexpected status code from OIDC provider ${resp.status} ${request.uri}""")
+        mapFailed(resp)
     }
   }
 }
