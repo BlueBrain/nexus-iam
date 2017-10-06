@@ -95,10 +95,7 @@ object Permissions {
     * @param items a non-empty permissions set to be included in the resulting instance
     * @return a new __Permissions__ instance
     */
-  def apply(items: Permission*): Permissions = {
-    require(items.nonEmpty, "Argument 'items' must not be empty, use Permissions.empty explicitly instead")
-    apply(items.toSet)
-  }
+  def apply(items: Permission*): Permissions = apply(items.toSet)
 
   /**
     * Singleton representing the empty permissions set.
