@@ -9,8 +9,7 @@ import scala.annotation.tailrec
 
 trait AclDirectives {
 
-  def extractResourcePath: Directive1[Path] =
-    extractUnmatchedPath.map(p => transform(p))
+  def extractResourcePath: Directive1[Path] = extractUnmatchedPath.map(transform)
 
   /**
     * Maps path segments from akka's representation to the internal application type.

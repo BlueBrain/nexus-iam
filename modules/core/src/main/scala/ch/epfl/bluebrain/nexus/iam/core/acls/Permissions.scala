@@ -92,10 +92,15 @@ object Permissions {
   /**
     * Convenience factory method to construct a [[ch.epfl.bluebrain.nexus.iam.core.acls.Permissions]] instance from var args.
     *
-    * @param items the permissions included in the resulting set
-    * @return a new __Permissions__ instance that contains all argument __permissions__
+    * @param items a non-empty permissions set to be included in the resulting instance
+    * @return a new __Permissions__ instance
     */
   def apply(items: Permission*): Permissions = apply(items.toSet)
+
+  /**
+    * Singleton representing the empty permissions set.
+    */
+  val empty: Permissions = new Permissions(Set.empty)
 
   /**
     * @return Semigroup typeclass instance for Permissions

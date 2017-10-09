@@ -64,9 +64,9 @@ class AclsSpec extends WordSpecLike with Matchers {
 
     "not add empty set of permissions" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous, Permissions()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
+      acls.add(path, Anonymous, Permissions.empty) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
       acls.create(path, AccessControlList(alice -> OwnReadWrite)) shouldEqual Success(())
-      acls.add(path, Anonymous, Permissions()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
+      acls.add(path, Anonymous, Permissions.empty) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
       acls.add(path, Anonymous, OwnRead) shouldEqual Success(OwnRead)
       acls.add(path, Anonymous, OwnRead) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
     }

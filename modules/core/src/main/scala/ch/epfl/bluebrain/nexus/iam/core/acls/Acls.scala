@@ -109,7 +109,7 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
     * @return Unit in an ''F[_]'' context if the action was successful
     */
   def create(path: Path, acl: AccessControlList)(implicit caller: Identity): F[Unit] = {
-    log.debug(s"Adding permissions mapping '$acl' for path '${path.show}'")
+    log.debug(s"Creating permissions mapping '$acl' for path '${path.show}'")
     agg.eval(path.show, CreatePermissions(path, acl, meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>

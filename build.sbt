@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.4.3"
+val commonsVersion = "0.4.6"
 
 lazy val commonTypes     = nexusDep("common-types", commonsVersion)
 lazy val commonsHttp     = nexusDep("commons-http", commonsVersion)

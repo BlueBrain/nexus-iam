@@ -79,7 +79,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "reject creating empty permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(Anonymous -> Permissions())) ~> routes ~> check {
+      Put(s"/acls${path.repr}", AccessControlList(Anonymous -> Permissions.empty)) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotCreateVoidPermissions.type]
       }
@@ -90,7 +90,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       Put(s"/acls${path.repr}", AccessControlList(alice -> ownReadWrite)) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
       }
-      Post(s"/acls${path.repr}", AccessControl(Anonymous, Permissions())) ~> routes ~> check {
+      Post(s"/acls${path.repr}", AccessControl(Anonymous, Permissions.empty)) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
       }
@@ -107,6 +107,10 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       Get(s"/acls${path.repr}?all=true") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList].acl shouldBe empty
+      }
+      Get(s"/acls${path.repr}") ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControl] shouldBe AccessControl(Anonymous, Permissions.empty)
       }
     }
 
@@ -125,7 +129,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
       Get(s"/acls${path.repr}") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[Permissions] shouldEqual read
+        responseAs[AccessControl] shouldEqual AccessControl(Anonymous, read)
       }
     }
 
@@ -136,11 +140,11 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
       Get(s"/acls${path.repr}") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[Permissions] shouldEqual ownReadWrite
+        responseAs[AccessControl] shouldEqual AccessControl(Anonymous, ownReadWrite)
       }
       Post(s"/acls${path.repr}", AccessControl(alice, readWrite)) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[Permissions] shouldEqual readWrite
+        responseAs[AccessControl] shouldEqual AccessControl(alice, readWrite)
       }
       Get(s"/acls${path.repr}?all=true") ~> routes ~> check {
         status shouldEqual StatusCodes.OK

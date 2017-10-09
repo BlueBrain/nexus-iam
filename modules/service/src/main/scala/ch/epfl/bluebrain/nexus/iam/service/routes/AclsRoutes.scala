@@ -38,7 +38,7 @@ class AclsRoutes(acl: Acls[Future]) extends DefaultRoutes("acls") {
           post {
             entity(as[AccessControl]) { ac =>
               onSuccess(acl.add(path, ac.identity, ac.permissions)) { result =>
-                complete(StatusCodes.OK -> result)
+                complete(StatusCodes.OK -> AccessControl(ac.identity, result))
               }
             }
           } ~
@@ -55,7 +55,7 @@ class AclsRoutes(acl: Acls[Future]) extends DefaultRoutes("acls") {
                 }
               case _ =>
                 onSuccess(acl.fetch(path, caller)) { result =>
-                  complete(StatusCodes.OK -> result)
+                  complete(StatusCodes.OK -> AccessControl(caller, result.getOrElse(Permissions.empty)))
                 }
             }
           }

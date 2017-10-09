@@ -17,8 +17,8 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
-import ch.epfl.bluebrain.nexus.iam.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
+import ch.epfl.bluebrain.nexus.service.commons.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
