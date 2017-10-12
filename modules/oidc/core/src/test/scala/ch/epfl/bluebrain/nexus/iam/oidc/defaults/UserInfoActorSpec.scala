@@ -42,4 +42,11 @@ class UserInfoActorSpec
       expectMsg(Info(`uuid`, Some(`userInfo`)))
     }
   }
+
+  "A UserInfoActor sha function" should {
+    "compute the SHA 256 correctly" in {
+      import UserInfoActor.sha256
+      sha256("my well defined token") shouldEqual "b0be9dd17b7eef1d7bb02f9195745a89570bb601d03b405f07754a91d6410ed1"
+    }
+  }
 }

@@ -1,5 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.oidc.defaults
 
+import java.math.BigInteger
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
@@ -38,6 +42,13 @@ object UserInfoActor {
     final case class Info(token: String, userInfo: Option[UserInfo]) extends Protocol
   }
 
+  private[defaults] val sha256: String => String = {
+    val digest = MessageDigest.getInstance("SHA-256")
+
+    (string: String) =>
+      String.format("%064x", new BigInteger(1, digest.digest(string.getBytes(StandardCharsets.UTF_8))))
+  }
+
   // $COVERAGE-OFF$
   final def props: Props = Props[UserInfoActor]()
 
@@ -46,7 +57,7 @@ object UserInfoActor {
   }
 
   private def extractEntityId: ExtractEntityId = {
-    case p: Protocol => (p.token.substring(0, 16), p)
+    case p: Protocol => (sha256(p.token), p)
   }
 
   final def apply()(implicit as: ActorSystem): ActorRef = {

@@ -37,8 +37,8 @@ object OidcProviderConfig {
                                      cl: UntypedHttpClient[Future]): Future[OidcProviderConfig] = {
     import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
     import as.dispatcher
-    val fixed = implicitly[HttpClient[Future, OidcProviderConfig]]
-    fixed(HttpRequest(uri = discoveryUri))
+    val providerConfigClient = implicitly[HttpClient[Future, OidcProviderConfig]]
+    providerConfigClient(HttpRequest(uri = discoveryUri))
   }
 
   final implicit val oidcProviderConfigDecoder: Decoder[OidcProviderConfig] = {
