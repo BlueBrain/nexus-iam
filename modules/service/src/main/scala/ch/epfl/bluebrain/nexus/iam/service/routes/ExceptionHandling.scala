@@ -7,8 +7,8 @@ import akka.http.scaladsl.server.ExceptionHandler
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections.{IllegalIdentityFormat, IllegalPermissionString}
-import ch.epfl.bluebrain.nexus.service.commons.directives.ErrorDirectives._
-import ch.epfl.bluebrain.nexus.service.commons.directives.StatusFrom
+import ch.epfl.bluebrain.nexus.commons.service.directives.ErrorDirectives._
+import ch.epfl.bluebrain.nexus.commons.service.directives.StatusFrom
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
 import journal.Logger
