@@ -60,6 +60,11 @@ sealed abstract class Path extends Serializable {
   def reverse: Path
 
   /**
+    * @return this __Path__ and all its parents
+    */
+  def expand: Set[Path]
+
+  /**
     * @return a human readable representation of this path in its canonical form.  I.e.: __/a/b/c/d__
     */
   def repr: String
@@ -130,6 +135,8 @@ object Path {
 
     override val reverse: this.type = Empty
 
+    override val expand: Set[Path] = Set(this)
+
     override val repr: String = "/"
   }
 
@@ -168,6 +175,8 @@ object Path {
       }
       inner(Empty, this)
     }
+
+    override def expand: Set[Path] = tail.expand + this
 
     override def repr: String = tail match {
       case Empty => "/" + head

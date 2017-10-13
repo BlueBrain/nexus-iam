@@ -3,11 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 import java.time.Clock
 
 import cats.MonadError
-import cats.instances.map._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.semigroup._
-import cats.syntax.show._
+import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls.PermissionAggregate
 import ch.epfl.bluebrain.nexus.iam.core.acls.Command._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
@@ -167,6 +163,20 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
         log.debug(s"SubtractPermissions succeeded for path '${path.show}' and identity '${identity.show}'")
         F.pure(mapping.get(identity))
     }
+  }
+
+  /**
+    * Retrieves effective permissions for a set of ''identities'' on a ''path'' by combining ACLs on the path
+    * and on all its parents.
+    *
+    * @param path       the target path
+    * @param identities the set of identities for which permissions need to be retrieved
+    */
+  def retrieve(path: Path, identities: Set[Identity]): F[Map[Identity, Permissions]] = {
+    val listOfAcls: F[List[Map[Identity, Permissions]]] = path.expand.toList.map(fetch).sequence
+    listOfAcls.map(_.foldLeft(Map.empty[Identity, Permissions]) { (acc, el) =>
+      el.filterKeys(k => identities.contains(k)).combine(acc)
+    })
   }
 
   private def meta(implicit caller: Identity) = Meta(caller, clock.instant)

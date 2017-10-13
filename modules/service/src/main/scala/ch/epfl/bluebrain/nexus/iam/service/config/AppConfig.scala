@@ -46,6 +46,6 @@ object AppConfig {
 
   final case class AuthConfig(adminGroups: Set[String])
 
-  final case class OidcConfig(authorizeEndpoint: Uri, tokenEndpoint: Uri, userinfoEndpoint: Uri)
+  final case class OidcConfig(issuer: Uri, authorizeEndpoint: Uri, tokenEndpoint: Uri, userinfoEndpoint: Uri)
 
 }

@@ -2,8 +2,10 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpecLike}
+
 import scala.concurrent.duration._
 
 class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest {
@@ -34,6 +36,13 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
       appConfig.persistence.queryJournalPlugin shouldEqual "cassandra-query-journal"
 
       appConfig.auth.adminGroups shouldEqual Set("nexus-admin-group")
+
+      appConfig.oidc shouldEqual OidcConfig(
+        "http://localhost:8080/realm",
+        "http://localhost:8080/oauth2/authorize",
+        "http://localhost:8080/token",
+        "http://localhost:8080/userinfo"
+      )
     }
   }
 }
