@@ -16,6 +16,7 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.Decoder
 import io.circe.generic.auto._
+import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,8 +37,10 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {
-                onSuccess(acl.create(path, list)) {
-                  complete(StatusCodes.Created)
+                traceName("createPermissions") {
+                  onSuccess(acl.create(path, list)) {
+                    complete(StatusCodes.Created)
+                  }
                 }
               }
             }
@@ -45,16 +48,20 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
             post {
               entity(as[AccessControl]) { ac =>
                 authorizeAsync(check(path, user, Permission.Own)) {
-                  onSuccess(acl.add(path, ac.identity, ac.permissions)) { result =>
-                    complete(StatusCodes.OK -> AccessControl(ac.identity, result))
+                  traceName("addPermisssions") {
+                    onSuccess(acl.add(path, ac.identity, ac.permissions)) { result =>
+                      complete(StatusCodes.OK -> AccessControl(ac.identity, result))
+                    }
                   }
                 }
               }
             } ~
             delete {
               authorizeAsync(check(path, user, Permission.Own)) {
-                onSuccess(acl.clear(path)) {
-                  complete(StatusCodes.NoContent)
+                traceName("deletePermissions") {
+                  onSuccess(acl.clear(path)) {
+                    complete(StatusCodes.NoContent)
+                  }
                 }
               }
             } ~
@@ -62,14 +69,18 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
               parameters('all.as[Boolean].?) {
                 case Some(true) =>
                   authorizeAsync(check(path, user, Permission.Own)) {
-                    onSuccess(acl.fetch(path)) { result =>
-                      complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                    traceName("getAllPermissions") {
+                      onSuccess(acl.fetch(path)) { result =>
+                        complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                      }
                     }
                   }
                 case _ =>
                   authorizeAsync(check(path, user, Permission.Read)) {
-                    onSuccess(acl.retrieve(path, user.identities)) { result =>
-                      complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                    traceName("getPermissions") {
+                      onSuccess(acl.retrieve(path, user.identities)) { result =>
+                        complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                      }
                     }
                   }
               }
