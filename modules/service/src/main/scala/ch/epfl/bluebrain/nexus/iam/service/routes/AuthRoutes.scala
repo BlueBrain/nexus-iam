@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
+import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.Future
 
@@ -18,16 +19,22 @@ class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends Default
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?)) { redirectUri =>
-      complete(downstreamClient.authorize(redirectUri))
+      traceName("authorize") {
+        complete(downstreamClient.authorize(redirectUri))
+      }
     } ~
       (get & path("token") & parameters(('code, 'state))) { (code, state) =>
-        complete(downstreamClient.token(code, state))
+        traceName("token") {
+          complete(downstreamClient.token(code, state))
+        }
       } ~
       (get & path("userinfo")) {
         extractCredentials {
           case Some(credentials: OAuth2BearerToken) =>
-            onSuccess(downstreamClient.userInfo(credentials)) { userInfo =>
-              complete(StatusCodes.OK -> userInfo)
+            traceName("userinfo") {
+              onSuccess(downstreamClient.userInfo(credentials)) { userInfo =>
+                complete(StatusCodes.OK -> userInfo)
+              }
             }
           case _ => complete(StatusCodes.Unauthorized)
         }

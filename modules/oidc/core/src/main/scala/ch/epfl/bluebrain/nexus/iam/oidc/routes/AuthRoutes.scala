@@ -13,6 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.oidc.api.{OidcOps, UserInfo}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
+import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -31,14 +32,17 @@ final class AuthRoutes(oidcOps: OidcOps[Future]) {
               .map(str => Future.fromTry(parseFinalRedirect(str).map(uri => Some(uri))))
               .getOrElse(Future.successful(None))
             val eventualUri = eventualMaybeUri.flatMap(uriOpt => oidcOps.buildRedirectUri(uriOpt))
-            onSuccess(eventualUri) { uri =>
-              redirect(uri, StatusCodes.Found)
+            traceName("authorize") {
+              onSuccess(eventualUri) { uri =>
+                redirect(uri, StatusCodes.Found)
+              }
             }
           }
-        } ~
-          (pathPrefix("token") & pathEndOrSingleSlash & get) {
-            (parameter('code) & parameter('state)) { (code, state) =>
+        } ~ (pathPrefix("token") & pathEndOrSingleSlash & get) {
+          (parameter('code) & parameter('state)) { (code, state) =>
+            traceName("token") {
               onSuccess(oidcOps.exchangeCode(code, state)) {
+
                 case (token, Some(finalRedirect)) =>
                   val q = ("access_token" -> token.accessToken) +: Query(finalRedirect.rawQueryString)
                   redirect(finalRedirect.withQuery(q), StatusCodes.Found)
@@ -46,12 +50,14 @@ final class AuthRoutes(oidcOps: OidcOps[Future]) {
                   complete(Map("access_token" -> token.accessToken))
               }
             }
-          } ~
-          (pathPrefix("userinfo") & pathEndOrSingleSlash & get) {
-            authenticateOAuth2Async[UserInfo]("*", authenticator).apply { userInfo =>
+          }
+        } ~ (pathPrefix("userinfo") & pathEndOrSingleSlash & get) {
+          authenticateOAuth2Async[UserInfo]("*", authenticator).apply { userInfo =>
+            traceName("userinfo") {
               complete(userInfo)
             }
           }
+        }
       }
     }
   }
