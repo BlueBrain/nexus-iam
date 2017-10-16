@@ -1,36 +1,35 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import akka.http.scaladsl.client.RequestBuilding._
-import akka.http.scaladsl.model.Uri.Query
-import akka.http.scaladsl.model.headers.Authorization
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import ch.epfl.bluebrain.nexus.iam.core.auth.DownstreamAuthClient
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe.generic.auto._
 
 import scala.concurrent.Future
 
 /**
   * HTTP routes for OAuth2 specifig functionality
-  * @param config           OIDC provider config
   * @param downstreamClient OIDC provider client
   */
-class AuthRoutes(config: OidcConfig, downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2") {
+class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2") {
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?)) { redirectUri =>
-      val upstreamUri = config.authorizeEndpoint
-        .withQuery(redirectUri.map(uri => Query("redirect" -> uri)).getOrElse(Query.Empty))
-      complete(downstreamClient.forward(Get(upstreamUri)))
+      complete(downstreamClient.authorize(redirectUri))
     } ~
       (get & path("token") & parameters(('code, 'state))) { (code, state) =>
-        val upstreamUri = config.tokenEndpoint
-          .withQuery(Query("code" -> code, "state" -> state))
-        complete(downstreamClient.forward(Get(upstreamUri)))
+        complete(downstreamClient.token(code, state))
       } ~
       (get & path("userinfo")) {
-        headerValueByType[Authorization](()) { authHeader =>
-          complete(downstreamClient.forward(Get(config.userinfoEndpoint).addHeader(authHeader)))
+        extractCredentials {
+          case Some(credentials: OAuth2BearerToken) =>
+            onSuccess(downstreamClient.userInfo(credentials)) { userInfo =>
+              complete(StatusCodes.OK -> userInfo)
+            }
+          case _ => complete(StatusCodes.Unauthorized)
         }
       }
 }
@@ -39,12 +38,9 @@ object AuthRoutes {
   // $COVERAGE-OFF$
   /**
     * Factory method for oauth2 related routes.
-    * @param config           OIDC provider config
     * @param downstreamClient OIDC provider client
     * @return new instance of AuthRoutes
     */
-  def apply(config: OidcConfig, downstreamClient: DownstreamAuthClient[Future]): AuthRoutes = {
-    new AuthRoutes(config, downstreamClient)
-  }
+  def apply(downstreamClient: DownstreamAuthClient[Future]): AuthRoutes = new AuthRoutes(downstreamClient)
   // $COVERAGE-ON$
 }

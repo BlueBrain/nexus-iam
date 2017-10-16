@@ -19,6 +19,9 @@ class AclsSpec extends WordSpecLike with Matchers {
 
   private val aggregate                = MemoryAggregate("permission")(Initial, Acls.next, Acls.eval).toF[Try]
   private val acls                     = Acls(aggregate, Clock.systemUTC)
+  private val Read                     = Permissions(Permission.Read)
+  private val Write                    = Permissions(Permission.Write)
+  private val Own                      = Permissions(Permission.Own)
   private val OwnRead                  = Permissions(Permission.Own, Permission.Read)
   private val OwnReadWrite             = Permissions(Permission.Own, Permission.Read, Permission.Write)
   private implicit val alice: Identity = UserRef(Uri("http://localhost"), "Alice")
@@ -75,7 +78,7 @@ class AclsSpec extends WordSpecLike with Matchers {
       val path = genPath(genId)
       acls.add(path, Anonymous, OwnRead) shouldEqual Success(OwnRead)
       acls.fetch(path, Anonymous) shouldEqual Success(Some(OwnRead))
-      acls.add(path, Anonymous, Permissions(Permission.Write)) shouldEqual Success(OwnReadWrite)
+      acls.add(path, Anonymous, Write) shouldEqual Success(OwnReadWrite)
       acls.fetch(path, Anonymous) shouldEqual Success(Some(OwnReadWrite))
     }
 
@@ -100,9 +103,8 @@ class AclsSpec extends WordSpecLike with Matchers {
     "subtract permissions" in {
       val path = genPath(genId)
       acls.add(path, Anonymous, OwnRead) shouldEqual Success(OwnRead)
-      acls.subtract(path, Anonymous, Permissions(Permission.Own)) shouldEqual Success(
-        Some(Permissions(Permission.Read)))
-      acls.fetch(path, Anonymous) shouldEqual Success(Some(Permissions(Permission.Read)))
+      acls.subtract(path, Anonymous, Own) shouldEqual Success(Some(Read))
+      acls.fetch(path, Anonymous) shouldEqual Success(Some(Read))
     }
 
     "not remove nonexistent permissions" in {
@@ -131,6 +133,15 @@ class AclsSpec extends WordSpecLike with Matchers {
       acls.fetch(path) shouldEqual Success(Map.empty)
     }
 
+    "retrieve permissions for nested paths" in {
+      val parent = genPath(genId)
+      val path   = parent / "a" / "b" / "c"
+      acls.create(parent, AccessControlList(Anonymous -> OwnRead, alice -> OwnRead)) shouldEqual Success(())
+      acls.add(path, alice, Write)
+      acls.retrieve(path, Set(Anonymous, alice)) shouldEqual Success(Map(Anonymous -> OwnRead, alice -> OwnReadWrite))
+      acls.retrieve(path / "d" / "e", Set(Anonymous, alice)) shouldEqual Success(
+        Map(Anonymous -> OwnRead, alice -> OwnReadWrite))
+    }
   }
 
   private def genId: String       = UUID.randomUUID.toString.toLowerCase
