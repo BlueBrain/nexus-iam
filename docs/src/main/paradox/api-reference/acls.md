@@ -1,8 +1,32 @@
 # Access control lists
 
-Access to any resource in the system is protected by an ACL.  Assuming a nexus deployment at
+Access to any resource in the system is protected by ACLs.  Assuming a nexus deployment at
 `http(s)://nexus.example.com` and resource address of `/v0/{address}` the following operations should apply
 to all resources for authenticated users:
+
+## Authentication and authorization
+
+Access to the ACL on a particular resource is protected by the ACL itself.
+
+This implies that the caller (i.e. the client sending an HTTP request to perform any of the following actions)
+must have the `own` permission for administrative tasks (*create*, *add*, *subtract*, *clear*, *fetch all*) and
+the `read` permission to fetch its own permissions.
+
+See @ref:[Authentication](auth.md) to learn about the authentication mechanism.
+
+## Bootstrapping
+
+By default, the IAM service gives `read` and `own` rights to the LDAP groups defined as administrators in the
+system internal configuration settings.
+
+This is done by setting permissions to the top-level, root resource path `/` for these groups.  The root ACL
+can be subsequently modified by users belonging to administrator groups.
+
+**Note**: Be careful when modifying top-level permissions, as it can results in locking everyone out, or
+on the contrary, giving full ownership to everyone, including anonymous users.  No checks about the sanity of
+such an operation are performed by the service.
+
+## Actions
 
 ### Fetch own permissions on a resource
 
@@ -10,24 +34,30 @@ to all resources for authenticated users:
 GET /v0/acls/{address}
 ```
 
+**Note**: Permissions are transitively inherited from the resource ACL and all its ancestors.
+This call computes the effective ACL for the caller on this resource.
+
 #### Status Codes
 
-- **200 OK**: the resource is found and the associated caller permissions are returned successfully
-- **404 Not Found**: the resource was not found
+- **200 OK**: the ACL is computed and the associated caller permissions are returned successfully
+- **403 Forbidden**: the caller doesn't have `read` rights on this resource
 
-### Fetch all permissions on a resource
+## Administrative actions
+
+### Fetch permissions for all users on a resource
 
 ```
 GET /v0/acls/{address}?all=true
 ```
 
+**Note**: This action *does not* show inherited permissions.
+
 #### Status Codes
 
-- **200 OK**: the resource is found and its ACL is returned successfully
-- **404 Not Found**: the resource was not found
+- **200 OK**: the entire ACL is fetched is returned successfully
+- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
 ### Create a new ACL
-
 
 ```
 PUT /v0/acls/{address}
@@ -37,6 +67,8 @@ PUT /v0/acls/{address}
 #### Status Codes
 
 - **201 Created**: the resource ACL was created successfully
+- **400 Bad Request**: the request payload is not valid
+- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 - **409 Conflict**: the resource ACL already exists
 
 ### Add permissions to a resource ACL
@@ -50,6 +82,7 @@ POST /v0/acls/{address}
 
 - **200 OK**: the resource ACL was updated successfully
 - **400 Bad Request**: the request payload is not valid
+- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
 ### Clear ACL on a resource
 
@@ -59,9 +92,9 @@ DELETE /v0/acls/{address}
 
 #### Status Codes
 
-- **200 OK**: the resource was created successfully
-- **404 Not Found**: the resource was not found
-- **409 Conflict**: the resource ACL is already empty
+- **200 OK**: the resource ACL was cleared successfully
+- **403 Forbidden**: the caller doesn't have `own` rights on this resource
+- **404 Not Found**: the resource ACL was not found, i.e. it is already empty
 
 ## Error Signaling
 

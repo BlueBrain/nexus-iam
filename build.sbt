@@ -58,7 +58,8 @@ lazy val kamonDeps = Seq(
   "org.aspectj" % "aspectjweaver"          % aspectJVersion % Runtime
 )
 
-lazy val docs = project.in(file("docs"))
+lazy val docs = project
+  .in(file("docs"))
   .enablePlugins(ParadoxPlugin)
   .settings(noPublish)
   .settings(
@@ -170,8 +171,14 @@ lazy val service = project
 
 lazy val root = project
   .in(file("."))
-  .settings(common, noPublish, name := "iam", moduleName := "iam", description := "Nexus IAM")
-  .aggregate(core, service, oidcCore, oidcBbp)
+  .settings(common, noPublish)
+  .settings(
+    name := "iam",
+    moduleName := "iam",
+    homepage := Some(new URL("https://github.com/BlueBrain/nexus-iam")),
+    licenses := Seq(("Apache 2.0", new URL("https://github.com/BlueBrain/nexus-kg/blob/master/LICENSE"))),
+    description := "Nexus Identity & Access Management")
+  .aggregate(docs, core, service, oidcCore, oidcBbp)
 
 /* Common settings */
 
