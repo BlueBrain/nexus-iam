@@ -1,12 +1,18 @@
 @@@ index
 
 * [Access control lists](acls.md)
+* [Authentication](auth.md)
 
 @@@
 
 # API Reference
 
-As with all Nexus services the KnowledgeGraph exposes a RESTful interface over HTTP(S) for synchronous communication. 
+As with the rest of the Nexus platform, the IAM service exposes a RESTful interface over HTTP(S) for synchronous
+communication. 
 The generally adopted transport format is JSON based.
 
-The service operates on @ref:[Access control lists](acls.md).
+The service handles @ref:[access control lists](acls.md) and identifies users through third party provides via
+its own @ref:[authentication](auth.md) interface.
+
+# Examples
+
