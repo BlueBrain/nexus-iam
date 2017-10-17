@@ -13,12 +13,13 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
+import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
+import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
-import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
@@ -66,6 +67,23 @@ object Main {
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate, clock)
       val downStreamAuthClient = DownstreamAuthClient(appConfig.oidc, cl, uicl)
+
+      if (appConfig.auth.adminGroups.nonEmpty) {
+        val adminGroup = GroupRef(appConfig.oidc.issuer, appConfig.auth.adminGroups.head)
+        acl.fetch(Path./, adminGroup).foreach {
+          case Some(permissions) if permissions(Permission.Own) =>
+            logger.info(s"Top-level 'own' permission found for $adminGroup; nothing to do")
+          case Some(_) =>
+            logger.info(s"Adding 'own' to top-level permissions for $adminGroup")
+            acl.add(Path./, adminGroup, Permissions(Permission.Own))(adminGroup)
+          case None =>
+            logger.info(s"Creating top-level permissions for $adminGroup")
+            acl.create(Path./, AccessControlList(adminGroup -> Permissions(Permission.Own)))(adminGroup)
+        }
+      } else {
+        logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
+        logger.warning("Top-level permissions might be missing as a result")
+      }
 
       // configure routes
       val staticRoutes = uriPrefix(baseUri) {
