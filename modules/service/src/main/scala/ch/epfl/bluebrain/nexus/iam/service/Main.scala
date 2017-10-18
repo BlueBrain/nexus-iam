@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service
 
 import java.time.Clock
 
+import _root_.io.circe.generic.auto._
 import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
@@ -13,24 +14,24 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.iam.core.acls.Acls
+import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
+import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
-import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
-import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
-import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.Kamon
-import _root_.io.circe.generic.auto._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 // $COVERAGE-OFF$
 object Main {
@@ -66,6 +67,32 @@ object Main {
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate, clock)
       val downStreamAuthClient = DownstreamAuthClient(appConfig.oidc, cl, uicl)
+
+      if (appConfig.auth.adminGroups.isEmpty) {
+        logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
+        logger.warning("Top-level permissions might be missing as a result")
+      } else {
+        val ownRead     = Permissions(Permission.Own, Permission.Read)
+        val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.issuer, group))
+        acl.fetch(Path./).onComplete {
+          case Success(mapping) =>
+            adminGroups.foreach {
+              adminGroup =>
+                mapping.get(adminGroup) match {
+                  case Some(permissions) if permissions.containsAll(ownRead) =>
+                    logger.info(s"Top-level 'own' permission found for $adminGroup; nothing to do")
+                  case Some(_) =>
+                    logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
+                    acl.add(Path./, adminGroup, ownRead)(adminGroup)
+                  case None =>
+                    logger.info(s"Creating top-level permissions for $adminGroup")
+                    acl.create(Path./, AccessControlList(adminGroup -> ownRead))(adminGroup)
+                }
+            }
+          case Failure(e) =>
+            logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")
+        }
+      }
 
       // configure routes
       val staticRoutes = uriPrefix(baseUri) {

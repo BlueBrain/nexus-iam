@@ -12,7 +12,7 @@ import kamon.akka.http.KamonTraceDirectives.traceName
 import scala.concurrent.Future
 
 /**
-  * HTTP routes for OAuth2 specifig functionality
+  * HTTP routes for OAuth2 specific functionality
   * @param downstreamClient OIDC provider client
   */
 class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2") {
