@@ -6,7 +6,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import io.circe.generic.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.Future

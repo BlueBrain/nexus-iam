@@ -3,6 +3,9 @@ package ch.epfl.bluebrain.nexus.iam.core.auth
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto._
 
 /**
   * Detailed user information.
@@ -35,4 +38,13 @@ final case class UserInfo(sub: String,
     * @param origin the authentication provider realm
     */
   def toUser(origin: Uri): User = AuthenticatedUser(identities(origin))
+}
+
+object UserInfo {
+
+  implicit val config: Configuration = Configuration.default.withSnakeCaseKeys
+
+  implicit val userInfoDecoder: Decoder[UserInfo] = deriveDecoder[UserInfo]
+
+  implicit val userInfoEncoder: Encoder[UserInfo] = deriveEncoder[UserInfo]
 }
