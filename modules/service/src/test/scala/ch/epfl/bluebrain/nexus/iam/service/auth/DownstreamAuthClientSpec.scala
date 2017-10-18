@@ -2,14 +2,18 @@ package ch.epfl.bluebrain.nexus.iam.service.auth
 
 import java.util.UUID
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Location
+import akka.http.scaladsl.model.headers.{Location, OAuth2BearerToken}
+import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import org.mockito.ArgumentMatchers.isA
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
@@ -34,8 +38,10 @@ class DownstreamAuthClientSpec
     "http://example.com/token",
     "http://example.com/userinfo",
   )
+  implicit val as    = ActorSystem("as")
+  implicit val mt    = ActorMaterializer()
   implicit val cl    = mock[UntypedHttpClient[Future]]
-  implicit val uicl  = mock[HttpClient[Future, UserInfo]]
+  implicit val uicl  = HttpClient.withAkkaUnmarshaller[UserInfo]
   private val client = DownstreamAuthClient(oidc, cl, uicl)
 
   before {
@@ -78,6 +84,27 @@ class DownstreamAuthClientSpec
       }
     }
 
-  }
+    val userInfoString =
+      s"""
+         |{
+         | "sub": "sub",
+         | "name": "name",
+         | "preferred_username": "preferredUsername",
+         | "given_name": "givenName",
+         | "family_name": "familyName",
+         | "email": "email@example.com",
+         | "groups": []
+         |}
+       """.stripMargin
+    val userInfo =
+      UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set.empty)
 
+    "decode user info" in {
+      when(cl.apply(isA(classOf[HttpRequest])))
+        .thenReturn(
+          Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, userInfoString))))
+
+      client.userInfo(OAuth2BearerToken("token")).futureValue shouldEqual userInfo
+    }
+  }
 }
