@@ -72,20 +72,21 @@ object Main {
         logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
         logger.warning("Top-level permissions might be missing as a result")
       } else {
+        val ownRead     = Permissions(Permission.Own, Permission.Read)
         val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.issuer, group))
         acl.fetch(Path./).onComplete {
           case Success(mapping) =>
             adminGroups.foreach {
               adminGroup =>
                 mapping.get(adminGroup) match {
-                  case Some(permissions) if permissions(Permission.Own) =>
+                  case Some(permissions) if permissions.containsAll(ownRead) =>
                     logger.info(s"Top-level 'own' permission found for $adminGroup; nothing to do")
                   case Some(_) =>
-                    logger.info(s"Adding 'own' to top-level permissions for $adminGroup")
-                    acl.add(Path./, adminGroup, Permissions(Permission.Own))(adminGroup)
+                    logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
+                    acl.add(Path./, adminGroup, ownRead)(adminGroup)
                   case None =>
                     logger.info(s"Creating top-level permissions for $adminGroup")
-                    acl.create(Path./, AccessControlList(adminGroup -> Permissions(Permission.Own)))(adminGroup)
+                    acl.create(Path./, AccessControlList(adminGroup -> ownRead))(adminGroup)
                 }
             }
           case Failure(e) =>
