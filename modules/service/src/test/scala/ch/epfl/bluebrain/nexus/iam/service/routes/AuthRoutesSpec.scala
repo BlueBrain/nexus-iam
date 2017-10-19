@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{BasicHttpCredentials, OAuth2BearerToken}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
 import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import org.mockito.Mockito
@@ -79,6 +80,11 @@ class AuthRoutesSpec
       when(cl.userInfo(credentials)).thenReturn(Future.successful(alice))
       Get(s"/oauth2/userinfo") ~> addCredentials(credentials) ~> routes ~> check {
         responseAs[UserInfo] shouldBe alice
+      }
+      when(cl.userInfo(credentials))
+        .thenReturn(Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized))))
+      Get(s"/oauth2/userinfo") ~> addCredentials(credentials) ~> routes ~> check {
+        response.status shouldBe StatusCodes.Unauthorized
       }
     }
 

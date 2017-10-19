@@ -58,12 +58,11 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
   def userInfo(credentials: OAuth2BearerToken): F[UserInfo] = {
     uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
       .recoverWith {
+        case UnexpectedUnsuccessfulHttpResponse(resp) =>
+          F.raiseError(UnexpectedUnsuccessfulHttpResponse(mapFailed(resp)))
         case df: DecodingFailure =>
           log.error("Unable to decode UserInfo response", df)
           F.raiseError(df)
-        case UnexpectedUnsuccessfulHttpResponse(resp) =>
-          log.error("Received a failed response from the downstream oid provider for getting the UserInfo")
-          F.raiseError(UnexpectedUnsuccessfulHttpResponse(mapFailed(resp)))
         case NonFatal(th) =>
           log.error("Downstream call to fetch the UserInfo failed unexpectedly", th)
           F.raiseError(th)
@@ -88,8 +87,11 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
   protected[auth] def forward(request: HttpRequest): F[HttpResponse] = {
     cl(request) map {
       case resp if resp.status.isSuccess => resp
+      case resp if resp.status == StatusCodes.Unauthorized =>
+        log.info(s"Authorization was rejected by the OIDC provider ${resp.status} ${request.uri}")
+        mapFailed(resp)
       case resp =>
-        log.warn(s"""Unexpected status code from OIDC provider ${resp.status} ${request.uri}""")
+        log.error(s"""Unexpected status code from OIDC provider ${resp.status} ${request.uri}""")
         mapFailed(resp)
     }
   }
