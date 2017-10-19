@@ -4,15 +4,15 @@ import java.time.Instant
 import java.util.UUID
 
 import akka.http.scaladsl.model.Uri
+import akka.persistence.journal.Tagged
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Permission.{Own, Read, Write}
-import ch.epfl.bluebrain.nexus.iam.core.acls.{AccessControl, AccessControlList, Meta, Permissions}
+import ch.epfl.bluebrain.nexus.iam.core.acls.{AccessControlList, Meta, Permissions}
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapterSpec._
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{Matchers, WordSpecLike}
-import TaggingAdapterSpec._
-import akka.persistence.journal.Tagged
 
 class TaggingAdapterSpec extends WordSpecLike with Matchers with TableDrivenPropertyChecks {
 
@@ -22,13 +22,7 @@ class TaggingAdapterSpec extends WordSpecLike with Matchers with TableDrivenProp
       "event",
       PermissionsCleared(path, meta),
       PermissionsRemoved(path, user, meta),
-      PermissionsCreated(path,
-                         AccessControlList(
-                           Set(
-                             AccessControl(user, permissions),
-                             AccessControl(group, permissions)
-                           )),
-                         meta),
+      PermissionsCreated(path, AccessControlList(user -> permissions, group -> permissions), meta),
       PermissionsAdded(path, user, permissions, meta),
       PermissionsSubtracted(path, user, permissions, meta)
     )
