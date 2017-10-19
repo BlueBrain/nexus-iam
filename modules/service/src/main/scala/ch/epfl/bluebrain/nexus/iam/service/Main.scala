@@ -9,6 +9,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
+import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
@@ -21,6 +22,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
+import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
@@ -28,6 +30,7 @@ import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.Kamon
+import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -114,6 +117,15 @@ object Main {
           logger.info(s"Bound to '${binding.localAddress.getHostString}': '${binding.localAddress.getPort}'")
         case _ => Await.result(as.terminate(), 3.seconds)
       }
+
+      KafkaPublisher.start(
+        "permission",
+        appConfig.persistence.queryJournalPlugin,
+        "permission",
+        "permissionsKafkaPublisher",
+        ProducerSettings(as, new StringSerializer, new StringSerializer),
+        "permissions"
+      )
     })
 
     val provided = appConfig.cluster.seedAddresses
