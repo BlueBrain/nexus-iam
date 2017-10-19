@@ -22,6 +22,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
+import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
@@ -119,12 +120,12 @@ object Main {
       }
 
       KafkaPublisher.start(
-        "permission",
+        appConfig.kafka.permissionsProjectionId,
         appConfig.persistence.queryJournalPlugin,
-        "permission",
-        "permissionsKafkaPublisher",
+        TaggingAdapter.tag,
+        "kafka-permissions-publisher",
         ProducerSettings(as, new StringSerializer, new StringSerializer),
-        "permissions"
+        appConfig.kafka.permissionsTopic
       )
     })
 

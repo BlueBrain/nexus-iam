@@ -27,7 +27,8 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[ClusterConfig](config, "app.cluster"),
     loadConfigOrThrow[PersistenceConfig](config, "app.persistence"),
     loadConfigOrThrow[AuthConfig](config, "app.auth"),
-    loadConfigOrThrow[OidcConfig](config, "app.oidc")
+    loadConfigOrThrow[OidcConfig](config, "app.oidc"),
+    loadConfigOrThrow[Kafka](config, "app.kafka")
   )
 
 }
