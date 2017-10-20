@@ -10,7 +10,7 @@ import cats.syntax.functor._
 import cats.syntax.applicativeError._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.iam.core.auth.{User, UserInfo}
+import ch.epfl.bluebrain.nexus.iam.core.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import io.circe.DecodingFailure
 import journal.Logger
@@ -51,31 +51,36 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
     forward(Get(config.tokenEndpoint.withQuery(Query("code" -> code, "state" -> state))))
 
   /**
-    * Fetches and forwards the [[UserInfo]] object associated to these ''credentials''.
+    * Forwards the ''userinfo'' object received from the provider for these ''credentials''.
     * @param credentials the OAuth 2.0 bearer token given by the provider
-    * @return a [[UserInfo]] instance in an ''F'' context
+    * @return the response in an ''F'' context
     */
-  def userInfo(credentials: OAuth2BearerToken): F[UserInfo] = {
-    uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
-      .recoverWith {
-        case UnexpectedUnsuccessfulHttpResponse(resp) =>
-          F.raiseError(UnexpectedUnsuccessfulHttpResponse(mapFailed(resp)))
-        case df: DecodingFailure =>
-          log.error("Unable to decode UserInfo response", df)
-          F.raiseError(df)
-        case NonFatal(th) =>
-          log.error("Downstream call to fetch the UserInfo failed unexpectedly", th)
-          F.raiseError(th)
-      }
-  }
+  def userInfo(credentials: OAuth2BearerToken): F[HttpResponse] =
+    forward(Get(config.userinfoEndpoint).addCredentials(credentials))
 
   /**
     * Fetches the ''userinfo'' associated to this access token and builds the corresponding [[User]] instance.
     * @param accessToken the OAuth 2.0 bearer token given by the provider
-    * @return a [[User]] holding all the identities the user belongs to in an ''F'' context
+    * @return a future [[User]] holding all the identities the user belongs to
     */
   def getUser(accessToken: String): F[User] = {
-    userInfo(OAuth2BearerToken(accessToken)).map(_.toUser(config.issuer))
+    uicl(Get(config.userinfoEndpoint).addCredentials(OAuth2BearerToken(accessToken)))
+      .map(_.toUser(config.issuer))
+      .recoverWith {
+        case df: DecodingFailure =>
+          log.error("Unable to decode UserInfo response", df)
+          F.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.BadGateway)))
+        case UnexpectedUnsuccessfulHttpResponse(resp) =>
+          if (resp.status == StatusCodes.Unauthorized) {
+            log.info(s"Credentials were rejected by the OIDC provider ${resp.status} ${config.userinfoEndpoint}")
+          } else {
+            log.error(s"Unexpected status code from OIDC provider ${resp.status} ${config.userinfoEndpoint}")
+          }
+          F.raiseError(UnexpectedUnsuccessfulHttpResponse(mapFailed(resp)))
+        case NonFatal(th) =>
+          log.error("Downstream call to fetch the UserInfo failed unexpectedly", th)
+          F.raiseError(th)
+      }
   }
 
   /**
@@ -88,10 +93,10 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
     cl(request) map {
       case resp if resp.status.isSuccess => resp
       case resp if resp.status == StatusCodes.Unauthorized =>
-        log.info(s"Authorization was rejected by the OIDC provider ${resp.status} ${request.uri}")
+        log.info(s"Credentials were rejected by the OIDC provider ${resp.status} ${request.uri}")
         mapFailed(resp)
       case resp =>
-        log.error(s"""Unexpected status code from OIDC provider ${resp.status} ${request.uri}""")
+        log.error(s"Unexpected status code from OIDC provider ${resp.status} ${request.uri}")
         mapFailed(resp)
     }
   }
