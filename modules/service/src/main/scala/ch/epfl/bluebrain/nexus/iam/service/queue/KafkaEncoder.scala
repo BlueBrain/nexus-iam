@@ -24,19 +24,15 @@ trait KafkaEncoder {
   }
 
   import Identity._
-  protected implicit val identityEncoderWithId: Encoder[Identity] = identityEncoder.mapJson { json: Json =>
-    val idOption = for {
-      origin  <- fieldAsString(json, "origin")
-      subject <- fieldAsString(json, "subject") orElse fieldAsString(json, "group")
-    } yield s"$origin/$subject"
-    idOption match {
-      case Some(id) => json.asObject.map(_.add("@id", Json.fromString(id)).asJson).getOrElse(json)
-      case None     => json
-    }
-  }
-
-  private def fieldAsString(json: Json, field: String): Option[String] =
-    json.asObject.flatMap(_(field)).flatMap(_.asString)
+  protected implicit val identityEncoderWithId: Encoder[Identity] =
+    Encoder.encodeJson.contramap(identity => {
+      val id = identity match {
+        case GroupRef(origin, group)  => Json.obj("@id" -> Json.fromString(s"$origin/$group"))
+        case UserRef(origin, subject) => Json.obj("@id" -> Json.fromString(s"$origin/$subject"))
+        case _                        => Json.obj()
+      }
+      identityEncoder.apply(identity) deepMerge id
+    })
 
 }
 // $COVERAGE-ON$
