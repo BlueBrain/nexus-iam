@@ -5,10 +5,10 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Location, OAuth2BearerToken}
+import akka.http.scaladsl.model.headers.Location
 import akka.stream.ActorMaterializer
 import cats.instances.future._
-import ch.epfl.bluebrain.nexus.commons.http.HttpClient
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
@@ -41,7 +41,7 @@ class DownstreamAuthClientSpec
   implicit val as    = ActorSystem("as")
   implicit val mt    = ActorMaterializer()
   implicit val cl    = mock[UntypedHttpClient[Future]]
-  implicit val uicl  = HttpClient.withAkkaUnmarshaller[UserInfo]
+  private val uicl   = HttpClient.withAkkaUnmarshaller[UserInfo]
   private val client = DownstreamAuthClient(oidc, cl, uicl)
 
   before {
@@ -58,8 +58,7 @@ class DownstreamAuthClientSpec
     "forward requests and return successful responses" in {
       forAll(successResponses) { expectedResp =>
         val request = Get(s"http://example.com/${UUID.randomUUID().toString}")
-        when(cl.apply(request))
-          .thenReturn(Future.successful(expectedResp))
+        when(cl.apply(request)).thenReturn(Future.successful(expectedResp))
 
         client.forward(request).futureValue shouldBe expectedResp
       }
@@ -78,8 +77,7 @@ class DownstreamAuthClientSpec
     "map error responses to correct status codes" in {
       forAll(errorResponses) { (errorResponse, expectedErrorCode) =>
         val request = Get(s"http://example.com/${UUID.randomUUID().toString}")
-        when(cl.apply(request))
-          .thenReturn(Future.successful(errorResponse))
+        when(cl.apply(request)).thenReturn(Future.successful(errorResponse))
         client.forward(request).futureValue.status shouldBe expectedErrorCode
       }
     }
@@ -93,18 +91,31 @@ class DownstreamAuthClientSpec
          | "given_name": "givenName",
          | "family_name": "familyName",
          | "email": "email@example.com",
-         | "groups": []
+         | "groups": ["group"]
          |}
        """.stripMargin
-    val userInfo =
-      UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set.empty)
+    val user = UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set("group"))
+      .toUser(oidc.issuer)
 
-    "decode user info" in {
-      when(cl.apply(isA(classOf[HttpRequest])))
-        .thenReturn(
-          Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, userInfoString))))
+    "transform userinfo requests properly" when {
+      "authentication is successful" in {
+        when(cl.apply(isA(classOf[HttpRequest])))
+          .thenReturn(
+            Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, userInfoString))))
 
-      client.userInfo(OAuth2BearerToken("token")).futureValue shouldEqual userInfo
+        client.getUser("token").futureValue shouldEqual user
+      }
+
+      "authentication is rejected or an error is received" in {
+        forAll(errorResponses) { (errorResponse, expectedErrorCode) =>
+          when(cl.apply(isA(classOf[HttpRequest])))
+            .thenReturn(Future.failed(UnexpectedUnsuccessfulHttpResponse(errorResponse)))
+          client
+            .getUser("bad_token")
+            .failed
+            .futureValue shouldEqual UnexpectedUnsuccessfulHttpResponse(HttpResponse(expectedErrorCode))
+        }
+      }
     }
   }
 }

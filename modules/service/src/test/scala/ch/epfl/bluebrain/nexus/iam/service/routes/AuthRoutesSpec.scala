@@ -6,14 +6,12 @@ import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{BasicHttpCredentials, OAuth2BearerToken}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 
 import scala.concurrent.Future
 
@@ -73,12 +71,14 @@ class AuthRoutesSpec
 
     "forward requests to userinfo endpoint and return the downstream response" in {
       val credentials = OAuth2BearerToken(UUID.randomUUID.toString)
-      val alice =
-        UserInfo("alice", "Alice Smith", "alice", "Alice", "Smith", "alice.smith@example.com", Set("some-group"))
 
-      when(cl.userInfo(credentials)).thenReturn(Future.successful(alice))
+      when(cl.userInfo(credentials)).thenReturn(Future.successful(expectedResponse))
       Get(s"/oauth2/userinfo") ~> addCredentials(credentials) ~> routes ~> check {
-        responseAs[UserInfo] shouldBe alice
+        response shouldBe expectedResponse
+      }
+      when(cl.userInfo(credentials)).thenReturn(Future.successful(HttpResponse(StatusCodes.Unauthorized)))
+      Get(s"/oauth2/userinfo") ~> addCredentials(credentials) ~> routes ~> check {
+        response.status shouldBe StatusCodes.Unauthorized
       }
     }
 
