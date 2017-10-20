@@ -33,7 +33,8 @@ Gets the OAuth 2.0 access token from the provider.
 #### Status Codes
 
 - **200 OK**: the request was successfully verified and the access token is returned
-- **401 Unauthorized**: the request was rejected
+- **400 Bad Request**: the request was rejected by the provider
+- **401 Unauthorized**: the credentials were rejected
 
 ### User info
 
@@ -44,9 +45,15 @@ Authorization: Bearer {access_token}
 ```
 ... where `{access_token}` is the access token that was received from the provider, which must be passed in an `Authorization` header.
 
-Gets the *user info* associated to these credentials from the provider.
+Gets the *user info* JSON object associated to these credentials from the provider.
 
 #### Status Codes
 
 - **200 OK**: the access token is valid and the corresponding *user info* is returned
 - **401 Unauthorized**: the access token is invalid or missing
+
+## Error Signaling
+
+The services makes use of the HTTP Status Codes to report the outcome of each API call.
+Unexpected error codes received from the provider are translated to relevant ones.
+In particular, an `Internal Server Error` received from downstream turns into `Bad Gateway`.

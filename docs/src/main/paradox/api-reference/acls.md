@@ -24,7 +24,7 @@ can be subsequently modified by users belonging to administrator groups.
 
 **Note**: Be careful when modifying top-level permissions, as it can results in locking everyone out, or
 on the contrary, giving full ownership to everyone, including anonymous users.  No checks about the sanity of
-such an operation are performed by the service.
+such operations are performed by the service.
 
 ## Actions
 
@@ -64,6 +64,9 @@ PUT /v0/acls/{address}
 {...}
 ```
 
+Payload
+:   @@snip [acls.json](../assets/api-reference/acls.json)
+
 #### Status Codes
 
 - **201 Created**: the resource ACL was created successfully
@@ -77,6 +80,9 @@ PUT /v0/acls/{address}
 POST /v0/acls/{address}
 {...}
 ```
+
+Payload
+:   @@snip [acl.json](../assets/api-reference/acl.json)
 
 #### Status Codes
 
@@ -95,6 +101,27 @@ DELETE /v0/acls/{address}
 - **200 OK**: the resource ACL was cleared successfully
 - **403 Forbidden**: the caller doesn't have `own` rights on this resource
 - **404 Not Found**: the resource ACL was not found, i.e. it is already empty
+
+## Permission format
+
+The `permissions` object in the payload (in both request and response body) is a simple
+JSON array of arbitrary string literals. Internally, the IAM services
+recognizes `read`, `write` and `own`. Third party services can store and
+make use of custom permissions.
+
+## Identity format
+
+The `identity` object in the payload (in both request and response body) is qualified by
+a mandatory `type` field that needs to match one of the literals described below. Additionally,
+any authenticated identity has an `origin` which is the URI of the provider realm. Groups
+have a `group` identifier, and users a `name`.
+
+| Type | Additional fields | Description |
+| --- | --- | --- |
+| Anonymous | *None* | Represents unauthenticated users |
+| AuthenticatedRef | `origin` | Represents any user authenticated by a provider of a specific *origin* |
+| GroupRef | `origin`, `group` | Represents users belonging to a specific *group* within the *origin* realm |
+| UserRef | `origin`, `name` | Represents a single user identified by *name* within the *origin* realm |
 
 ## Error Signaling
 

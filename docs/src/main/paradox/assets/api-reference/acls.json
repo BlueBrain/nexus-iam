@@ -1,0 +1,33 @@
+{
+  "acl": [
+    {
+      "permissions": [
+        "read"
+      ],
+      "identity": {
+        "type": "AuthenticatedRef",
+        "origin": "https://example.com/realm"
+      }
+    },
+    {
+      "permissions": [
+        "read", "write"
+      ],
+      "identity": {
+        "type": "GroupRef",
+        "origin": "https://example.com/realm",
+        "group": "some-group"
+      }
+    },
+    {
+      "permissions": [
+        "read", "write", "own"
+      ],
+      "identity": {
+        "type": "UserRef",
+        "origin": "https://example.com/realm",
+        "name": "alice"
+      }
+    }
+  ]
+}
