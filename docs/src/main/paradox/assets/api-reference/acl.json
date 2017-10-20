@@ -1,0 +1,8 @@
+{
+  "permissions": [
+    "read"
+  ],
+  "identity": {
+    "type": "Anonymous"
+  }
+}
