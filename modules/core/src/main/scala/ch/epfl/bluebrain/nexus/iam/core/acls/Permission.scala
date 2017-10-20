@@ -35,6 +35,12 @@ object Permission {
     */
   val Write = Permission("write")
 
+  /**
+    * Resource publish access permission definition. Publish access to a resource allows
+    * publishing the resource.
+    */
+  val Publish = Permission("publish")
+
   implicit val permissionShow: Show[Permission] = Show.show { case Permission(value) => value }
 
   implicit val permissionKeyEncoder: KeyEncoder[Permission] = KeyEncoder.encodeKeyString.contramap(_.value)
