@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.queue
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.model.Uri
 import akka.kafka.scaladsl.Producer
 import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.persistence.query.Offset
@@ -13,7 +14,7 @@ import shapeless.Typeable
 import io.circe.syntax._
 import io.circe.generic.extras.auto._
 
-object KafkaPublisher extends KafkaEncoder {
+case class KafkaPublisher(baseUri: Uri) extends KafkaEncoder {
 
   private def flow(producerSettings: ProducerSettings[String, String],
                    topic: String): Flow[(Offset, String, Event), Offset, NotUsed] = {

@@ -119,7 +119,7 @@ object Main {
         case _ => Await.result(as.terminate(), 3.seconds)
       }
 
-      KafkaPublisher.start(
+      KafkaPublisher(baseUri).start(
         appConfig.kafka.permissionsProjectionId,
         appConfig.persistence.queryJournalPlugin,
         TaggingAdapter.tag,

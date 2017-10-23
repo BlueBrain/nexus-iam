@@ -39,7 +39,7 @@ class DownstreamAuthClientSpec
     with BeforeAndAfter
     with TableDrivenPropertyChecks
     with ScalaFutures {
-  
+
   private implicit val oidc = OidcConfig(
     "http://example.com/realm",
     "realm",
