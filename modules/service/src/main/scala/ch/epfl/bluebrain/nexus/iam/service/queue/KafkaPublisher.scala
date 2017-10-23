@@ -14,6 +14,11 @@ import shapeless.Typeable
 import io.circe.syntax._
 import io.circe.generic.extras.auto._
 
+/**
+  * Class responsible for starting publishing to Kafka using a `SequentialTagIndexer`
+  *
+  * @param baseUri uri used as base for `@context` and `@id`'s
+  */
 case class KafkaPublisher(baseUri: Uri) extends KafkaEncoder {
 
   private def flow(producerSettings: ProducerSettings[String, String],
@@ -31,6 +36,19 @@ case class KafkaPublisher(baseUri: Uri) extends KafkaEncoder {
 
   }
   // $COVERAGE-OFF$
+  /**
+    * Start publishing events to Kafka
+    *
+    * @param projectionId projection to user for publishing events
+    * @param pluginId query pluging ID
+    * @param tag events with which tag to publish
+    * @param name name of the actor
+    * @param producerSettings Akka StreamsKafka producer settings
+    * @param topic topic to publish to
+    * @param as implicit ActorSystem
+    * @param T implicit Typeable
+    * @return ActorRef for the started actor
+    */
   final def start(projectionId: String,
                   pluginId: String,
                   tag: String,

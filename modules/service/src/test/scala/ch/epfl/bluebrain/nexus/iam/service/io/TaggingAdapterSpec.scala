@@ -32,7 +32,6 @@ class TaggingAdapterSpec extends WordSpecLike with Matchers with TableDrivenProp
     "tag permissions events" in {
       forAll(events) { event =>
         adapter.toJournal(event) shouldBe Tagged(event, Set("permission"))
-
       }
     }
 
