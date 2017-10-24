@@ -39,9 +39,7 @@ class DownstreamAuthClientSpec
     with BeforeAndAfter
     with TableDrivenPropertyChecks
     with ScalaFutures {
-
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
-
+  
   private implicit val oidc = OidcConfig(
     "http://example.com/realm",
     "realm",
