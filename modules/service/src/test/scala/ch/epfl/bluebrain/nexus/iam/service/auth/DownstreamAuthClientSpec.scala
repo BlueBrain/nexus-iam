@@ -15,6 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.DecodingFailure
+import io.circe.syntax._
 import org.mockito.ArgumentMatchers.isA
 import org.mockito.Mockito
 import org.mockito.Mockito.when
@@ -130,6 +131,22 @@ class DownstreamAuthClientSpec
         when(cl.apply(isA(classOf[HttpRequest]))).thenReturn(Future.failed(df))
 
         client.getUser(OAuth2BearerToken("valid_token")).failed.futureValue shouldBe UnexpectedAuthenticationFailure(df)
+      }
+    }
+
+    val authFailures = Table(
+      ("failure", "expected JSON encoding"),
+      (UnauthorizedCaller,
+       """{"code":"UnauthorizedCaller","description":"The caller is not permitted to perform this request"}"""),
+      (UnexpectedAuthenticationFailure(new Exception),
+       """{"code":"UnexpectedAuthenticationFailure","description":"Error received from downstream authentication provider","cause":null}"""),
+      (UnexpectedAuthenticationFailure(DecodingFailure("Unable to decode userinfo", List.empty)),
+       """{"code":"UnexpectedAuthenticationFailure","description":"Error received from downstream authentication provider","cause":"Unable to decode userinfo"}""")
+    )
+
+    "encode authentication failure errors to JSON" in {
+      forAll(authFailures) { (f: AuthenticationFailure, encoding) =>
+        f.asJson.noSpaces shouldEqual encoding
       }
     }
   }

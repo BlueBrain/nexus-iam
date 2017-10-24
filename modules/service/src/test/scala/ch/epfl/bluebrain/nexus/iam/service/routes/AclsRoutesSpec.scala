@@ -133,7 +133,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         responseAs[AccessControlList].acl shouldBe empty
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Forbidden
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
     }
 

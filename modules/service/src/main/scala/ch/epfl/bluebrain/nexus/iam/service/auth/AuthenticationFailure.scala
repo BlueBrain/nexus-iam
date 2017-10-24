@@ -29,7 +29,7 @@ object AuthenticationFailure {
       Json.obj(
         "code"        -> Json.fromString("UnexpectedAuthenticationFailure"),
         "description" -> Json.fromString(f.message),
-        "cause"       -> Json.fromString(cause.getMessage)
+        "cause"       -> Option(cause.getMessage).fold(Json.Null)(Json.fromString)
       )
   }
 }
