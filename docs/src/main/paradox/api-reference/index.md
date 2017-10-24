@@ -11,5 +11,5 @@ As with the rest of the Nexus platform, the IAM service exposes a RESTful interf
 communication. 
 The generally adopted transport format is JSON based.
 
-The service handles @ref:[access control lists](acls.md) and identifies users through third party provider via
+The service handles @ref:[access control lists](acls.md) and identifies users through third party providers via
 its own @ref:[authentication](auth.md) interface.

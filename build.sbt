@@ -62,7 +62,7 @@ lazy val kamonDeps = Seq(
 lazy val docs = project
   .in(file("docs"))
   .enablePlugins(ParadoxPlugin)
-  .settings(noPublish)
+  .settings(common, noPublish)
   .settings(
     name                          := "iam-docs",
     moduleName                    := "iam-docs",
@@ -179,8 +179,6 @@ lazy val root = project
   .settings(
     name := "iam",
     moduleName := "iam",
-    homepage := Some(new URL("https://github.com/BlueBrain/nexus-iam")),
-    licenses := Seq(("Apache 2.0", new URL("https://github.com/BlueBrain/nexus-kg/blob/master/LICENSE"))),
     description := "Nexus Identity & Access Management")
   .aggregate(docs, core, service, oidcCore, oidcBbp)
 
