@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.iam.service
 
 import java.time.Clock
 
-import _root_.io.circe.generic.auto._
 import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
@@ -14,11 +13,12 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Permission, Permissions}
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
@@ -62,18 +62,18 @@ object Main {
     // cluster join hook
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
-
+      implicit val oidcConfig  = appConfig.oidc
       val clock                = Clock.systemUTC
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate, clock)
-      val downStreamAuthClient = DownstreamAuthClient(appConfig.oidc, cl, uicl)
+      val downStreamAuthClient = DownstreamAuthClient(cl, uicl)
 
       if (appConfig.auth.adminGroups.isEmpty) {
         logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
         logger.warning("Top-level permissions might be missing as a result")
       } else {
         val ownRead     = Permissions(Permission.Own, Permission.Read)
-        val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.issuer, group))
+        val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.realm, group))
         acl.fetch(Path./).onComplete {
           case Success(mapping) =>
             adminGroups.foreach {

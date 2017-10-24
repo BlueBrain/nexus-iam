@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 /**
   * Base enumeration type for __command__ definitions.  Commands are attempts to change the system internal state, not

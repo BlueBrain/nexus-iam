@@ -1,17 +1,20 @@
 package ch.epfl.bluebrain.nexus.iam.service.auth
 
 import akka.http.scaladsl.client.RequestBuilding.Get
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import cats.MonadError
-import cats.syntax.functor._
 import cats.syntax.applicativeError._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.iam.core.auth._
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.iam.auth._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
+  UnauthorizedCaller,
+  UnexpectedAuthenticationFailure
+}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import io.circe.DecodingFailure
 import journal.Logger
@@ -21,13 +24,13 @@ import scala.util.control.NonFatal
 /**
   * Downstream authentication provider client which executes the requests and returns successful responses and maps
   * unsuccessful responses to correct error response
-  * @param config A config object holding the OIDC provider endpoints
   * @param cl     An untyped HTTP client
   * @param uicl   An HTTP Client to fetch a [[UserInfo]] entity
   * @tparam F     the execution mode of the type class, i.e.: __Try__, __Future__
   */
-class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
-    implicit F: MonadError[F, Throwable]) {
+class DownstreamAuthClient[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
+    implicit F: MonadError[F, Throwable],
+    config: OidcConfig) {
 
   private val log = Logger[this.type]
 
@@ -66,7 +69,7 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
     */
   def getUser(credentials: OAuth2BearerToken): F[User] = {
     uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
-      .map(_.toUser(config.issuer))
+      .map(_.toUser(config.realm))
       .recoverWith {
         case df: DecodingFailure =>
           log.error("Unable to decode UserInfo response", df)
@@ -122,7 +125,8 @@ object DownstreamAuthClient {
     *
     * @see [[DownstreamAuthClient]]
     */
-  def apply[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
-      implicit F: MonadError[F, Throwable]): DownstreamAuthClient[F] =
-    new DownstreamAuthClient(config, cl, uicl)
+  def apply[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
+      implicit F: MonadError[F, Throwable],
+      config: OidcConfig): DownstreamAuthClient[F] =
+    new DownstreamAuthClient(cl, uicl)
 }

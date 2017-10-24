@@ -1,10 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.Future
@@ -13,7 +14,8 @@ import scala.concurrent.Future
   * HTTP routes for OAuth2 specific functionality
   * @param downstreamClient OIDC provider client
   */
-class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends DefaultRoutes("oauth2") {
+class AuthRoutes(downstreamClient: DownstreamAuthClient[Future])(implicit oidc: OidcConfig)
+    extends DefaultRoutes("oauth2") {
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?)) { redirectUri =>
@@ -26,13 +28,14 @@ class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends Default
           complete(downstreamClient.token(code, state))
         }
       } ~
-      (get & path("userinfo")) {
-        extractCredentials {
-          case Some(credentials: OAuth2BearerToken) =>
-            traceName("userinfo") {
-              complete(downstreamClient.userInfo(credentials))
-            }
-          case _ => complete(StatusCodes.Unauthorized)
+      (get & path("userinfo") & extractBearerToken) { credentials =>
+        traceName("userinfo") {
+          complete(downstreamClient.userInfo(credentials))
+        }
+      } ~
+      (get & path("user") & extractBearerToken) { credentials =>
+        traceName("user") {
+          complete(downstreamClient.getUser(credentials))
         }
       }
 }
@@ -44,6 +47,7 @@ object AuthRoutes {
     * @param downstreamClient OIDC provider client
     * @return new instance of AuthRoutes
     */
-  def apply(downstreamClient: DownstreamAuthClient[Future]): AuthRoutes = new AuthRoutes(downstreamClient)
+  def apply(downstreamClient: DownstreamAuthClient[Future])(implicit oidc: OidcConfig): AuthRoutes =
+    new AuthRoutes(downstreamClient)
   // $COVERAGE-ON$
 }

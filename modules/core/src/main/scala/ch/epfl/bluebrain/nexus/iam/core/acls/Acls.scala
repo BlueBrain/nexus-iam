@@ -4,12 +4,13 @@ import java.time.Clock
 
 import cats.MonadError
 import cats.implicits._
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls.PermissionAggregate
 import ch.epfl.bluebrain.nexus.iam.core.acls.Command._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.{Current, Initial}
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import journal.Logger
 

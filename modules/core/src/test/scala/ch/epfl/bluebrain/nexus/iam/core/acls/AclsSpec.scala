@@ -3,12 +3,12 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 import java.time.Clock
 import java.util.UUID
 
-import akka.http.scaladsl.model.Uri
 import cats.instances.try_._
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State._
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import org.scalatest.{Matchers, WordSpecLike}
@@ -24,7 +24,7 @@ class AclsSpec extends WordSpecLike with Matchers {
   private val Own                      = Permissions(Permission.Own)
   private val OwnRead                  = Permissions(Permission.Own, Permission.Read)
   private val OwnReadWrite             = Permissions(Permission.Own, Permission.Read, Permission.Write)
-  private implicit val alice: Identity = UserRef(Uri("http://localhost"), "Alice")
+  private implicit val alice: Identity = UserRef("realm", "Alice")
 
   "An ACL service" should {
 

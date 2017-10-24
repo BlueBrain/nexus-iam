@@ -5,11 +5,11 @@ import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.Credentials
-import ch.epfl.bluebrain.nexus.iam.core.acls.Permissions._
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.auth._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.core.auth._
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
