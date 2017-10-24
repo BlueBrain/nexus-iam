@@ -78,6 +78,14 @@ final case class Permissions(set: Set[Permission]) extends (Permission => Boolea
   def containsAll(permissions: Permissions): Boolean = permissions.set.subsetOf(set)
 
   /**
+    * Checks whether at least one of the argument __Permissions__ is included in this set.
+    *
+    * @param permissions the permissions to check for inclusion in this set
+    * @return __true__ if any of the argument permission is included, __false__ otherwise
+    */
+  def containsAny(permissions: Permissions): Boolean = permissions.set.intersect(set).nonEmpty
+
+  /**
     * Checks whether the argument __Permission__ is included in this set.  This method is equivalent to
     * `contains`. It allows permissions sets to be interpreted as predicates.
     *
@@ -92,6 +100,13 @@ final case class Permissions(set: Set[Permission]) extends (Permission => Boolea
     * @return __true__ if this set contains no permissions, __false__ otherwise
     */
   def isEmpty: Boolean = set.isEmpty
+
+  /**
+    * Checks whether this set of permissions is not empty.
+    *
+    * @return __true__ if this set contains permissions, __false__ otherwise
+    */
+  def nonEmpty: Boolean = set.nonEmpty
 
 }
 

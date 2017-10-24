@@ -1,14 +1,16 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server._
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.Credentials
-import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Permissions._
+import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.auth._
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
@@ -76,7 +78,7 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
                     }
                   }
                 case _ =>
-                  authorizeAsync(check(path, user, Permission.Read)) {
+                  authorizeAsync(check(path, user, Permission.Read, Permission.Write, Permission.Own)) {
                     traceName("getPermissions") {
                       onSuccess(acl.retrieve(path, user.identities)) { result =>
                         complete(StatusCodes.OK -> AccessControlList.fromMap(result))
@@ -91,12 +93,21 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
   }
 
   private def authenticator(implicit ec: ExecutionContext): AsyncAuthenticator[User] = {
-    case Credentials.Missing         => Future.successful(None)
-    case Credentials.Provided(token) => dsac.getUser(token).map(Option.apply)
+    case Credentials.Missing => Future.successful(None)
+    case Credentials.Provided(token) =>
+      dsac
+        .getUser(OAuth2BearerToken(token))
+        .map(Some.apply)
+        .recover { case UnauthorizedCaller => None }
   }
 
-  private def check(path: Path, user: User, permission: Permission)(implicit ec: ExecutionContext): Future[Boolean] =
-    acl.retrieve(path, user.identities).map(_.values.exists(_.contains(permission)))
+  /**
+    * Checks whether the ''user'' has __any__ of the ''permissions'' argument on this resource ''path''.
+    *
+    * @return a future true if the user has one of the required permissions, false otherwise
+    */
+  private def check(path: Path, user: User, permissions: Permission*)(implicit ec: ExecutionContext): Future[Boolean] =
+    acl.retrieve(path, user.identities).map(_.values.exists(_.containsAny(Permissions(permissions: _*))))
 
 }
 

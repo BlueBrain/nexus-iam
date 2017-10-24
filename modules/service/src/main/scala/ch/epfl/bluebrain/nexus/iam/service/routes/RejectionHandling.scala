@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.Authorization
+import akka.http.scaladsl.server.AuthenticationFailedRejection.CredentialsRejected
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
@@ -25,6 +26,10 @@ object RejectionHandling {
     RejectionHandler
       .newBuilder()
       .handle {
+        case AuthenticationFailedRejection(CredentialsRejected, _) =>
+          complete(Unauthorized)
+        case AuthorizationFailedRejection =>
+          complete(Forbidden)
         case ValidationRejection(_, Some(e: IllegalPermissionString)) =>
           complete(BadRequest -> (e: CommonRejections))
         case MalformedQueryParamRejection(_, _, Some(e: CommonRejections)) =>

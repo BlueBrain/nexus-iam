@@ -5,14 +5,16 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Location
+import akka.http.scaladsl.model.headers.{Location, OAuth2BearerToken}
 import akka.stream.ActorMaterializer
 import cats.instances.future._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe.DecodingFailure
 import org.mockito.ArgumentMatchers.isA
 import org.mockito.Mockito
 import org.mockito.Mockito.when
@@ -94,8 +96,9 @@ class DownstreamAuthClientSpec
          | "groups": ["group"]
          |}
        """.stripMargin
-    val user = UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set("group"))
-      .toUser(oidc.issuer)
+    val user =
+      UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set("group"))
+        .toUser(oidc.issuer)
 
     "transform userinfo requests properly" when {
       "authentication is successful" in {
@@ -103,18 +106,30 @@ class DownstreamAuthClientSpec
           .thenReturn(
             Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, userInfoString))))
 
-        client.getUser("token").futureValue shouldEqual user
+        client.getUser(OAuth2BearerToken("valid_token")).futureValue shouldEqual user
       }
 
       "authentication is rejected or an error is received" in {
         forAll(errorResponses) { (errorResponse, expectedErrorCode) =>
           when(cl.apply(isA(classOf[HttpRequest])))
             .thenReturn(Future.failed(UnexpectedUnsuccessfulHttpResponse(errorResponse)))
+
+          val expected =
+            if (errorResponse.status == StatusCodes.Unauthorized) UnauthorizedCaller
+            else UnexpectedAuthenticationFailure(UnexpectedUnsuccessfulHttpResponse(HttpResponse(expectedErrorCode)))
+
           client
-            .getUser("bad_token")
+            .getUser(OAuth2BearerToken("bad_token"))
             .failed
-            .futureValue shouldEqual UnexpectedUnsuccessfulHttpResponse(HttpResponse(expectedErrorCode))
+            .futureValue shouldEqual expected
         }
+      }
+
+      "decoding the user info object fails" in {
+        val df = DecodingFailure("Failed to decode userinfo", List.empty)
+        when(cl.apply(isA(classOf[HttpRequest]))).thenReturn(Future.failed(df))
+
+        client.getUser(OAuth2BearerToken("valid_token")).failed.futureValue shouldBe UnexpectedAuthenticationFailure(df)
       }
     }
   }
