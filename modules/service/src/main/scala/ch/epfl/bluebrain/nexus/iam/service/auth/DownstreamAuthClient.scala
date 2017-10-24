@@ -11,6 +11,7 @@ import cats.syntax.applicativeError._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.iam.core.auth._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import io.circe.DecodingFailure
 import journal.Logger
@@ -60,26 +61,28 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
 
   /**
     * Fetches the ''userinfo'' associated to this access token and builds the corresponding [[User]] instance.
-    * @param accessToken the OAuth 2.0 bearer token given by the provider
-    * @return a future [[User]] holding all the identities the user belongs to
+    * @param credentials the OAuth 2.0 bearer token given by the provider
+    * @return a [[User]] holding all the identities the user belongs to, in an ''F'' context
     */
-  def getUser(accessToken: String): F[User] = {
-    uicl(Get(config.userinfoEndpoint).addCredentials(OAuth2BearerToken(accessToken)))
+  def getUser(credentials: OAuth2BearerToken): F[User] = {
+    uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
       .map(_.toUser(config.issuer))
       .recoverWith {
         case df: DecodingFailure =>
           log.error("Unable to decode UserInfo response", df)
-          F.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.BadGateway)))
-        case UnexpectedUnsuccessfulHttpResponse(resp) =>
-          if (resp.status == StatusCodes.Unauthorized) {
-            log.info(s"Credentials were rejected by the OIDC provider ${resp.status} ${config.userinfoEndpoint}")
+          F.raiseError(UnexpectedAuthenticationFailure(df))
+        case UnexpectedUnsuccessfulHttpResponse(HttpResponse(status, _, _, _)) =>
+          val cause = if (status == StatusCodes.Unauthorized) {
+            log.info(s"Credentials were rejected by the OIDC provider $status ${config.userinfoEndpoint}")
+            UnauthorizedCaller
           } else {
-            log.error(s"Unexpected status code from OIDC provider ${resp.status} ${config.userinfoEndpoint}")
+            log.error(s"Unexpected status code from OIDC provider $status ${config.userinfoEndpoint}")
+            UnexpectedAuthenticationFailure(UnexpectedUnsuccessfulHttpResponse(HttpResponse(mapErrorCode(status))))
           }
-          F.raiseError(UnexpectedUnsuccessfulHttpResponse(mapFailed(resp)))
+          F.raiseError(cause)
         case NonFatal(th) =>
           log.error("Downstream call to fetch the UserInfo failed unexpectedly", th)
-          F.raiseError(th)
+          F.raiseError(UnexpectedAuthenticationFailure(th))
       }
   }
 
@@ -94,19 +97,21 @@ class DownstreamAuthClient[F[_]](config: OidcConfig, cl: UntypedHttpClient[F], u
       case resp if resp.status.isSuccess => resp
       case resp if resp.status == StatusCodes.Unauthorized =>
         log.info(s"Credentials were rejected by the OIDC provider ${resp.status} ${request.uri}")
-        mapFailed(resp)
+        mapFailedResponse(resp)
       case resp =>
         log.error(s"Unexpected status code from OIDC provider ${resp.status} ${request.uri}")
-        mapFailed(resp)
+        mapFailedResponse(resp)
     }
   }
 
-  private def mapFailed(resp: HttpResponse): HttpResponse = resp.status match {
-    case Unauthorized                     => HttpResponse(Unauthorized)
-    case Forbidden                        => HttpResponse(Forbidden)
-    case InternalServerError | BadGateway => HttpResponse(BadGateway)
-    case GatewayTimeout                   => HttpResponse(GatewayTimeout)
-    case _                                => HttpResponse(InternalServerError)
+  private def mapFailedResponse(resp: HttpResponse): HttpResponse = HttpResponse(mapErrorCode(resp.status))
+
+  private def mapErrorCode(status: StatusCode): StatusCode = status match {
+    case Unauthorized                     => Unauthorized
+    case Forbidden                        => Forbidden
+    case InternalServerError | BadGateway => BadGateway
+    case GatewayTimeout                   => GatewayTimeout
+    case _                                => InternalServerError
   }
 }
 

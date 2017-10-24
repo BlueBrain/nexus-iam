@@ -11,12 +11,14 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.TestDuration
 import akka.util.Timeout
 import cats.instances.future._
+import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.auth.AuthenticatedUser
 import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
@@ -131,7 +133,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         responseAs[AccessControlList].acl shouldBe empty
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Forbidden
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
     }
 
@@ -182,6 +185,26 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
     }
 
+    "handle downstream error codes" in {
+      when(dsac.getUser(credentials)).thenReturn(Future.failed(UnauthorizedCaller))
+      Get("/acls/a/b/c") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.Unauthorized
+      }
+
+      when(dsac.getUser(credentials)).thenReturn(Future.failed(
+        UnexpectedAuthenticationFailure(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.BadGateway)))))
+      Get("/acls/a/b/c") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadGateway
+      }
+
+      when(dsac.getUser(credentials)).thenReturn(Future.failed(new Exception))
+      Get("/acls/a/b/c") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.InternalServerError
+      }
+
+      when(dsac.getUser(credentials)).thenReturn(Future.successful(user)) // reset
+    }
+
   }
 }
 
@@ -214,7 +237,7 @@ abstract class AclsRoutesSpecInstances
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    when(dsac.getUser("token")).thenReturn(Future.successful(user))
+    when(dsac.getUser(credentials)).thenReturn(Future.successful(user))
     val p       = Promise[Unit]()
     val cluster = Cluster(system)
     cluster.registerOnMemberUp {
@@ -224,7 +247,7 @@ abstract class AclsRoutesSpecInstances
                                                                                                          Acls.eval)
       val acl = Acls[Future](aggregate, cl)
       acl.create(Path./, AccessControlList(alice -> own))(alice)
-      routes = Route.seal(new AclsRoutes(acl, dsac).routes)
+      routes = new AclsRoutes(acl, dsac).routes
       p.success(())
     }
     cluster.join(cluster.selfAddress)
