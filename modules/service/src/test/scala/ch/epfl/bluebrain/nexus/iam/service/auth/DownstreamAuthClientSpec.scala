@@ -11,7 +11,10 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{UnauthorizedCaller, UnexpectedAuthenticationFailure}
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
+  UnauthorizedCaller,
+  UnexpectedAuthenticationFailure
+}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.DecodingFailure
@@ -38,17 +41,19 @@ class DownstreamAuthClientSpec
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
 
-  private val oidc = OidcConfig(
+  private implicit val oidc = OidcConfig(
     "http://example.com/realm",
+    "realm",
     "http://example.com/authorize",
     "http://example.com/token",
     "http://example.com/userinfo",
   )
-  implicit val as    = ActorSystem("as")
-  implicit val mt    = ActorMaterializer()
-  implicit val cl    = mock[UntypedHttpClient[Future]]
+  implicit val as = ActorSystem("as")
+  implicit val mt = ActorMaterializer()
+  implicit val cl = mock[UntypedHttpClient[Future]]
+
   private val uicl   = HttpClient.withAkkaUnmarshaller[UserInfo]
-  private val client = DownstreamAuthClient(oidc, cl, uicl)
+  private val client = DownstreamAuthClient(cl, uicl)
 
   before {
     Mockito.reset(cl)
@@ -102,7 +107,7 @@ class DownstreamAuthClientSpec
        """.stripMargin
     val user =
       UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set("group"))
-        .toUser(oidc.issuer)
+        .toUser(oidc.realm)
 
     "transform userinfo requests properly" when {
       "authentication is successful" in {

@@ -39,6 +39,7 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
 
       appConfig.oidc shouldEqual OidcConfig(
         "http://localhost:8080/realm",
+        "realm",
         "http://localhost:8080/oauth2/authorize",
         "http://localhost:8080/token",
         "http://localhost:8080/userinfo"

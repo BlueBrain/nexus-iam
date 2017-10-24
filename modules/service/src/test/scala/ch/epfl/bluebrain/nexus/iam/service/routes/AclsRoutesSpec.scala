@@ -19,6 +19,10 @@ import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
+  UnauthorizedCaller,
+  UnexpectedAuthenticationFailure
+}
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
@@ -77,7 +81,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
     "reject command with invalid identity" in {
       val path = Path(s"/some/$rand")
       val content = HttpEntity(ContentTypes.`application/json`,
-                               """{"acl":[{"permissions": ["read"], "identity": {"origin": "foö://bar"}}]}""")
+                               """{"acl":[{"permissions": ["read"], "identity": {"realm": "foö://bar"}}]}""")
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[IllegalIdentityFormat.type]
@@ -225,13 +229,13 @@ abstract class AclsRoutesSpecInstances
   protected val readWrite    = Permissions(Read, Write)
   protected val own          = Permissions(Own)
   protected val read         = Permissions(Read)
-  protected val local        = Uri("http://localhost/realm")
-  protected val alice        = UserRef(local, "alice")
-  protected val someGroup    = GroupRef(local, "some-group")
-  protected val otherGroup   = GroupRef(local, "other-group")
+  protected val realm        = "realm"
+  protected val alice        = UserRef(realm, "alice")
+  protected val someGroup    = GroupRef(realm, "some-group")
+  protected val otherGroup   = GroupRef(realm, "other-group")
   protected val dsac         = mock[DownstreamAuthClient[Future]]
   protected val credentials  = OAuth2BearerToken("token")
-  protected val user         = AuthenticatedUser(Set(Anonymous, AuthenticatedRef(local), someGroup, alice))
+  protected val user         = AuthenticatedUser(Set(Anonymous, AuthenticatedRef(Some(realm)), someGroup, alice))
 
   var routes: Route = _
 

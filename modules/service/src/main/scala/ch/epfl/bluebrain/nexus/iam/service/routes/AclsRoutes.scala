@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._

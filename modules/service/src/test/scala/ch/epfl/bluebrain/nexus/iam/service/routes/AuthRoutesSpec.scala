@@ -8,12 +8,14 @@ import akka.http.scaladsl.model.headers.{BasicHttpCredentials, OAuth2BearerToken
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+
 import scala.concurrent.Future
 
 class AuthRoutesSpec
@@ -24,7 +26,15 @@ class AuthRoutesSpec
     with MockitoSugar
     with ScalaFutures {
 
-  val cl     = mock[DownstreamAuthClient[Future]]
+  val cl = mock[DownstreamAuthClient[Future]]
+  private implicit val oidc = OidcConfig(
+    "http://example.com/realm",
+    "realm",
+    "http://example.com/authorize",
+    "http://example.com/token",
+    "http://example.com/userinfo",
+  )
+
   val routes = AuthRoutes(cl).routes
 
   before {
@@ -86,14 +96,14 @@ class AuthRoutesSpec
     "request user endpoint and return a user entity response" in {
       val credentials = OAuth2BearerToken(UUID.randomUUID.toString)
       val user = UserInfo("sub",
-        "name",
-        "preferredUsername",
-        "givenName",
-        "familyName",
-        "email@example.com",
-        Set("group1", "group2")).toUser("http://localhost.com/realm")
+                          "name",
+                          "preferredUsername",
+                          "givenName",
+                          "familyName",
+                          "email@example.com",
+                          Set("group1", "group2")).toUser("http://localhost.com/realm")
 
-      when(cl.getUser(credentials.token)).thenReturn(Future.successful(user))
+      when(cl.getUser(credentials)).thenReturn(Future.successful(user))
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         response.status shouldBe StatusCodes.OK
         responseAs[User] shouldEqual user
