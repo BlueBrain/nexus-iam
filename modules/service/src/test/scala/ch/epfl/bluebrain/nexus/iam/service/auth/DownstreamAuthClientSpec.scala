@@ -30,6 +30,7 @@ import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DownstreamAuthClientSpec
     extends WordSpecLike
@@ -54,6 +55,9 @@ class DownstreamAuthClientSpec
 
   private val uicl   = HttpClient.withAkkaUnmarshaller[UserInfo]
   private val client = DownstreamAuthClient(cl, uicl)
+
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 100 millis)
 
   before {
     Mockito.reset(cl)
