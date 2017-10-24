@@ -54,7 +54,6 @@ class DownstreamAuthClientSpec
   private val uicl   = HttpClient.withAkkaUnmarshaller[UserInfo]
   private val client = DownstreamAuthClient(cl, uicl)
 
-
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 100 millis)
 
   before {

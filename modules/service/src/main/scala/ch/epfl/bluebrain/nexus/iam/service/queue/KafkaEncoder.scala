@@ -1,12 +1,13 @@
 package ch.epfl.bluebrain.nexus.iam.service.queue
 
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, Printer}
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.commons.iam.acls.AccessControlList
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 // $COVERAGE-OFF$
 trait KafkaEncoder {
@@ -34,13 +35,11 @@ trait KafkaEncoder {
 
       val context = Json.obj("@context" -> Json.fromString(contextUri.toString))
       val id = identity match {
-        case GroupRef(origin, group) =>
+        case GroupRef(realm, group) =>
           Json.obj(
-            "@id" -> Json.fromString(
-              baseUri.withPath(baseUri.path / "realms" / origin.name / "groups" / group).toString))
-        case UserRef(origin, sub) =>
-          Json.obj(
-            "@id" -> Json.fromString(baseUri.withPath(baseUri.path / "realms" / origin.name / "users" / sub).toString))
+            "@id" -> Json.fromString(baseUri.withPath(baseUri.path / "realms" / realm / "groups" / group).toString))
+        case UserRef(realm, sub) =>
+          Json.obj("@id" -> Json.fromString(baseUri.withPath(baseUri.path / "realms" / realm / "users" / sub).toString))
         case _ => Json.obj()
       }
 

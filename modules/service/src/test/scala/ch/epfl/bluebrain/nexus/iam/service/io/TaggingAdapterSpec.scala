@@ -3,13 +3,13 @@ package ch.epfl.bluebrain.nexus.iam.service.io
 import java.time.Instant
 import java.util.UUID
 
-import akka.http.scaladsl.model.Uri
 import akka.persistence.journal.Tagged
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Permissions}
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
+import ch.epfl.bluebrain.nexus.iam.core.acls.Meta
 import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Permission.{Own, Read, Write}
-import ch.epfl.bluebrain.nexus.iam.core.acls.{AccessControlList, Meta, Permissions}
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.{GroupRef, Realm, UserRef}
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapterSpec._
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{Matchers, WordSpecLike}
@@ -46,7 +46,7 @@ object TaggingAdapterSpec {
 
   private val uuid        = UUID.randomUUID.toString
   private val path        = "foo" / "bar" / uuid
-  private val local       = Realm("local", Uri("http://localhost/realm"))
+  private val local       = "realm"
   private val user        = UserRef(local, "alice")
   private val group       = GroupRef(local, "some-group")
   private val meta        = Meta(user, Instant.ofEpochMilli(1))

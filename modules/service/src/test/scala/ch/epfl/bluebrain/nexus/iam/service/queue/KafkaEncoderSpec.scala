@@ -4,16 +4,17 @@ import java.time.Instant
 import java.util.UUID
 
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event.{
   PermissionsAdded,
   PermissionsCleared,
   PermissionsRemoved,
   PermissionsSubtracted
 }
+import ch.epfl.bluebrain.nexus.iam.core.acls.Meta
 import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Permission.{Own, Read, Write}
-import ch.epfl.bluebrain.nexus.iam.core.acls.{Meta, Permissions}
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity.{GroupRef, Realm, UserRef}
 import io.circe.syntax._
 import io.circe.generic.extras.auto._
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -23,7 +24,7 @@ class KafkaEncoderSpec extends WordSpecLike with Matchers with TableDrivenProper
   override val baseUri    = Uri("http://localhost/prefix")
   private val uuid        = UUID.randomUUID.toString
   private val path        = "foo" / "bar" / uuid
-  private val local       = Realm("local", Uri("http://localhost/realm"))
+  private val local       = "realm"
   private val user        = UserRef(local, "alice")
   private val group       = GroupRef(local, "some-group")
   private val meta        = Meta(user, Instant.ofEpochMilli(1))
@@ -32,9 +33,9 @@ class KafkaEncoderSpec extends WordSpecLike with Matchers with TableDrivenProper
   private val context    = s""""${baseUri.withPath(baseUri.path / "context")}""""
   private val pathString = s""""${path.repr}""""
   private val groupString =
-    s"""{"@context":$context,"@id":"http://localhost/prefix/realms/local/groups/some-group","realm":{"name":"local","uri":"http://localhost/realm"},"group":"some-group","@type":"GroupRef"}"""
+    s"""{"@context":$context,"@id":"http://localhost/prefix/realms/realm/groups/some-group","realm":"realm","group":"some-group","@type":"GroupRef"}"""
   private val userString =
-    s"""{"@context":$context,"@id":"http://localhost/prefix/realms/local/users/alice","realm":{"name":"local","uri":"http://localhost/realm"},"subject":"alice","@type":"UserRef"}"""
+    s"""{"@context":$context,"@id":"http://localhost/prefix/realms/realm/users/alice","realm":"realm","sub":"alice","@type":"UserRef"}"""
   private val permissionsString = s"""["own","read","write"]"""
 
   val results = Table(
@@ -53,8 +54,6 @@ class KafkaEncoderSpec extends WordSpecLike with Matchers with TableDrivenProper
   "KafkaEncoder" should {
     "encoder events to JSON" in {
       forAll(results) { (event, json) =>
-        println(event.asJson.pretty(printer))
-        println(json)
         event.asJson.pretty(printer) shouldBe json
 
       }

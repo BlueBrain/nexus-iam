@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.headers.HttpChallenges._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 
 trait CredentialsDirectives {
+
   /**
     * Directive that provides the [[OAuth2BearerToken]] if present or rejects otherwise
     *
