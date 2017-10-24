@@ -24,6 +24,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -34,6 +35,8 @@ class DownstreamAuthClientSpec
     with BeforeAndAfter
     with TableDrivenPropertyChecks
     with ScalaFutures {
+
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
 
   private val oidc = OidcConfig(
     "http://example.com/realm",
