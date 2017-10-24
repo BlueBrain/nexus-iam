@@ -1,17 +1,17 @@
 package ch.epfl.bluebrain.nexus.iam.service.auth
 
 import akka.http.scaladsl.client.RequestBuilding.Get
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import cats.MonadError
-import cats.syntax.functor._
 import cats.syntax.applicativeError._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.iam.core.auth._
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.iam.auth._
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{UnauthorizedCaller, UnexpectedAuthenticationFailure}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import io.circe.DecodingFailure
 import journal.Logger

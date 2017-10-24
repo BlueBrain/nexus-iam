@@ -6,14 +6,15 @@ import java.util.UUID
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.serialization.{SerializationExtension, SerializerWithStringManifest}
-import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.service.io.UTF8
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Permission._
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity._
+import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
+import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
-import ch.epfl.bluebrain.nexus.commons.service.io.UTF8
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 import shapeless.Typeable
 

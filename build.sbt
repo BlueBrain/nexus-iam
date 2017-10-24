@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.0"
+val commonsVersion = "0.5.3"
 
 val akkaVersion          = "2.5.4"
 val akkaHttpVersion      = "10.0.10"
@@ -24,6 +24,8 @@ lazy val commonsService = "ch.epfl.bluebrain.nexus" %% "commons-service" % commo
 lazy val sourcingCore   = "ch.epfl.bluebrain.nexus" %% "sourcing-core"   % commonsVersion
 lazy val sourcingMem    = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"    % commonsVersion
 lazy val sourcingAkka   = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"   % commonsVersion
+lazy val iamTypes       = "ch.epfl.bluebrain.nexus" %% "iam"       % commonsVersion
+
 
 lazy val akkaTestkit         = "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion
 lazy val akkaHttp            = "com.typesafe.akka"     %% "akka-http"                  % akkaHttpVersion
@@ -66,6 +68,7 @@ lazy val core = project
     moduleName := "iam-core",
     libraryDependencies ++= Seq(sourcingCore,
                                 commonsHttp,
+                                iamTypes,
                                 journal,
                                 akkaHttp,
                                 shapeless,

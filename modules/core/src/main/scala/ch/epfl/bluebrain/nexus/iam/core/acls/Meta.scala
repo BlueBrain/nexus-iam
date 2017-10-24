@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import java.time.Instant
 
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 /**
   * Type definition that aggregates ''author'' and ''timestamp'' as meta information for

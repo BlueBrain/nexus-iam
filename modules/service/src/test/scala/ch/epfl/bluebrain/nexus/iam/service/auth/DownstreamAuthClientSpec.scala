@@ -10,8 +10,8 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.iam.core.auth.UserInfo
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{UnauthorizedCaller, UnexpectedAuthenticationFailure}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.DecodingFailure

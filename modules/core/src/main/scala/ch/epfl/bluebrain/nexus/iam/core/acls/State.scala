@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.iam.core.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 /**
   * Enumeration type for possible states of a resource on the ACL.

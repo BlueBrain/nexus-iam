@@ -1,10 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
+import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.Future
@@ -26,13 +26,14 @@ class AuthRoutes(downstreamClient: DownstreamAuthClient[Future]) extends Default
           complete(downstreamClient.token(code, state))
         }
       } ~
-      (get & path("userinfo")) {
-        extractCredentials {
-          case Some(credentials: OAuth2BearerToken) =>
-            traceName("userinfo") {
-              complete(downstreamClient.userInfo(credentials))
-            }
-          case _ => complete(StatusCodes.Unauthorized)
+      (get & path("userinfo") & extractBearerToken) { credentials =>
+        traceName("userinfo") {
+          complete(downstreamClient.userInfo(credentials))
+        }
+      } ~
+      (get & path("user") & extractBearerToken) { credentials =>
+        traceName("user") {
+          complete(downstreamClient.getUser(credentials.token))
         }
       }
 }
