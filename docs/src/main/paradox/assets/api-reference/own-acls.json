@@ -1,0 +1,16 @@
+{
+  "acl": [
+    {
+      "permissions": [
+        "read",
+        "write",
+        "own"
+      ],
+      "identity": {
+        "type": "UserRef",
+        "origin": "https://example.com/realm",
+        "name": "alice"
+      }
+    }
+  ]
+}

@@ -61,6 +61,21 @@ lazy val kamonDeps = Seq(
   "org.aspectj" % "aspectjweaver"          % aspectJVersion % Runtime
 )
 
+lazy val docs = project
+  .in(file("docs"))
+  .enablePlugins(ParadoxPlugin)
+  .settings(common, noPublish)
+  .settings(
+    name                          := "iam-docs",
+    moduleName                    := "iam-docs",
+    paradoxTheme                  := Some(builtinParadoxTheme("generic")),
+    target in (Compile, paradox)  := (resourceManaged in Compile).value / "docs",
+    resourceGenerators in Compile += {
+      (paradox in Compile).map { parent =>
+        (parent ** "*").get
+      }.taskValue
+    })
+
 lazy val core = project
   .in(file("modules/core"))
   .settings(
@@ -166,8 +181,12 @@ lazy val service = project
 
 lazy val root = project
   .in(file("."))
-  .settings(common, noPublish, name := "iam", moduleName := "iam", description := "Nexus IAM")
-  .aggregate(core, service, oidcCore, oidcBbp)
+  .settings(common, noPublish)
+  .settings(
+    name := "iam",
+    moduleName := "iam",
+    description := "Nexus Identity & Access Management")
+  .aggregate(docs, core, service, oidcCore, oidcBbp)
 
 /* Common settings */
 
