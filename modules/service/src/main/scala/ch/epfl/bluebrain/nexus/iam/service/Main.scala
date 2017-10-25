@@ -25,6 +25,7 @@ import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -67,6 +68,7 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
       implicit val oidcConfig  = appConfig.oidc
+      implicit val baseApiUri  = ApiUri(baseUri)
       val clock                = Clock.systemUTC
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate, clock)
@@ -119,7 +121,7 @@ object Main {
         case _ => Await.result(as.terminate(), 3.seconds)
       }
 
-      KafkaPublisher(baseUri).start(
+      KafkaPublisher.start(
         appConfig.kafka.permissionsProjectionId,
         appConfig.persistence.queryJournalPlugin,
         TaggingAdapter.tag,

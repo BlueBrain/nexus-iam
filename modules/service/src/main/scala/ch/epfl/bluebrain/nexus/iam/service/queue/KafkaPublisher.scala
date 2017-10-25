@@ -2,34 +2,30 @@ package ch.epfl.bluebrain.nexus.iam.service.queue
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.model.Uri
 import akka.kafka.scaladsl.Producer
 import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.persistence.query.Offset
 import akka.stream.scaladsl.Flow
 import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import io.circe.Encoder
 import org.apache.kafka.clients.producer.ProducerRecord
 import shapeless.Typeable
-import io.circe.syntax._
-import io.circe.generic.extras.auto._
 
 /**
   * Class responsible for starting publishing to Kafka using a `SequentialTagIndexer`
-  *
-  * @param baseUri uri used as base for `@context` and `@id`'s
   */
-case class KafkaPublisher(baseUri: Uri) extends KafkaEncoder {
+object KafkaPublisher {
 
-  private def flow(producerSettings: ProducerSettings[String, String],
-                   topic: String): Flow[(Offset, String, Event), Offset, NotUsed] = {
-
+  private def flow(producerSettings: ProducerSettings[String, String], topic: String)(
+      implicit api: ApiUri): Flow[(Offset, String, Event), Offset, NotUsed] = {
+    implicit val ee: Encoder[Event] = KafkaEncoders.eventEncoder
+    val m                           = KafkaMarshaller.jsonLdMarshaller[Event]
     Flow[(Offset, String, Event)]
       .map {
         case (off, _, event) =>
-          ProducerMessage.Message(
-            new ProducerRecord[String, String](topic, event.path.toString, event.asJson.pretty(printer)),
-            off)
+          ProducerMessage.Message(new ProducerRecord[String, String](topic, event.path.toString, m(event)), off)
       }
       .via(Producer.flow(producerSettings))
       .map(m => m.message.passThrough)
@@ -54,7 +50,7 @@ case class KafkaPublisher(baseUri: Uri) extends KafkaEncoder {
                   tag: String,
                   name: String,
                   producerSettings: ProducerSettings[String, String],
-                  topic: String)(implicit as: ActorSystem, T: Typeable[Event]): ActorRef =
+                  topic: String)(implicit as: ActorSystem, T: Typeable[Event], api: ApiUri): ActorRef =
     SequentialTagIndexer.start(
       flow(producerSettings, topic),
       projectionId,
