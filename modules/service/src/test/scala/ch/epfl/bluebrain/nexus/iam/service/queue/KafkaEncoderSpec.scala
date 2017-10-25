@@ -41,14 +41,14 @@ class KafkaEncoderSpec extends WordSpecLike with Matchers with TableDrivenProper
   val results = Table(
     ("event", "json"),
     (PermissionsAdded(path, group, permissions, meta),
-     s"""{"path":$pathString,"identity":$groupString,"permissions":$permissionsString,"type":"PermissionsAdded"}"""),
+     s"""{"path":$pathString,"identity":$groupString,"permissions":$permissionsString,"@type":"PermissionsAdded"}"""),
     (
       PermissionsSubtracted(path, user, permissions, meta),
-      s"""{"path":$pathString,"identity":$userString,"permissions":$permissionsString,"type":"PermissionsSubtracted"}"""
+      s"""{"path":$pathString,"identity":$userString,"permissions":$permissionsString,"@type":"PermissionsSubtracted"}"""
     ),
     (PermissionsRemoved(path, group, meta),
-     s"""{"path":$pathString,"identity":$groupString,"type":"PermissionsRemoved"}"""),
-    (PermissionsCleared(path, meta), s"""{"path":$pathString,"type":"PermissionsCleared"}""")
+     s"""{"path":$pathString,"identity":$groupString,"@type":"PermissionsRemoved"}"""),
+    (PermissionsCleared(path, meta), s"""{"path":$pathString,"@type":"PermissionsCleared"}""")
   )
 
   "KafkaEncoder" should {

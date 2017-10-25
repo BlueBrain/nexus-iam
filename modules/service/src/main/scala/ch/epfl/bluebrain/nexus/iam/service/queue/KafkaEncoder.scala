@@ -8,6 +8,8 @@ import io.circe.{Encoder, Json, Printer}
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.iam.acls.AccessControlList
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
+import io.circe.generic.extras.semiauto.deriveEncoder
 
 // $COVERAGE-OFF$
 trait KafkaEncoder {
@@ -17,7 +19,7 @@ trait KafkaEncoder {
   lazy val contextUri = baseUri.withPath(baseUri.path / "context")
 
   protected implicit val config: Configuration =
-    Configuration.default.withDiscriminator("type")
+    Configuration.default.withDiscriminator("@type")
 
   protected val printer: Printer = Printer.noSpaces.copy(dropNullKeys = true)
 
@@ -29,7 +31,7 @@ trait KafkaEncoder {
     Json.Null
   }
 
-  import Identity._
+  val identityEncoder: Encoder[Identity] = deriveEncoder[Identity]
   protected implicit val identityEncoderWithId: Encoder[Identity] =
     Encoder.encodeJson.contramap(identity => {
 
@@ -44,7 +46,6 @@ trait KafkaEncoder {
       }
 
       identityEncoder
-        .mapJson(json => json.mapObject(obj => obj("type").map(f => obj.add("@type", f).remove("type")).getOrElse(obj)))
         .apply(identity) deepMerge id deepMerge context
     })
 
