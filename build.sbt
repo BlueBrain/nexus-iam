@@ -2,18 +2,19 @@
 
 val commonsVersion = "0.5.3"
 
-val akkaVersion          = "2.5.4"
-val akkaHttpVersion      = "10.0.10"
-val akkaPersCassVersion  = "0.55"
-val akkaPersMemVersion   = "2.5.1.1"
-val akkaHttpCorsVersion  = "0.2.2"
-val akkaHttpCirceVersion = "1.18.0"
-val shapelessVersion     = "2.3.2"
-val circeVersion         = "0.8.0"
-val journalVersion       = "3.0.18"
-val scalaTestVersion     = "3.0.4"
-val pureconfigVersion    = "0.8.0"
-val mockitoVersion       = "2.10.0"
+val akkaVersion            = "2.5.4"
+val akkaHttpVersion        = "10.0.10"
+val akkaPersCassVersion    = "0.55"
+val akkaStreamKafkaVersion = "0.17"
+val akkaPersMemVersion     = "2.5.1.1"
+val akkaHttpCorsVersion    = "0.2.2"
+val akkaHttpCirceVersion   = "1.18.0"
+val shapelessVersion       = "2.3.2"
+val circeVersion           = "0.8.0"
+val journalVersion         = "3.0.18"
+val scalaTestVersion       = "3.0.4"
+val pureconfigVersion      = "0.8.0"
+val mockitoVersion         = "2.10.0"
 
 val aspectJVersion     = "1.8.11"
 val sigarLoaderVersion = "1.6.6-rev002"
@@ -33,6 +34,7 @@ lazy val akkaClusterSharding = "com.typesafe.akka"     %% "akka-cluster-sharding
 lazy val akkaDData           = "com.typesafe.akka"     %% "akka-distributed-data"      % akkaVersion
 lazy val akkaHttpTestkit     = "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion
 lazy val akkaPersCass        = "com.typesafe.akka"     %% "akka-persistence-cassandra" % akkaPersCassVersion
+lazy val akkaStreamKafka     = "com.typesafe.akka"     %% "akka-stream-kafka"          % akkaStreamKafkaVersion
 lazy val akkaPersMem         = "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersMemVersion
 lazy val akkaHttpCirce       = "de.heikoseeberger"     %% "akka-http-circe"            % akkaHttpCirceVersion
 lazy val akkaHttpCors        = "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion
@@ -82,8 +84,11 @@ lazy val core = project
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
       sourcingCore,
+      commonsService,
       commonsHttp,
       iamTypes,
+      akkaPersCass,
+      akkaStreamKafka,
       journal,
       akkaHttp,
       shapeless,
@@ -92,7 +97,8 @@ lazy val core = project
       sourcingMem % Test,
       circeParser % Test,
       scalaTest   % Test,
-      mockitoCore % Test
+      mockitoCore % Test,
+      akkaTestkit % Test
     )
   )
 
