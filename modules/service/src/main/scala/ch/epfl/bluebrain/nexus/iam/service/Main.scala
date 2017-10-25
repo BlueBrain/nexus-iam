@@ -68,7 +68,7 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
       implicit val oidcConfig  = appConfig.oidc
-      implicit val baseApiUri  = ApiUri(baseUri)
+      implicit val baseApiUri  = ApiUri(apiUri)
       val clock                = Clock.systemUTC
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate, clock)
