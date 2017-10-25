@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{Kafka, OidcConfig}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpecLike}
 
@@ -44,6 +44,7 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
         "http://localhost:8080/token",
         "http://localhost:8080/userinfo"
       )
+      appConfig.kafka shouldEqual Kafka("permissions-topic", "permissions-persistence-id")
     }
   }
 }

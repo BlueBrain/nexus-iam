@@ -22,7 +22,8 @@ final case class AppConfig(description: DescriptionConfig,
                            cluster: ClusterConfig,
                            persistence: PersistenceConfig,
                            auth: AuthConfig,
-                           oidc: OidcConfig)
+                           oidc: OidcConfig,
+                           kafka: Kafka)
 
 object AppConfig {
 
@@ -51,5 +52,7 @@ object AppConfig {
                               authorizeEndpoint: Uri,
                               tokenEndpoint: Uri,
                               userinfoEndpoint: Uri)
+
+  final case class Kafka(permissionsTopic: String, permissionsProjectionId: String)
 
 }
