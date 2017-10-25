@@ -8,6 +8,9 @@ import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.generic.extras.Configuration
 import io.circe.{Encoder, Json}
 
+/**
+  * Circe encoders used for encoding Events to be published to Kafka
+  */
 trait KafkaEncoders {
 
   private implicit val config: Configuration =
@@ -38,6 +41,11 @@ trait KafkaEncoders {
     }
   }
 
+  /**
+    * Event encoder which uses `Encoder[Identity]` which adds `@id` field to JSON representation of `Identity`
+    * @param base base URI for the API
+    * @return encoder for `Event`
+    */
   def eventEncoder(implicit base: ApiUri): Encoder[Event] = {
     import io.circe.generic.extras.auto._
     implicit val id: Encoder[Identity] = kafkaIdentityEncoder(base)
