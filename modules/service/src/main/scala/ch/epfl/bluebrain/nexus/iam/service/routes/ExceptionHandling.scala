@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.ExceptionHandler
 import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
+import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.commons.service.directives.ErrorDirectives._
 import ch.epfl.bluebrain.nexus.commons.service.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure
@@ -28,17 +28,17 @@ object ExceptionHandling {
   private val logger = Logger[this.type]
 
   /**
-    * @return an ExceptionHandler for [[ch.epfl.bluebrain.nexus.iam.core.acls.Rejection]] and
+    * @return an ExceptionHandler for [[ch.epfl.bluebrain.nexus.commons.types.Rejection]] and
     *         [[ch.epfl.bluebrain.nexus.commons.types.Err]] subtypes that ensures a descriptive
     *         message is returned to the caller
     */
   final def exceptionHandler: ExceptionHandler = ExceptionHandler {
     case f: AuthenticationFailure => complete(f: AuthenticationFailure)
     case r: IllegalUriException =>
-      val rejection: CommonRejections = IllegalIdentityFormat(r.getMessage, "origin")
+      val rejection: CommonRejection = IllegalIdentityFormat(r.getMessage, "origin")
       complete(rejection)
-    case r: IllegalIdentityFormat             => complete(r: CommonRejections)
-    case r: IllegalPermissionString           => complete(r: CommonRejections)
+    case r: IllegalIdentityFormat             => complete(r: CommonRejection)
+    case r: IllegalPermissionString           => complete(r: CommonRejection)
     case CommandRejected(r: CommandRejection) => complete(r)
     case UnableToDeserializeEvent             => complete(InternalError("Unable to deserialize event"))
     case UnexpectedState(expected, actual) =>
@@ -74,7 +74,7 @@ object ExceptionHandling {
     case CannotCreateExistingPermissions          => Conflict
   }
 
-  private implicit val commonRejectionsStatusFrom: StatusFrom[CommonRejections] = StatusFrom(_ => BadRequest)
+  private implicit val commonRejectionsStatusFrom: StatusFrom[CommonRejection] = StatusFrom(_ => BadRequest)
 
   private implicit val internalErrorStatusFrom: StatusFrom[InternalError] = StatusFrom(_ => InternalServerError)
 

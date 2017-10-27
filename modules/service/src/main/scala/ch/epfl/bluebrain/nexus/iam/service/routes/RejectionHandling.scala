@@ -5,7 +5,9 @@ import akka.http.scaladsl.model.headers.Authorization
 import akka.http.scaladsl.server.AuthenticationFailedRejection.CredentialsRejected
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server._
-import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
+import ch.epfl.bluebrain.nexus.commons.types.HttpRejection
+import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
+import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
@@ -26,28 +28,28 @@ object RejectionHandling {
     RejectionHandler
       .newBuilder()
       .handle {
-        case AuthenticationFailedRejection(CredentialsRejected, _) =>
+        case AuthenticationFailedRejection(CredentialsRejected, _)        =>
           complete(Unauthorized)
-        case AuthorizationFailedRejection =>
+        case AuthorizationFailedRejection                                 =>
           complete(Forbidden)
-        case ValidationRejection(_, Some(e: IllegalPermissionString)) =>
-          complete(BadRequest -> (e: CommonRejections))
-        case MalformedQueryParamRejection(_, _, Some(e: CommonRejections)) =>
-          complete(BadRequest -> (e: CommonRejections))
-        case MalformedRequestContentRejection(_, e: CommonRejections) =>
-          complete(BadRequest -> (e: CommonRejections))
+        case ValidationRejection(_, Some(e: IllegalPermissionString))     =>
+          complete(BadRequest -> (e: CommonRejection))
+        case MalformedQueryParamRejection(_, _, Some(e: CommonRejection)) =>
+          complete(BadRequest -> (e: CommonRejection))
+        case MalformedRequestContentRejection(_, e: CommonRejection)      =>
+          complete(BadRequest -> (e: CommonRejection))
       }
       .handleAll[MalformedRequestContentRejection] { rejection =>
         val aggregate = rejection.map(_.message).mkString(", ")
-        complete(BadRequest -> (WrongOrInvalidJson(Some(aggregate)): CommonRejections))
+        complete(BadRequest -> (WrongOrInvalidJson(Some(aggregate)): HttpRejection))
       }
       .handleAll[MethodRejection] { methodRejections =>
         val names = methodRejections.map(_.supported.name)
-        complete(MethodNotAllowed -> (MethodNotSupported(names): CommonRejections))
+        complete(MethodNotAllowed -> (MethodNotSupported(names): HttpRejection))
       }
       .handleAll[MissingQueryParamRejection] { rejections =>
         val missingParameters = rejections.map(_.parameterName)
-        complete(BadRequest -> MissingParameters(missingParameters))
+        complete(BadRequest -> (MissingParameters(missingParameters): HttpRejection))
       }
       .handle {
         case MissingHeaderRejection(Authorization.name) =>

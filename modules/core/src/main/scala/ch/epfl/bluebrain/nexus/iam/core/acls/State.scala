@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{Path, Permissions}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 /**
