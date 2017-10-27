@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.5"
+val commonsVersion = "0.5.6"
 
 val akkaVersion            = "2.5.4"
 val akkaHttpVersion        = "10.0.10"
@@ -142,7 +142,7 @@ lazy val oidcBbp = project
     moduleName := "iam-bbp",
     packageName in Docker := "iam-bbp",
     description := "Nexus IAM BBP Integration Service",
-    libraryDependencies ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, journal, scalaTest % Test)
+    libraryDependencies ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, commonsService, journal, scalaTest % Test)
   )
 
 lazy val service = project
