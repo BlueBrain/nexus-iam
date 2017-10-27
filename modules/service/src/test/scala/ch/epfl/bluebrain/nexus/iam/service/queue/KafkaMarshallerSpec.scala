@@ -4,17 +4,12 @@ import java.time.Instant
 import java.util.UUID
 
 import akka.http.scaladsl.model.Uri
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.iam.core.acls.Event.{
-  PermissionsAdded,
-  PermissionsCleared,
-  PermissionsRemoved,
-  PermissionsSubtracted
-}
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.{Event, Meta}
-import ch.epfl.bluebrain.nexus.iam.core.acls.Path._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.Encoder
 import org.scalatest.prop.TableDrivenPropertyChecks

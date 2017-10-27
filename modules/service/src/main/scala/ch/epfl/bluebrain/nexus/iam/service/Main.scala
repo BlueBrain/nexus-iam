@@ -14,7 +14,7 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Permission, Permissions}
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Path, Permission, Permissions}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._

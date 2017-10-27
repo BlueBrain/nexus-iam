@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
+import ch.epfl.bluebrain.nexus.commons.types.Rejection
+
 /**
   * Enumeration type for ACL command rejections.
   */

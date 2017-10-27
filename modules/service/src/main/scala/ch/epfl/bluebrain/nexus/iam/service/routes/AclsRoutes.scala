@@ -9,12 +9,13 @@ import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
-import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejections._
+import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.Decoder
 import io.circe.generic.auto._
