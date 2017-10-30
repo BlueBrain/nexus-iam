@@ -1,8 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives.stripTrailingSlashes
 import ch.epfl.bluebrain.nexus.iam.service.types._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
@@ -18,17 +19,32 @@ import kamon.akka.http.KamonTraceDirectives.traceName
   */
 class StaticRoutes(serviceDescription: ServiceDescription, publicUri: Uri, apiPrefix: String) {
 
-  private val prefix = prefixOf(publicUri)
-
-  def routes: Route = pathPrefix(prefix) {
+  private def serviceDescriptionRoute: Route = pathEndOrSingleSlash {
     get {
-      pathEndOrSingleSlash {
-        traceName("serviceDescription") {
-          complete(Boxed(serviceDescription, List(Link("api", s"$publicUri/$apiPrefix/acls"))))
-        }
+      traceName("serviceDescription") {
+        complete(Boxed(serviceDescription, List(Link("api", s"$publicUri/$apiPrefix/acls"))))
       }
     }
   }
+  private def docsRoute =
+    pathPrefix("docs") {
+      pathEndOrSingleSlash {
+        extractUri { uri =>
+          redirect(uri.copy(path = stripTrailingSlashes(uri.path) / "iam" / "index.html"), StatusCodes.MovedPermanently)
+        }
+      } ~
+        pathPrefix("iam") {
+          pathEndOrSingleSlash {
+            redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
+              getFromResource("docs/index.html")
+            }
+          } ~
+            getFromResourceDirectory("docs")
+        }
+    }
+
+  def routes: Route = serviceDescriptionRoute ~ docsRoute
+
 }
 
 object StaticRoutes {

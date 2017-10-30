@@ -147,7 +147,7 @@ lazy val oidcBbp = project
 
 lazy val service = project
   .in(file("modules/service"))
-  .dependsOn(core)
+  .dependsOn(core, docs)
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
   .settings(
     common,
