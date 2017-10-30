@@ -13,6 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.{Current, Initial}
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import journal.Logger
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Meta
 
 /**
   * Unified ACLs actions provided for all the available resources in the service.
