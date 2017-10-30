@@ -24,12 +24,6 @@ class StaticRoutesSpec extends WordSpecLike with Matchers with ScalatestRouteTes
         responseAs[Boxed[ServiceDescription]] shouldEqual expected
       }
     }
-    "redirect docs to docs/iam/index.html" in {
-      Get("/docs") ~> routes ~> check {
-        status shouldEqual StatusCodes.MovedPermanently
-        response.header[Location].get.uri.path.toString shouldEqual "/docs/iam/index.html"
-      }
-    }
     "redirect docs/iam to docs/iam/" in {
       Get("/docs/iam") ~> routes ~> check {
         status shouldEqual StatusCodes.MovedPermanently

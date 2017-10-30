@@ -3,7 +3,6 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives.stripTrailingSlashes
 import ch.epfl.bluebrain.nexus.iam.service.types._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
@@ -28,19 +27,14 @@ class StaticRoutes(serviceDescription: ServiceDescription, publicUri: Uri, apiPr
   }
   private def docsRoute =
     pathPrefix("docs") {
-      pathEndOrSingleSlash {
-        extractUri { uri =>
-          redirect(uri.copy(path = stripTrailingSlashes(uri.path) / "iam" / "index.html"), StatusCodes.MovedPermanently)
-        }
-      } ~
-        pathPrefix("iam") {
-          pathEndOrSingleSlash {
-            redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
-              getFromResource("docs/index.html")
-            }
-          } ~
-            getFromResourceDirectory("docs")
-        }
+      pathPrefix("iam") {
+        pathEndOrSingleSlash {
+          redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
+            getFromResource("docs/index.html")
+          }
+        } ~
+          getFromResourceDirectory("docs")
+      }
     }
 
   def routes: Route = serviceDescriptionRoute ~ docsRoute
