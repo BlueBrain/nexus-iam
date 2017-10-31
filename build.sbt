@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.6"
+val commonsVersion = "0.5.7"
 
 val akkaVersion            = "2.5.4"
 val akkaHttpVersion        = "10.0.10"

@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Permissions}
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
-import ch.epfl.bluebrain.nexus.iam.core.acls.Meta
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Meta
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapterSpec._
 import org.scalatest.prop.TableDrivenPropertyChecks

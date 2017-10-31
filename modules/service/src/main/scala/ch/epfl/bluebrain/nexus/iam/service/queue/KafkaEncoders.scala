@@ -1,13 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.service.queue
 
-import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControl, AccessControlList}
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControl, AccessControlList, Meta}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.iam.core.acls.{Event, Meta}
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.generic.extras.Configuration
 import io.circe.{Encoder, Json}
-
 /**
   * Circe encoders used for encoding Events to be published to Kafka
   */
