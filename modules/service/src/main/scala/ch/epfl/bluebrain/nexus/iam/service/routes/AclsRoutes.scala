@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
+import java.time.Clock
+
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
@@ -11,6 +13,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
@@ -29,14 +32,12 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param acl  the ACL operations bundle
   * @param dsac the downstream authentication client
   */
-class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends DefaultRoutes("acls") {
+class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit clock: Clock) extends DefaultRoutes("acls") {
 
-  override def apiRoutes: Route = {
-    implicit val caller: Identity = Anonymous
-
+  override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
       extractResourcePath { path =>
-        authenticateOAuth2Async("*", authenticator).withAnonymousUser(AnonymousUser) { user =>
+        authenticateOAuth2Async("*", authenticator).withAnonymousUser(AnonymousUser) { implicit user =>
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {
@@ -91,7 +92,6 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
         }
       }
     }
-  }
 
   private def authenticator(implicit ec: ExecutionContext): AsyncAuthenticator[User] = {
     case Credentials.Missing => Future.successful(None)
@@ -113,8 +113,14 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future]) extends 
 }
 
 object AclsRoutes {
-
-  def apply(acl: Acls[Future], dsac: DownstreamAuthClient[Future]): AclsRoutes = new AclsRoutes(acl, dsac)
+  /**
+    * Constructs a new ''AclsRoutes'' instance that defines the http routes specific to ACL endopints.
+    *
+    * @param acl   the ACL operation bundle
+    * @param dsac  the downstream authentication client
+    * @param clock the clock used to issue instants
+    */
+  def apply(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit clock: Clock): AclsRoutes = new AclsRoutes(acl, dsac)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
     val fields = cursor.fields.toSeq.flatten

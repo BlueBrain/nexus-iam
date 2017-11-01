@@ -1,7 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import java.time.Clock
-
 import cats.MonadError
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
@@ -13,15 +11,14 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.{Current, Initial}
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import journal.Logger
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Meta
 
 /**
   * Unified ACLs actions provided for all the available resources in the service.
-  * @tparam F    the execution mode of the type class, i.e.: __Try__, __Future__
+  *
   * @param agg   the underlying event log aggregate
-  * @param clock the clock used by the service to issue instants
+  * @tparam F the execution mode of the type class, i.e.: __Try__, __Future__
   */
-final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: MonadError[F, Throwable]) {
+final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Throwable]) {
 
   private val log = Logger[this.type]
 
@@ -60,12 +57,12 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
     *
     * @param path     the path
     * @param identity the target identity
-    * @param caller   the implicit identity calling this action
+    * @param ctx      the implicit identity context calling this action
     * @return Unit in an ''F[_]'' context if the action was successful
     */
-  def remove(path: Path, identity: Identity)(implicit caller: Identity): F[Unit] = {
+  def remove(path: Path, identity: Identity)(implicit ctx: CallerCtx): F[Unit] = {
     log.debug(s"Removing permissions for path '${path.show}' and identity '${identity.show}'")
-    agg.eval(path.show, RemovePermissions(path, identity, meta)).flatMap {
+    agg.eval(path.show, RemovePermissions(path, identity, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
@@ -80,13 +77,13 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
   /**
     * Clears all permissions on a ''path''.
     *
-    * @param path   the path
-    * @param caller the implicit identity calling this action
+    * @param path the path
+    * @param ctx  the implicit identity context calling this action
     * @return Unit in an ''F[_]'' context if the action was successful
     */
-  def clear(path: Path)(implicit caller: Identity): F[Unit] = {
+  def clear(path: Path)(implicit ctx: CallerCtx): F[Unit] = {
     log.debug(s"Clearing all permissions for path '${path.show}'")
-    agg.eval(path.show, ClearPermissions(path, meta)).flatMap {
+    agg.eval(path.show, ClearPermissions(path, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
@@ -101,14 +98,14 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
   /**
     * Creates initial permissions ''mapping'' on a ''path''
     *
-    * @param path        the path
-    * @param acl         the identity to permissions mapping to create
-    * @param caller      the implicit identity calling this action
+    * @param path the path
+    * @param acl  the identity to permissions mapping to create
+    * @param ctx  the implicit identity context calling this action
     * @return Unit in an ''F[_]'' context if the action was successful
     */
-  def create(path: Path, acl: AccessControlList)(implicit caller: Identity): F[Unit] = {
+  def create(path: Path, acl: AccessControlList)(implicit ctx: CallerCtx): F[Unit] = {
     log.debug(s"Creating permissions mapping '$acl' for path '${path.show}'")
-    agg.eval(path.show, CreatePermissions(path, acl, meta)).flatMap {
+    agg.eval(path.show, CreatePermissions(path, acl, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
@@ -126,12 +123,12 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
     * @param path        the path
     * @param identity    the target identity
     * @param permissions the permissions to add
-    * @param caller      the implicit identity calling this action
+    * @param ctx         the implicit identity context calling this action
     * @return the resulting permissions set on this path for this identity, in an ''F[_]'' context
     */
-  def add(path: Path, identity: Identity, permissions: Permissions)(implicit caller: Identity): F[Permissions] = {
+  def add(path: Path, identity: Identity, permissions: Permissions)(implicit ctx: CallerCtx): F[Permissions] = {
     log.debug(s"Adding permissions '$permissions' for path '${path.show}' and identity '${identity.show}'")
-    agg.eval(path.show, AddPermissions(path, identity, permissions, meta)).flatMap {
+    agg.eval(path.show, AddPermissions(path, identity, permissions, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
@@ -149,13 +146,13 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
     * @param path        the path
     * @param identity    the target identity
     * @param permissions the permissions to subtract
-    * @param caller      the implicit identity calling this action
+    * @param ctx         the implicit identity context calling this action
     * @return an option containing the resulting permissions, or None if none exists, in an ''F[_]'' context
     */
   def subtract(path: Path, identity: Identity, permissions: Permissions)(
-      implicit caller: Identity): F[Option[Permissions]] = {
+      implicit ctx: CallerCtx): F[Option[Permissions]] = {
     log.debug(s"Subtracting permissions '$permissions' for path '${path.show}' and identity '${identity.show}'")
-    agg.eval(path.show, SubtractPermissions(path, identity, permissions, meta)).flatMap {
+    agg.eval(path.show, SubtractPermissions(path, identity, permissions, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
@@ -180,8 +177,6 @@ final class Acls[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: Mo
       el.filterKeys(k => identities.contains(k)).combine(acc)
     })
   }
-
-  private def meta(implicit caller: Identity) = Meta(caller, clock.instant)
 }
 
 object Acls {
@@ -286,7 +281,7 @@ object Acls {
     * @see [[ch.epfl.bluebrain.nexus.iam.core.acls.Acls]]
     */
   @inline
-  def apply[F[_]](agg: PermissionAggregate[F], clock: Clock)(implicit F: MonadError[F, Throwable]): Acls[F] =
-    new Acls[F](agg, clock)(F)
+  def apply[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Throwable]): Acls[F] =
+    new Acls[F](agg)(F)
 
 }
