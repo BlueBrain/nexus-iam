@@ -5,6 +5,8 @@ import java.util.UUID
 
 import cats.instances.try_._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
+import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
@@ -17,14 +19,16 @@ import scala.util.{Failure, Success, Try}
 
 class AclsSpec extends WordSpecLike with Matchers {
 
+  private implicit val clock           = Clock.systemUTC
+  private implicit val alice: Identity = UserRef("realm", "Alice")
+  private implicit val user: User      = AuthenticatedUser(Set(alice))
   private val aggregate                = MemoryAggregate("permission")(Initial, Acls.next, Acls.eval).toF[Try]
-  private val acls                     = Acls(aggregate, Clock.systemUTC)
+  private val acls                     = Acls(aggregate)
   private val Read                     = Permissions(Permission.Read)
   private val Write                    = Permissions(Permission.Write)
   private val Own                      = Permissions(Permission.Own)
   private val OwnRead                  = Permissions(Permission.Own, Permission.Read)
   private val OwnReadWrite             = Permissions(Permission.Own, Permission.Read, Permission.Write)
-  private implicit val alice: Identity = UserRef("realm", "Alice")
 
   "An ACL service" should {
 

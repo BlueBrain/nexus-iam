@@ -218,7 +218,7 @@ abstract class AclsRoutesSpecInstances
     with BeforeAndAfterAll
     with MockitoSugar {
   private val appConfig                        = Settings(system).appConfig
-  private val cl                               = Clock.fixed(Instant.ofEpochMilli(1), ZoneId.systemDefault())
+  private implicit val cl                               = Clock.fixed(Instant.ofEpochMilli(1), ZoneId.systemDefault())
   implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
   implicit val tm: Timeout                     = Timeout(appConfig.runtime.defaultTimeout.toMillis, TimeUnit.MILLISECONDS)
   implicit val rt: RouteTestTimeout            = RouteTestTimeout(5.seconds.dilated)
@@ -229,6 +229,7 @@ abstract class AclsRoutesSpecInstances
   protected val read         = Permissions(Read)
   protected val realm        = "realm"
   protected val alice        = UserRef(realm, "alice")
+  protected val aliceCaller  = CallerCtx(cl, AuthenticatedUser(Set(alice)))
   protected val someGroup    = GroupRef(realm, "some-group")
   protected val otherGroup   = GroupRef(realm, "other-group")
   protected val dsac         = mock[DownstreamAuthClient[Future]]
@@ -247,8 +248,8 @@ abstract class AclsRoutesSpecInstances
         ShardingAggregate("permission", SourcingAkkaSettings(journalPluginId = "inmemory-read-journal"))(Initial,
                                                                                                          Acls.next,
                                                                                                          Acls.eval)
-      val acl = Acls[Future](aggregate, cl)
-      acl.create(Path./, AccessControlList(alice -> own))(alice)
+      val acl = Acls[Future](aggregate)
+      acl.create(Path./, AccessControlList(alice -> own))(aliceCaller)
       routes = new AclsRoutes(acl, dsac).routes
       p.success(())
     }
