@@ -14,9 +14,9 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Path, Permission, Permissions}
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
+import ch.epfl.bluebrain.nexus.commons.iam.auth._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
@@ -83,12 +83,12 @@ object Main {
           case Success(mapping) =>
             mapping.get(Anonymous) match {
               case Some(permissions) if permissions.containsAll(ownRead) =>
-                logger.info(s"Top-level permissions found for anonymous; nothing to do")
+                logger.info("Top-level permissions found for anonymous; nothing to do")
               case Some(_) =>
-                logger.info(s"Adding 'own' & 'read' to top-level permissions for anonymous")
+                logger.info("Adding 'own' & 'read' to top-level permissions for anonymous")
                 acl.add(Path./, Anonymous, ownRead)(anonymousCaller)
               case None =>
-                logger.info(s"Creating top-level permissions for anonymous")
+                logger.info("Creating top-level permissions for anonymous")
                 acl.create(Path./, AccessControlList(Anonymous -> ownRead))(anonymousCaller)
             }
           case Failure(e) =>
