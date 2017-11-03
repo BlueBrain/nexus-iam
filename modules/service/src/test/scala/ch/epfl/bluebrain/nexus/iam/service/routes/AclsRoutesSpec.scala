@@ -218,7 +218,7 @@ abstract class AclsRoutesSpecInstances
     with BeforeAndAfterAll
     with MockitoSugar {
   private val appConfig                        = Settings(system).appConfig
-  private implicit val cl                               = Clock.fixed(Instant.ofEpochMilli(1), ZoneId.systemDefault())
+  private implicit val cl                      = Clock.fixed(Instant.ofEpochMilli(1), ZoneId.systemDefault())
   implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
   implicit val tm: Timeout                     = Timeout(appConfig.runtime.defaultTimeout.toMillis, TimeUnit.MILLISECONDS)
   implicit val rt: RouteTestTimeout            = RouteTestTimeout(5.seconds.dilated)

@@ -15,8 +15,8 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Path, Permission, Permissions}
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{AuthenticatedRef, GroupRef}
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
@@ -69,16 +69,35 @@ object Main {
       logger.info("==== Cluster is Live ====")
       implicit val oidcConfig  = appConfig.oidc
       implicit val baseApiUri  = ApiUri(apiUri)
-      implicit val clock                = Clock.systemUTC
+      implicit val clock       = Clock.systemUTC
       val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aggregate)
       val downStreamAuthClient = DownstreamAuthClient(cl, uicl)
+      val ownRead              = Permissions(Permission.Own, Permission.Read)
 
-      if (appConfig.auth.adminGroups.isEmpty) {
+      if (appConfig.auth.testMode) {
+        val anonymousCaller = CallerCtx(clock, AnonymousUser)
+        logger.warning("""/!\ Test mode is enabled - this is potentially DANGEROUS /!\""")
+        logger.warning("Granting full rights to every user...")
+        acl.fetch(Path./).onComplete {
+          case Success(mapping) =>
+            mapping.get(Anonymous) match {
+              case Some(permissions) if permissions.containsAll(ownRead) =>
+                logger.info(s"Top-level permissions found for anonymous; nothing to do")
+              case Some(_) =>
+                logger.info(s"Adding 'own' & 'read' to top-level permissions for anonymous")
+                acl.add(Path./, Anonymous, ownRead)(anonymousCaller)
+              case None =>
+                logger.info(s"Creating top-level permissions for anonymous")
+                acl.create(Path./, AccessControlList(Anonymous -> ownRead))(anonymousCaller)
+            }
+          case Failure(e) =>
+            logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")
+        }
+      } else if (appConfig.auth.adminGroups.isEmpty) {
         logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
         logger.warning("Top-level permissions might be missing as a result")
       } else {
-        val ownRead     = Permissions(Permission.Own, Permission.Read)
         val adminCaller = CallerCtx(clock, AuthenticatedUser(Set(AuthenticatedRef(Some(appConfig.oidc.realm)))))
         val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.realm, group))
         acl.fetch(Path./).onComplete {
@@ -87,7 +106,7 @@ object Main {
               adminGroup =>
                 mapping.get(adminGroup) match {
                   case Some(permissions) if permissions.containsAll(ownRead) =>
-                    logger.info(s"Top-level 'own' permission found for $adminGroup; nothing to do")
+                    logger.info(s"Top-level permissions found for $adminGroup; nothing to do")
                   case Some(_) =>
                     logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
                     acl.add(Path./, adminGroup, ownRead)(adminCaller)
