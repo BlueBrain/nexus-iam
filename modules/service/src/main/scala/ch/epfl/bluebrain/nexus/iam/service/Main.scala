@@ -104,7 +104,6 @@ object Main {
           case Success(mapping) =>
             mapping.get(Anonymous).foreach { permissions =>
               logger.warning(s"Found top-level permissions: ${permissions.set} for anonymous; removing them for security reasons!")
-              logger.warning("Please have an authenticated administrator restore them if they were needed")
               acl.remove(Path./, Anonymous)(adminCaller)
             }
             adminGroups.foreach {
