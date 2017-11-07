@@ -45,7 +45,7 @@ object AppConfig {
 
   final case class PersistenceConfig(journalPlugin: String, snapshotStorePlugin: String, queryJournalPlugin: String)
 
-  final case class AuthConfig(adminGroups: Set[String])
+  final case class AuthConfig(testMode: Boolean, adminGroups: Set[String])
 
   final case class OidcConfig(issuer: Uri,
                               realm: String,

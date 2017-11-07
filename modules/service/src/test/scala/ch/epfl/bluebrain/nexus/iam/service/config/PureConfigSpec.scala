@@ -35,6 +35,7 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
       appConfig.persistence.snapshotStorePlugin shouldEqual "cassandra-snapshot-store"
       appConfig.persistence.queryJournalPlugin shouldEqual "cassandra-query-journal"
 
+      appConfig.auth.testMode shouldEqual false
       appConfig.auth.adminGroups shouldEqual Set("nexus-admin-group")
 
       appConfig.oidc shouldEqual OidcConfig(
