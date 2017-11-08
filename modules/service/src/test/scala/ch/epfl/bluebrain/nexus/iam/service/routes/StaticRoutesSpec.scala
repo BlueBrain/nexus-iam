@@ -3,8 +3,8 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 import akka.http.scaladsl.model.headers.{Location, `Content-Type`}
 import akka.http.scaladsl.model.{ContentTypes, StatusCodes, Uri}
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.{Boxed, Link, ServiceDescription}
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import org.scalatest.{Matchers, WordSpecLike}
 

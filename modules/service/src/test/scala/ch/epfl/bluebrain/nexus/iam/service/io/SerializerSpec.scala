@@ -5,13 +5,12 @@ import java.util.UUID
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.serialization.{SerializationExtension, SerializerWithStringManifest}
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Event._
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.commons.service.io.UTF8
-import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
-import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
@@ -71,8 +70,8 @@ object SerializerSpec {
   private val permissions = Permissions(Own, Read, Write)
 
   private val pathString        = s""""${path.repr}""""
-  private val identityString    = s"""{"realm":"realm","group":"some-group","type":"GroupRef"}"""
-  private val authorString      = s"""{"realm":"realm","sub":"alice","type":"UserRef"}"""
+  private val identityString    = s"""{"id":"realms/realm/groups/some-group","type":"GroupRef"}"""
+  private val authorString      = s"""{"id":"realms/realm/users/alice","type":"UserRef"}"""
   private val metaString        = s"""{"author":$authorString,"instant":"1970-01-01T00:00:00.001Z"}"""
   private val permissionsString = s"""["own","read","write"]"""
 

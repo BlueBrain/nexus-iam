@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.7"
+val commonsVersion = "0.5.9"
 
 val akkaVersion            = "2.5.4"
 val akkaHttpVersion        = "10.0.10"
@@ -18,6 +18,7 @@ val mockitoVersion         = "2.10.0"
 
 val aspectJVersion     = "1.8.11"
 val sigarLoaderVersion = "1.6.6-rev002"
+val jwtVersion         = "0.14.1"
 
 lazy val commonsTypes   = "ch.epfl.bluebrain.nexus" %% "commons-types"   % commonsVersion
 lazy val commonsHttp    = "ch.epfl.bluebrain.nexus" %% "commons-http"    % commonsVersion
@@ -48,6 +49,7 @@ lazy val pureconfig          = "com.github.pureconfig" %% "pureconfig"          
 lazy val pureconfigAkka      = "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion
 lazy val scalaTest           = "org.scalatest"         %% "scalatest"                  % scalaTestVersion
 lazy val mockitoCore         = "org.mockito"           % "mockito-core"                % mockitoVersion
+lazy val jwtCirce            = "com.pauldijou"         %% "jwt-circe"                  % jwtVersion
 
 lazy val kamonDeps = Seq(
   "io.kamon"    %% "kamon-core"            % "0.6.7",
@@ -66,15 +68,16 @@ lazy val docs = project
   .enablePlugins(ParadoxPlugin)
   .settings(common, noPublish)
   .settings(
-    name                          := "iam-docs",
-    moduleName                    := "iam-docs",
-    paradoxTheme                  := Some(builtinParadoxTheme("generic")),
-    target in (Compile, paradox)  := (resourceManaged in Compile).value / "docs",
+    name := "iam-docs",
+    moduleName := "iam-docs",
+    paradoxTheme := Some(builtinParadoxTheme("generic")),
+    target in (Compile, paradox) := (resourceManaged in Compile).value / "docs",
     resourceGenerators in Compile += {
       (paradox in Compile).map { parent =>
         (parent ** "*").get
       }.taskValue
-    })
+    }
+  )
 
 lazy val core = project
   .in(file("modules/core"))
@@ -104,6 +107,7 @@ lazy val core = project
 
 lazy val oidcCore = project
   .in(file("modules/oidc/core"))
+  .dependsOn(core)
   .enablePlugins(BuildInfoPlugin)
   .settings(
     common,
@@ -119,6 +123,7 @@ lazy val oidcCore = project
         akkaClusterSharding,
         akkaDData,
         akkaHttpCirce,
+        iamTypes,
         pureconfig,
         pureconfigAkka,
         circeCore,
@@ -142,7 +147,33 @@ lazy val oidcBbp = project
     moduleName := "iam-bbp",
     packageName in Docker := "iam-bbp",
     description := "Nexus IAM BBP Integration Service",
-    libraryDependencies ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, commonsService, journal, scalaTest % Test)
+    libraryDependencies ++= Seq(akkaHttp,
+                                circeCore,
+                                circeParser,
+                                circeGenericExtras,
+                                commonsService,
+                                journal,
+                                scalaTest % Test)
+  )
+
+lazy val oidcHbp = project
+  .in(file("modules/oidc/hbp"))
+  .dependsOn(oidcCore)
+  .enablePlugins(ServicePackagingPlugin)
+  .settings(
+    common,
+    monitoringSettings,
+    name := "iam-hbp",
+    moduleName := "iam-hbp",
+    packageName in Docker := "iam-hbp",
+    description := "Nexus IAM HBP Integration Service",
+    libraryDependencies ++= Seq(akkaHttp,
+                                circeCore,
+                                circeParser,
+                                circeGenericExtras,
+                                commonsService,
+                                journal,
+                                scalaTest % Test)
   )
 
 lazy val service = project
@@ -171,6 +202,7 @@ lazy val service = project
       circeParser,
       circeJava8,
       circeGenericExtras,
+      jwtCirce,
       akkaTestkit     % Test,
       akkaHttpTestkit % Test,
       scalaTest       % Test,
@@ -182,10 +214,7 @@ lazy val service = project
 lazy val root = project
   .in(file("."))
   .settings(common, noPublish)
-  .settings(
-    name := "iam",
-    moduleName := "iam",
-    description := "Nexus Identity & Access Management")
+  .settings(name := "iam", moduleName := "iam", description := "Nexus Identity & Access Management")
   .aggregate(docs, core, service, oidcCore, oidcBbp)
 
 /* Common settings */

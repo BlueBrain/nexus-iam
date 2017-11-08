@@ -47,11 +47,14 @@ object AppConfig {
 
   final case class AuthConfig(testMode: Boolean, adminGroups: Set[String])
 
-  final case class OidcConfig(issuer: Uri,
-                              realm: String,
-                              authorizeEndpoint: Uri,
-                              tokenEndpoint: Uri,
-                              userinfoEndpoint: Uri)
+  final case class OidcConfig(providers: List[OidcProviderConfig], defaultRealm: String)
+
+  final case class OidcProviderConfig(realm: String,
+                                      issuer: Uri,
+                                      jwkCert: Uri,
+                                      authorizeEndpoint: Uri,
+                                      tokenEndpoint: Uri,
+                                      userinfoEndpoint: Uri)
 
   final case class Kafka(permissionsTopic: String, permissionsProjectionId: String)
 

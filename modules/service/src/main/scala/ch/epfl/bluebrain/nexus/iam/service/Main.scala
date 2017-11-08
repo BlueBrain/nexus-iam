@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
+import java.security.PublicKey
 import java.time.Clock
 
 import akka.actor.{ActorSystem, AddressFromURIString}
@@ -14,13 +15,13 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.auth._
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{AccessControlList, Path, Permission, Permissions}
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient, JwkClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
@@ -33,6 +34,7 @@ import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.Kamon
 import org.apache.kafka.common.serialization.StringSerializer
+import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -66,30 +68,37 @@ object Main {
 
     // cluster join hook
     cluster.registerOnMemberUp({
+      implicit val oidcConfig = appConfig.oidc
+      implicit val keys: Map[TokenId, PublicKey] =
+        oidcConfig.providers.foldLeft(Map.empty[TokenId, PublicKey]) { (acc, currentConfig) =>
+          logger.info(
+            s"Retrieving Json Web Key for issuer '${currentConfig.issuer}' from endpoint '${currentConfig.jwkCert}'")
+          acc ++ Await.result(JwkClient(currentConfig), 10.seconds)
+        }
       logger.info("==== Cluster is Live ====")
-      implicit val oidcConfig  = appConfig.oidc
-      implicit val baseApiUri  = ApiUri(apiUri)
-      implicit val clock       = Clock.systemUTC
-      val aggregate            = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
-      val acl                  = Acls[Future](aggregate)
-      val downStreamAuthClient = DownstreamAuthClient(cl, uicl)
-      val ownRead              = Permissions(Permission.Own, Permission.Read)
 
+      implicit val baseApiUri   = ApiUri(apiUri)
+      implicit val clock                 = Clock.systemUTC
+      val aggregate                      = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl                            = Acls[Future](aggregate)
+      implicit val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
+      implicit val ce: ClaimExtractor    = ClaimExtractor.jwtCirceInstance
+      val ownRead     = Permissions(Permission.Own, Permission.Read)
       if (appConfig.auth.testMode) {
         val anonymousCaller = CallerCtx(clock, AnonymousUser)
         logger.warning("""/!\ Test mode is enabled - this is potentially DANGEROUS /!\""")
         logger.warning("Granting full rights to every user...")
         acl.fetch(Path./).onComplete {
           case Success(mapping) =>
-            mapping.get(Anonymous) match {
+            mapping.get(Anonymous()) match {
               case Some(permissions) if permissions.containsAll(ownRead) =>
                 logger.info("Top-level permissions found for anonymous; nothing to do")
               case Some(_) =>
                 logger.info("Adding 'own' & 'read' to top-level permissions for anonymous")
-                acl.add(Path./, Anonymous, ownRead)(anonymousCaller)
+                acl.add(Path./, Anonymous(), ownRead)(anonymousCaller)
               case None =>
                 logger.info("Creating top-level permissions for anonymous")
-                acl.create(Path./, AccessControlList(Anonymous -> ownRead))(anonymousCaller)
+                acl.create(Path./, AccessControlList(Anonymous() -> ownRead))(anonymousCaller)
             }
           case Failure(e) =>
             logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")
@@ -98,13 +107,13 @@ object Main {
         logger.warning("Empty 'auth.admin-groups' found in app.conf settings")
         logger.warning("Top-level permissions might be missing as a result")
       } else {
-        val adminCaller = CallerCtx(clock, AuthenticatedUser(Set(AuthenticatedRef(Some(appConfig.oidc.realm)))))
-        val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.realm, group))
+        val adminCaller = CallerCtx(clock, AuthenticatedUser(Set(AuthenticatedRef(Some(appConfig.oidc.defaultRealm)))))
+        val adminGroups = appConfig.auth.adminGroups.map(group => GroupRef(appConfig.oidc.defaultRealm, group))
         acl.fetch(Path./).onComplete {
           case Success(mapping) =>
-            mapping.get(Anonymous).foreach { permissions =>
+            mapping.get(Anonymous()).foreach { permissions =>
               logger.warning(s"Found top-level permissions: ${permissions.set} for anonymous; removing them for security reasons!")
-              acl.remove(Path./, Anonymous)(adminCaller)
+              acl.remove(Path./, Anonymous())(adminCaller)
             }
             adminGroups.foreach {
               adminGroup =>
@@ -132,8 +141,8 @@ object Main {
                      appConfig.http.prefix).routes
       }
 
-      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl, downStreamAuthClient).routes)
-      val authRoutes = uriPrefix(apiUri)(AuthRoutes(downStreamAuthClient).routes)
+      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
+      val authRoutes = uriPrefix(apiUri)(AuthRoutes(downStreamAuthClients).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
       }

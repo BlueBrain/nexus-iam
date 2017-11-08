@@ -5,13 +5,13 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.ExceptionHandler
 import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
-import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
-import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.commons.service.directives.ErrorDirectives._
 import ch.epfl.bluebrain.nexus.commons.service.directives.StatusFrom
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure
+import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
+import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
+import ch.epfl.bluebrain.nexus.iam.service.auth.{AuthenticationFailure, TokenValidationFailure}
+import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import io.circe.DecodingFailure
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
@@ -37,6 +37,7 @@ object ExceptionHandling {
     case r: IllegalUriException =>
       val rejection: CommonRejection = IllegalIdentityFormat(r.getMessage, "origin")
       complete(rejection)
+    case r: TokenValidationFailure            => complete(r: TokenValidationFailure)
     case r: IllegalIdentityFormat             => complete(r: CommonRejection)
     case r: IllegalPermissionString           => complete(r: CommonRejection)
     case CommandRejected(r: CommandRejection) => complete(r)
@@ -61,6 +62,9 @@ object ExceptionHandling {
     case UnauthorizedCaller                                                            => Unauthorized
     case _                                                                             => InternalServerError
   }
+
+  private implicit val tokenValidationFailureStatusFrom: StatusFrom[TokenValidationFailure] = StatusFrom(
+    _ => Unauthorized)
 
   private implicit val commandStatusFrom: StatusFrom[CommandRejection] = StatusFrom {
     case CannotCreateVoidPermissions              => BadRequest

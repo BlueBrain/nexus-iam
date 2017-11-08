@@ -15,13 +15,14 @@ import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
-import ch.epfl.bluebrain.nexus.iam.service.auth.DownstreamAuthClient
+import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor
+import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
+import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.Decoder
-import io.circe.generic.auto._
+import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,9 +31,8 @@ import scala.concurrent.{ExecutionContext, Future}
   * HTTP routes for ACL specific functionality.
   *
   * @param acl  the ACL operations bundle
-  * @param dsac the downstream authentication client
   */
-class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit clock: Clock) extends DefaultRoutes("acls") {
+class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor) extends DefaultRoutes("acls") {
 
   override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
@@ -96,10 +96,19 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit
   private def authenticator(implicit ec: ExecutionContext): AsyncAuthenticator[User] = {
     case Credentials.Missing => Future.successful(None)
     case Credentials.Provided(token) =>
-      dsac
-        .getUser(OAuth2BearerToken(token))
+      val cred = OAuth2BearerToken(token)
+      cred.extractClaim
+        .flatMap {
+          case (client, json) =>
+            json
+              .extractUser(client.config)
+              .recoverWith {
+                case _ => client.getUser(cred)
+              }
+        }
         .map(Some.apply)
         .recover { case UnauthorizedCaller => None }
+
   }
 
   /**
@@ -113,14 +122,14 @@ class AclsRoutes(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit
 }
 
 object AclsRoutes {
+
   /**
     * Constructs a new ''AclsRoutes'' instance that defines the http routes specific to ACL endopints.
     *
     * @param acl   the ACL operation bundle
-    * @param dsac  the downstream authentication client
-    * @param clock the clock used to issue instants
     */
-  def apply(acl: Acls[Future], dsac: DownstreamAuthClient[Future])(implicit clock: Clock): AclsRoutes = new AclsRoutes(acl, dsac)
+  def apply(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor): AclsRoutes =
+    new AclsRoutes(acl)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
     val fields = cursor.fields.toSeq.flatten

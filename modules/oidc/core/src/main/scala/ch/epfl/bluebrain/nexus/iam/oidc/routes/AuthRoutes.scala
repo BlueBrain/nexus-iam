@@ -7,12 +7,11 @@ import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.Credentials
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault.{Rejected, Unauthorized}
+import ch.epfl.bluebrain.nexus.iam.oidc.api.OidcOps
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.IllegalRedirectUri
-import ch.epfl.bluebrain.nexus.iam.oidc.api.{OidcOps, UserInfo}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,8 +19,6 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
 final class AuthRoutes(oidcOps: OidcOps[Future]) {
-
-  private implicit val config: Configuration = Configuration.default.withSnakeCaseKeys
 
   def routes: Route = {
     pathPrefix("oauth2") {

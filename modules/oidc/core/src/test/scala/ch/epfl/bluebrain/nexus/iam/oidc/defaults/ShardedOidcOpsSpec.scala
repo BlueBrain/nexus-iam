@@ -11,9 +11,10 @@ import akka.stream.ActorMaterializer
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault.{Rejected, UnsuccessfulDownstreamCall}
-import ch.epfl.bluebrain.nexus.iam.oidc.api.{Fault, IdAccessToken, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.AuthorizationAttemptWithInvalidState
+import ch.epfl.bluebrain.nexus.iam.oidc.api.{Fault, IdAccessToken}
 import ch.epfl.bluebrain.nexus.iam.oidc.config.AppConfig.OidcConfig
 import ch.epfl.bluebrain.nexus.iam.oidc.config.OidcProviderConfig
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.StateActor.Protocol.{
@@ -23,9 +24,12 @@ import ch.epfl.bluebrain.nexus.iam.oidc.defaults.StateActor.Protocol.{
   ValidateState
 }
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.UserInfoActor.Protocol.{GetInfo, Info, SetInfo}
+import io.circe.Decoder
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveDecoder
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito
 import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpecLike}
@@ -43,10 +47,12 @@ class ShardedOidcOpsSpec
     with BeforeAndAfter
     with BeforeAndAfterAll {
 
-  implicit val mt = ActorMaterializer()
-  implicit val ec = system.dispatcher
-  implicit val cl = mock[UntypedHttpClient[Future]]
-  implicit val tm = Timeout(3 seconds)
+  implicit val mt                             = ActorMaterializer()
+  implicit val ec                             = system.dispatcher
+  implicit val cl                             = mock[UntypedHttpClient[Future]]
+  implicit val tm                             = Timeout(3 seconds)
+  implicit val config                         = Configuration.default.withSnakeCaseKeys
+  implicit val userInfoDec: Decoder[UserInfo] = deriveDecoder[UserInfo]
 
   before {
     Mockito.reset(cl)
@@ -73,6 +79,7 @@ class ShardedOidcOpsSpec
   "A ShardedOidcOps" should {
 
     val cfg = OidcConfig(
+      realm = "realm",
       discoveryUri = "http://localhost/.well-known/openid-configuration",
       clientId = "clientid",
       clientSecret = "clientsecret",
@@ -96,7 +103,7 @@ class ShardedOidcOpsSpec
       val q = Query(
         "response_type" -> "code",
         "client_id"     -> cfg.clientId,
-        "redirect_uri"  -> cfg.tokenUri.toString(),
+        "redirect_uri"  -> s"${cfg.tokenUri.toString()}/${cfg.realm}",
         "scope"         -> cfg.scopes.mkString(" "),
         "state"         -> stateId
       )

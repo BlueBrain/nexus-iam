@@ -15,9 +15,10 @@ import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
   UnauthorizedCaller,
   UnexpectedAuthenticationFailure
 }
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcProviderConfig
 import io.circe.DecodingFailure
 import journal.Logger
+import shapeless.Typeable
 
 import scala.util.control.NonFatal
 
@@ -28,9 +29,9 @@ import scala.util.control.NonFatal
   * @param uicl   An HTTP Client to fetch a [[UserInfo]] entity
   * @tparam F     the execution mode of the type class, i.e.: __Try__, __Future__
   */
-class DownstreamAuthClient[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
-    implicit F: MonadError[F, Throwable],
-    config: OidcConfig) {
+class DownstreamAuthClient[F[_]](cl: UntypedHttpClient[F],
+                                 uicl: HttpClient[F, UserInfo],
+                                 val config: OidcProviderConfig)(implicit F: MonadError[F, Throwable]) {
 
   private val log = Logger[this.type]
 
@@ -59,34 +60,34 @@ class DownstreamAuthClient[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, U
     * @param credentials the OAuth 2.0 bearer token given by the provider
     * @return the response in an ''F'' context
     */
-  def userInfo(credentials: OAuth2BearerToken): F[HttpResponse] =
-    forward(Get(config.userinfoEndpoint).addCredentials(credentials))
+  def userInfo(credentials: OAuth2BearerToken): F[UserInfo] =
+    uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
+      .recoverWith(recover[UserInfo])
 
   /**
     * Fetches the ''userinfo'' associated to this access token and builds the corresponding [[User]] instance.
     * @param credentials the OAuth 2.0 bearer token given by the provider
     * @return a [[User]] holding all the identities the user belongs to, in an ''F'' context
     */
-  def getUser(credentials: OAuth2BearerToken): F[User] = {
-    uicl(Get(config.userinfoEndpoint).addCredentials(credentials))
-      .map(_.toUser(config.realm))
-      .recoverWith {
-        case df: DecodingFailure =>
-          log.error("Unable to decode UserInfo response", df)
-          F.raiseError(UnexpectedAuthenticationFailure(df))
-        case UnexpectedUnsuccessfulHttpResponse(HttpResponse(status, _, _, _)) =>
-          val cause = if (status == StatusCodes.Unauthorized) {
-            log.info(s"Credentials were rejected by the OIDC provider $status ${config.userinfoEndpoint}")
-            UnauthorizedCaller
-          } else {
-            log.error(s"Unexpected status code from OIDC provider $status ${config.userinfoEndpoint}")
-            UnexpectedAuthenticationFailure(UnexpectedUnsuccessfulHttpResponse(HttpResponse(mapErrorCode(status))))
-          }
-          F.raiseError(cause)
-        case NonFatal(th) =>
-          log.error("Downstream call to fetch the UserInfo failed unexpectedly", th)
-          F.raiseError(UnexpectedAuthenticationFailure(th))
+  def getUser(credentials: OAuth2BearerToken): F[User] =
+    userInfo(credentials).map(_.toUser(config.realm))
+
+  private def recover[A](implicit T: Typeable[A]): PartialFunction[Throwable, F[A]] = {
+    case df: DecodingFailure =>
+      log.error(s"Unable to decode '${T.describe}' response", df)
+      F.raiseError(UnexpectedAuthenticationFailure(df))
+    case UnexpectedUnsuccessfulHttpResponse(HttpResponse(status, _, _, _)) =>
+      val cause = if (status == StatusCodes.Unauthorized) {
+        log.info(s"Credentials were rejected by the OIDC provider $status ${config.userinfoEndpoint}")
+        UnauthorizedCaller
+      } else {
+        log.error(s"Unexpected status code from OIDC provider $status ${config.userinfoEndpoint}")
+        UnexpectedAuthenticationFailure(UnexpectedUnsuccessfulHttpResponse(HttpResponse(mapErrorCode(status))))
       }
+      F.raiseError(cause)
+    case NonFatal(th) =>
+      log.error(s"Downstream call to fetch the '${T.describe}' failed unexpectedly", th)
+      F.raiseError(UnexpectedAuthenticationFailure(th))
   }
 
   /**
@@ -125,8 +126,7 @@ object DownstreamAuthClient {
     *
     * @see [[DownstreamAuthClient]]
     */
-  def apply[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo])(
-      implicit F: MonadError[F, Throwable],
-      config: OidcConfig): DownstreamAuthClient[F] =
-    new DownstreamAuthClient(cl, uicl)
+  def apply[F[_]](cl: UntypedHttpClient[F], uicl: HttpClient[F, UserInfo], config: OidcProviderConfig)(
+      implicit F: MonadError[F, Throwable]): DownstreamAuthClient[F] =
+    new DownstreamAuthClient(cl, uicl, config)
 }
