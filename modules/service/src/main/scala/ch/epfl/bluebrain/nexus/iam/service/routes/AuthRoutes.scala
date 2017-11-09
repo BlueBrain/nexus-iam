@@ -4,12 +4,15 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo.userInfoEncoder
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
 import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import io.circe.Encoder
 import kamon.akka.http.KamonTraceDirectives.traceName
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,9 +23,12 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param clients OIDC provider clients
   */
 class AuthRoutes(clients: List[DownstreamAuthClient[Future]])(implicit oidc: OidcConfig,
+                                                              api: ApiUri,
                                                               ce: ClaimExtractor,
                                                               ec: ExecutionContext)
     extends DefaultRoutes("oauth2") {
+
+  private implicit val enc: Encoder[Identity] = identityEncoder(api.base.copy(path = api.base.path / "realms"))
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?) & parameter('realm ? oidc.defaultRealm)) { (redirectUri, realm) =>
@@ -76,6 +82,7 @@ object AuthRoutes {
     * @return new instance of AuthRoutes
     */
   def apply(clients: List[DownstreamAuthClient[Future]])(implicit oidc: OidcConfig,
+                                                         api: ApiUri,
                                                          ce: ClaimExtractor,
                                                          ec: ExecutionContext): AuthRoutes =
     new AuthRoutes(clients)

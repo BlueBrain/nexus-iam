@@ -1,7 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.service.auth
 
-import java.security.PublicKey
-
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp._
@@ -15,10 +13,7 @@ import pdi.jwt.{JwtCirce, JwtOptions}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class ClaimExtractor(implicit
-                              private val keys: Map[TokenId, PublicKey],
-                              private val clients: List[DownstreamAuthClient[Future]])
-    extends (OAuth2BearerToken => Future[(DownstreamAuthClient[Future], Json)])
+abstract class ClaimExtractor extends (OAuth2BearerToken => Future[(DownstreamAuthClient[Future], Json)])
 
 object ClaimExtractor {
   private val log = Logger[this.type]
@@ -26,15 +21,11 @@ object ClaimExtractor {
   /**
     * Constructs a [[ClaimExtractor]] using JWT Circe and the implicitly available values
     *
-    * @param keys    the implicitly available ''map'' of [[PublicKey]] fetched by its [[TokenId]]
-    * @param clients the implicitly available list of [DownstreamAuthClient[Future]
+    * @param store   the credentials store of [[java.security.PublicKey]]s to verify JWT signatures
+    * @param clients the list of [DownstreamAuthClient[Future]
     */
-  implicit def jwtCirceInstance(implicit keys: Map[TokenId, PublicKey], clients: List[DownstreamAuthClient[Future]]) =
+  final def apply(store: CredentialsStore, clients: List[DownstreamAuthClient[Future]])(implicit ec: ExecutionContext) =
     new ClaimExtractor {
-
-      private def boolToEither(result: Boolean)(err: TokenValidationFailure) =
-        if (result) Right(result)
-        else Left(err)
 
       private def credentialsToEither(cred: OAuth2BearerToken) =
         JwtCirce
@@ -53,13 +44,20 @@ object ClaimExtractor {
         */
       override def apply(cred: OAuth2BearerToken): Future[(DownstreamAuthClient[Future], Json)] =
         (for {
-          json      <- credentialsToEither(cred)
-          tokenId   <- json.as[TokenId].fold(_ => Left(TokenInvalidOrExpired), s => Right(s))
-          client    <- clients.findByIssuer(tokenId.iss).toRight(KidOrIssuerNotFound)
-          publicKey <- keys.get(tokenId).toRight(KidOrIssuerNotFound)
-          _         <- boolToEither(JwtCirce.isValid(cred.token, publicKey))(TokenInvalidSignature)
-        } yield client -> json)
-          .fold(fa => Future.failed(fa), s => Future.successful(s))
+          json    <- credentialsToEither(cred)
+          tokenId <- json.as[TokenId].fold(_ => Left(TokenInvalidOrExpired), s => Right(s))
+          client  <- clients.findByIssuer(tokenId.iss).toRight(KidOrIssuerNotFound)
+        } yield (json, tokenId, client)) match {
+          case Left(fa) =>
+            Future.failed(fa)
+          case Right((json, tokenId, client)) =>
+            store
+              .fetchKey(tokenId)
+              .flatMap { key =>
+                if (JwtCirce.isValid(cred.token, key)) Future.successful((client, json))
+                else Future.successful((client, json))
+              }
+        }
     }
 
   /**

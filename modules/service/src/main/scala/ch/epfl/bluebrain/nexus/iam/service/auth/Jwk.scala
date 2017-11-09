@@ -26,6 +26,7 @@ object Jwk {
     * @param use the public key use
     */
   final case class Jwk(alg: String, e: String, n: String, kty: String, kid: String, use: Option[String]) {
+
     /**
       * Attempts to compute the [[PublicKey]] from the ''n'' and ''e'' fields
       */

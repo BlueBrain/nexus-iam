@@ -23,7 +23,7 @@ object UserInfoDecoder {
   object hbp {
     implicit val userInfoDecoder: Decoder[UserInfo] = {
       def toSet(value: String): Set[String] =
-        value.split(",").filter(!_.trim.isEmpty).toSet
+        value.split(",").filterNot(_.trim.isEmpty).toSet
 
       Decoder.forProduct7[String, String, String, String, String, String, String, UserInfo]("sub",
                                                                                             "name",

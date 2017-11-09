@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.9"
+val commonsVersion = "0.5.11"
 
 val akkaVersion            = "2.5.4"
 val akkaHttpVersion        = "10.0.10"
@@ -24,9 +24,11 @@ lazy val commonsTypes   = "ch.epfl.bluebrain.nexus" %% "commons-types"   % commo
 lazy val commonsHttp    = "ch.epfl.bluebrain.nexus" %% "commons-http"    % commonsVersion
 lazy val commonsService = "ch.epfl.bluebrain.nexus" %% "commons-service" % commonsVersion
 lazy val sourcingCore   = "ch.epfl.bluebrain.nexus" %% "sourcing-core"   % commonsVersion
-lazy val sourcingMem    = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"    % commonsVersion
-lazy val sourcingAkka   = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"   % commonsVersion
-lazy val iamTypes       = "ch.epfl.bluebrain.nexus" %% "iam"             % commonsVersion
+lazy val commonsTest    = "ch.epfl.bluebrain.nexus" %% "commons-test"    % commonsVersion
+
+lazy val sourcingMem  = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"  % commonsVersion
+lazy val sourcingAkka = "ch.epfl.bluebrain.nexus" %% "sourcing-akka" % commonsVersion
+lazy val iamTypes     = "ch.epfl.bluebrain.nexus" %% "iam"           % commonsVersion
 
 lazy val akkaTestkit         = "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion
 lazy val akkaHttp            = "com.typesafe.akka"     %% "akka-http"                  % akkaHttpVersion
@@ -207,7 +209,8 @@ lazy val service = project
       akkaHttpTestkit % Test,
       scalaTest       % Test,
       akkaPersMem     % Test,
-      mockitoCore     % Test
+      mockitoCore     % Test,
+      commonsTest     % Test
     )
   )
 

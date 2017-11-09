@@ -27,7 +27,6 @@ object JwkClient {
                                               mt: Materializer): Future[Map[TokenId, PublicKey]] = {
 
     val cl = HttpClient.withAkkaUnmarshaller[Jwks]
-
     cl(Get(config.jwkCert))
       .map(_.keys.foldLeft[Either[TokenToPublicKeyError, Map[TokenId, PublicKey]]](Right(Map())) {
         case (err @ Left(_), _) => err

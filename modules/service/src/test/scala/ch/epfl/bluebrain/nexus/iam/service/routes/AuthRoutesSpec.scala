@@ -11,11 +11,14 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
-import io.circe.generic.extras.auto._
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import io.circe.{Decoder, Encoder}
 import io.circe.syntax._
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -43,7 +46,12 @@ class AuthRoutesSpec
   val cl1                                            = DownstreamAuthClient(ucl, uicl, provider)
   val cl                                             = List[DownstreamAuthClient[Future]](cl1)
   implicit val claimExtractor                        = claim(cl)
+  implicit val apiUri: ApiUri                        = ApiUri("localhost:8080/v0")
   val routes                                         = AuthRoutes(cl).routes
+
+  implicit val enc: Encoder[Identity] =
+    JsonLdSerialization.identityEncoder(apiUri.base.copy(path = apiUri.base.path / "realms"))
+  implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
 
   before {
     Mockito.reset(ucl)

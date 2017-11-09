@@ -16,7 +16,6 @@ import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulH
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
@@ -37,14 +36,25 @@ import org.scalatest.mockito.MockitoSugar
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future, Promise}
 import scala.util.Random
+import akka.http.scaladsl.model.ContentTypes._
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import io.circe.{Decoder, Encoder, Json}
 
 class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
   "The ACL service" should {
-
     "reject unauthorized requests" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(Anonymous() -> ownReadWrite, alice -> readWrite)) ~> routes ~> check {
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
+        )
+      ) ~> routes ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
       Delete(s"/acls${path.repr}") ~> routes ~> check {
@@ -60,7 +70,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "reject command with invalid payload" in {
       val path    = Path(s"/some/$rand")
-      val content = HttpEntity(ContentTypes.`application/json`, """{"foo": ["bar"]}""")
+      val content = HttpEntity(`application/json`, """{"foo": ["bar"]}""")
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[WrongOrInvalidJson.type]
@@ -70,7 +80,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
     "reject command with invalid permissions" in {
       val path = Path(s"/some/$rand")
       val content =
-        HttpEntity(ContentTypes.`application/json`, """{"acl":[{"permissions": ["random123"], "identity": {}}]}""")
+        HttpEntity(`application/json`, """{"acl":[{"permissions": ["random123"], "identity": {}}]}""")
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[IllegalPermissionString.type]
@@ -79,8 +89,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "reject command with invalid identity" in {
       val path = Path(s"/some/$rand")
-      val content = HttpEntity(ContentTypes.`application/json`,
-                               """{"acl":[{"permissions": ["read"], "identity": {"realm": "foö://bar"}}]}""")
+      val content =
+        HttpEntity(`application/json`, """{"acl":[{"permissions": ["read"], "identity": {"realm": "foö://bar"}}]}""")
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[IllegalIdentityFormat.type]
@@ -105,7 +115,11 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "reject creating empty permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(Anonymous() -> Permissions.empty)) ~> addCredentials(credentials) ~> routes ~> check {
+      Put(s"/acls${path.repr}",
+          HttpEntity(
+            `application/json`,
+            """{"acl" : [{"identity" : {"@type" : "Anonymous"}, "permissions" : [] } ] }""")) ~> addCredentials(
+        credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotCreateVoidPermissions.type]
       }
@@ -113,10 +127,19 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "reject adding empty permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(alice -> ownReadWrite)) ~> addCredentials(credentials) ~> routes ~> check {
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["own", "read", "write"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
       }
-      Post(s"/acls${path.repr}", AccessControl(Anonymous(), Permissions.empty)) ~> addCredentials(credentials) ~> routes ~> check {
+      Post(
+        s"/acls${path.repr}",
+        HttpEntity(`application/json`, """{"identity" : {"@type" : "Anonymous"}, "permissions" : [] }""")) ~> addCredentials(
+        credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
       }
@@ -124,8 +147,13 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "clear permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(Anonymous() -> ownReadWrite, alice -> readWrite)) ~> addCredentials(
-        credentials) ~> routes ~> check {
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
       }
       Delete(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
@@ -137,17 +165,20 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
+        println(responseAs[Json])
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
     }
 
     "create and get permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}",
-          AccessControlList(someGroup   -> ownReadWrite,
-                            otherGroup  -> ownReadWrite,
-                            alice       -> readWrite,
-                            Anonymous() -> read)) ~> addCredentials(credentials) ~> routes ~> check {
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"realm": "realm", "group": "some", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "group": "other-group", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] }, {"identity": {"@type": "Anonymous"}, "permissions": ["read"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
@@ -171,14 +202,24 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
     "add permissions" in {
       val path = Path(s"/some/$rand")
-      Put(s"/acls${path.repr}", AccessControlList(alice -> readWrite)) ~> addCredentials(credentials) ~> routes ~> check {
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> ownReadWrite)
       }
-      Post(s"/acls${path.repr}", AccessControl(Anonymous(), readWrite)) ~> addCredentials(credentials) ~> routes ~> check {
+
+      Post(s"/acls${path.repr}",
+           HttpEntity(`application/json`,
+                      """{"identity": {"@type": "Anonymous"}, "permissions": ["read", "write"] }""")) ~> addCredentials(
+        credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[AccessControl] shouldEqual AccessControl(Anonymous(), readWrite)
       }
@@ -245,12 +286,15 @@ abstract class AclsRoutesSpecInstances
   val provider: AppConfig.OidcProviderConfig = oidc.providers(0)
   val cl                                     = List[DownstreamAuthClient[Future]](DownstreamAuthClient(ucl, uicl, provider))
   implicit val claimExtractor                = claim(cl)
-
-  protected val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
+  implicit val apiUri: ApiUri                = ApiUri("localhost:8080/v0")
+  protected val credentials                  = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
   protected val credentialsNoUser =
     genCredentailsNoUserInfo(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
 
   protected val user = AuthenticatedUser(Set(Anonymous(), AuthenticatedRef(Some(realm)), someGroup, alice))
+  implicit val enc: Encoder[Identity] =
+    JsonLdSerialization.identityEncoder(apiUri.base.copy(path = apiUri.base.path / "realms"))
+  implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
 
   var routes: Route = _
 

@@ -7,7 +7,7 @@ import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.persistence.query.Offset
 import akka.stream.scaladsl.Flow
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.EventJsonLdSerialization._
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization._
 import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.Encoder
@@ -21,7 +21,7 @@ object KafkaPublisher {
 
   private def flow(producerSettings: ProducerSettings[String, String], topic: String)(
       implicit api: ApiUri): Flow[(Offset, String, Event), Offset, NotUsed] = {
-    implicit val ee: Encoder[Event] = eventEncoder(api.base)
+    implicit val ee: Encoder[Event] = eventEncoder(api.base.copy(path = api.base.path / "realms"))
     val m                           = jsonLdMarshaller(api.base)
     Flow[(Offset, String, Event)]
       .map {

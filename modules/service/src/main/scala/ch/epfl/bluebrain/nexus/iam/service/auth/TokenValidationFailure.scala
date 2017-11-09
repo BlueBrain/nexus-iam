@@ -18,6 +18,10 @@ object TokenValidationFailure {
       extends TokenValidationFailure(
         "The key ID present on the token or the issuer fields do match any key ID present on the JSON Web Key or in the OIDC Provder configuration")
 
+  final case class UnexpectedErrorPublicKeyRetrieval(msg: String)
+      extends TokenValidationFailure(
+        s"The public key to verify the signature of JWT could not be retrieval because of '$msg'")
+
   final case object TokenInvalidOrExpired
       extends TokenValidationFailure("The JWK token is invalid format or it expired")
 

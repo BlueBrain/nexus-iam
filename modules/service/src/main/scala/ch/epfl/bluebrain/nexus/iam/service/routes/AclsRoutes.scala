@@ -10,7 +10,8 @@ import akka.http.scaladsl.server.directives.Credentials
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization.identityDecoder
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
@@ -21,7 +22,8 @@ import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
-import io.circe.Decoder
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
 
@@ -32,7 +34,10 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @param acl  the ACL operations bundle
   */
-class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor) extends DefaultRoutes("acls") {
+class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, api: ApiUri)
+    extends DefaultRoutes("acls") {
+
+  private implicit val enc: Encoder[Identity] = identityEncoder(api.base.copy(path = api.base.path / "realms"))
 
   override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
@@ -128,7 +133,7 @@ object AclsRoutes {
     *
     * @param acl   the ACL operation bundle
     */
-  def apply(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor): AclsRoutes =
+  def apply(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, api: ApiUri): AclsRoutes =
     new AclsRoutes(acl)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>

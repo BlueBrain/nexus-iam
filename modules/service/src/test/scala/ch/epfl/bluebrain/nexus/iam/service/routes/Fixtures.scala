@@ -1,18 +1,27 @@
 package ch.epfl.bluebrain.nexus.iam.service.routes
 
-import java.security.{KeyPairGenerator, PrivateKey, PublicKey}
+import java.security.{KeyPairGenerator, PrivateKey}
 import java.time.Instant
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
+import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
-import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient, TokenId}
+import ch.epfl.bluebrain.nexus.iam.service.auth.TokenValidationFailure.KidOrIssuerNotFound
+import ch.epfl.bluebrain.nexus.iam.service.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{OidcConfig, OidcProviderConfig}
 import io.circe.parser.parse
+import org.mockito.ArgumentMatchers.isA
+import org.mockito.Mockito.when
+import org.scalatest.mockito.MockitoSugar
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim, JwtUtils}
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
-trait Fixtures {
+trait Fixtures extends MockitoSugar {
+
+  implicit val timeout = Timeout(5 seconds)
 
   implicit val oidc = OidcConfig(
     List(
@@ -36,12 +45,9 @@ trait Fixtures {
 
   val generatorRSA = KeyPairGenerator.getInstance(JwtUtils.RSA, JwtUtils.PROVIDER)
   generatorRSA.initialize(1024)
+
   val randomRSAKey  = generatorRSA.generateKeyPair()
   val randomRSAKey2 = generatorRSA.generateKeyPair()
-
-  implicit val keys: Map[TokenId, PublicKey] = Map(
-    TokenId("http://example.com/issuer", "kid")   -> randomRSAKey.getPublic,
-    TokenId("http://example.com/issuer2", "kid2") -> randomRSAKey2.getPublic)
 
   def genCredentials(id: TokenId, privateKey: PrivateKey) = {
     val claim = parse(
@@ -78,7 +84,17 @@ trait Fixtures {
     Set("some", "other")
   )
 
-  implicit def claim(clients: List[DownstreamAuthClient[Future]]): ClaimExtractor =
-    ClaimExtractor.jwtCirceInstance(keys, clients)
+  implicit def claim(clients: List[DownstreamAuthClient[Future]])(implicit as: ActorSystem): ClaimExtractor = {
+    import as.dispatcher
+    val store = mock[CredentialsStore]
+    when(store.fetchKey(isA(classOf[TokenId])))
+      .thenReturn(Future.failed(KidOrIssuerNotFound: TokenValidationFailure))
+    when(store.fetchKey(TokenId("http://example.com/issuer", "kid")))
+      .thenReturn(Future.successful(randomRSAKey.getPublic))
+    when(store.fetchKey(TokenId("http://example.com/issuer", "kid2")))
+      .thenReturn(Future.successful(randomRSAKey2.getPublic))
+
+    ClaimExtractor(store, clients)
+  }
 
 }

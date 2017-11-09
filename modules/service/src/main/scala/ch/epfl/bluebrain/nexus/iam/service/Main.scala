@@ -1,6 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
-import java.security.PublicKey
 import java.time.Clock
 
 import akka.actor.{ActorSystem, AddressFromURIString}
@@ -12,6 +11,7 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
+import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
@@ -20,8 +20,9 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUse
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
+import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.core.acls._
-import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient, JwkClient, TokenId}
+import ch.epfl.bluebrain.nexus.iam.service.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
@@ -34,7 +35,6 @@ import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.Kamon
 import org.apache.kafka.common.serialization.StringSerializer
-import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -55,10 +55,10 @@ object Main {
     implicit val ec: ExecutionContextExecutor  = as.dispatcher
     implicit val mt: ActorMaterializer         = ActorMaterializer()
     implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
-
-    val uicl             = HttpClient.withAkkaUnmarshaller[UserInfo]
-    val logger           = Logging(as, getClass)
-    val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
+    implicit val tm: Timeout                   = Timeout(appConfig.runtime.defaultTimeout)
+    val uicl                                   = HttpClient.withAkkaUnmarshaller[UserInfo]
+    val logger                                 = Logging(as, getClass)
+    val sourcingSettings                       = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
@@ -68,22 +68,20 @@ object Main {
 
     // cluster join hook
     cluster.registerOnMemberUp({
-      implicit val oidcConfig = appConfig.oidc
-      implicit val keys: Map[TokenId, PublicKey] =
-        oidcConfig.providers.foldLeft(Map.empty[TokenId, PublicKey]) { (acc, currentConfig) =>
-          logger.info(
-            s"Retrieving Json Web Key for issuer '${currentConfig.issuer}' from endpoint '${currentConfig.jwkCert}'")
-          acc ++ Await.result(JwkClient(currentConfig), 10.seconds)
-        }
       logger.info("==== Cluster is Live ====")
 
+      implicit val oidcConfig   = appConfig.oidc
       implicit val baseApiUri   = ApiUri(apiUri)
-      implicit val clock                 = Clock.systemUTC
-      val aggregate                      = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
-      val acl                            = Acls[Future](aggregate)
-      implicit val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
-      implicit val ce: ClaimExtractor    = ClaimExtractor.jwtCirceInstance
-      val ownRead     = Permissions(Permission.Own, Permission.Read)
+      implicit val clock        = Clock.systemUTC
+      val aggregate             = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl                   = Acls[Future](aggregate)
+      val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
+      implicit val ce: ClaimExtractor =
+        ClaimExtractor(new CredentialsStore("credentialsStore",
+                                            CredentialsStoreActor.start("credentialsStore"),
+                                            Logging(as, s"CredentialsStore(name)")),
+                       downStreamAuthClients)
+      val ownRead = Permissions(Permission.Own, Permission.Read)
       if (appConfig.auth.testMode) {
         val anonymousCaller = CallerCtx(clock, AnonymousUser)
         logger.warning("""/!\ Test mode is enabled - this is potentially DANGEROUS /!\""")
@@ -112,7 +110,8 @@ object Main {
         acl.fetch(Path./).onComplete {
           case Success(mapping) =>
             mapping.get(Anonymous()).foreach { permissions =>
-              logger.warning(s"Found top-level permissions: ${permissions.set} for anonymous; removing them for security reasons!")
+              logger.warning(
+                s"Found top-level permissions: ${permissions.set} for anonymous; removing them for security reasons!")
               acl.remove(Path./, Anonymous())(adminCaller)
             }
             adminGroups.foreach {
