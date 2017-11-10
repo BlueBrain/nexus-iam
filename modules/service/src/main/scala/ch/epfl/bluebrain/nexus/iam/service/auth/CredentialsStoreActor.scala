@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.auth
 
 import java.security.PublicKey
 
+import akka.actor.Status.Failure
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.cluster.singleton.{
   ClusterSingletonManager,
@@ -17,7 +18,6 @@ import ch.epfl.bluebrain.nexus.iam.service.auth.TokenValidationFailure.KidOrIssu
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{OidcConfig, OidcProviderConfig}
 
 import scala.concurrent.{ExecutionContext, Future}
-import akka.actor.Status.Failure
 
 /**
   * Actor implementation that maintains the keys of the OIDC providers defined on configuration.
@@ -32,8 +32,7 @@ class CredentialsStoreActor(providers: List[OidcProviderConfig])(implicit ucl: U
   private implicit val mt: ActorMaterializer = ActorMaterializer()
   private var keys: Map[TokenId, PublicKey]  = Map()
 
-  override def preStart(): Unit =
-    updateKeys(providers)
+  override def preStart(): Unit = updateKeys(providers)
 
   def receive: Receive = {
     case FetchKey(id) =>
@@ -56,26 +55,15 @@ class CredentialsStoreActor(providers: List[OidcProviderConfig])(implicit ucl: U
     // $COVERAGE-ON$
   }
 
-  private def updateKeys(provs: List[OidcProviderConfig]): Unit = {
-    val _ = provs
-      .foldLeft(Future(Map.empty[TokenId, PublicKey])) { (providersKey, provider) =>
-        val provKey = JwkClient(provider)
+  private def updateKeys(provs: List[OidcProviderConfig]): Unit =
+    provs
+      .foreach { provider =>
+        JwkClient(provider)
           .map { key =>
             log.info("key for the provider '{}' has been retrieved from {}", provider.issuer, provider.jwkCert)
-            key
+            keys = keys ++ key
           }
-          .recoverWith {
-            log.warning("key for the provider '{}' has failed to be retrieved from {}",
-              provider.issuer,
-              provider.jwkCert)
-            Map()
-          }
-        (providersKey zip provKey).map {
-          case (acc, current) => acc ++ current
-        }
       }
-      .map(keysMap => keys = keysMap)
-  }
 }
 
 object CredentialsStoreActor {
