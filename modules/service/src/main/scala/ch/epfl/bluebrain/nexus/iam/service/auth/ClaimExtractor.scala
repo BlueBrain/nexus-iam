@@ -55,7 +55,7 @@ object ClaimExtractor {
               .fetchKey(tokenId)
               .flatMap { key =>
                 if (JwtCirce.isValid(cred.token, key)) Future.successful((client, json))
-                else Future.successful((client, json))
+                else Future.failed(TokenInvalidSignature)
               }
         }
     }

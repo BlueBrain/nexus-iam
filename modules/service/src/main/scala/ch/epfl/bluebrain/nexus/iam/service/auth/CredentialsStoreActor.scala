@@ -27,28 +27,28 @@ class CredentialsStoreActor(providers: List[OidcProviderConfig])(implicit ucl: U
     extends Actor
     with ActorLogging {
 
-  private implicit val as: ActorSystem              = context.system
-  private implicit val ec: ExecutionContext         = context.dispatcher
-  private implicit val mt: ActorMaterializer        = ActorMaterializer()
-  private var keys: Future[Map[TokenId, PublicKey]] = Future(Map())
+  private implicit val as: ActorSystem       = context.system
+  private implicit val ec: ExecutionContext  = context.dispatcher
+  private implicit val mt: ActorMaterializer = ActorMaterializer()
+  private var keys: Map[TokenId, PublicKey]  = Map()
 
   override def preStart(): Unit =
-    keys = attemptFetchKeys(providers)
+    updateKeys(providers)
 
   def receive: Receive = {
     case FetchKey(id) =>
       val requester = sender()
-      val _ = keys.map(_.get(id) match {
+      val _ = keys.get(id) match {
         case Some(key) =>
           requester ! key
         case None =>
           requester ! Failure(KidOrIssuerNotFound)
           log.warning("key for id '{}' not found on the provided keys", id)
-          keys = attemptFetchKeys(providers)
-      })
+          updateKeys(providers)
+      }
 
     case RefreshCredentials(provider) =>
-      keys = attemptFetchKeys(List(provider))
+      updateKeys(List(provider))
     // $COVERAGE-OFF$
     case Stop =>
       log.info("Received stop signal, stopping")
@@ -56,21 +56,26 @@ class CredentialsStoreActor(providers: List[OidcProviderConfig])(implicit ucl: U
     // $COVERAGE-ON$
   }
 
-  private def attemptFetchKeys(provs: List[OidcProviderConfig]): Future[Map[TokenId, PublicKey]] =
-    provs.foldLeft(Future(Map.empty[TokenId, PublicKey])) { (providersKey, provider) =>
-      val provKey = JwkClient(provider)
-        .map { key =>
-          log.info("key for the provider '{}' has been retrieved from {}", provider.issuer, provider.jwkCert)
-          key
+  private def updateKeys(provs: List[OidcProviderConfig]): Unit = {
+    val _ = provs
+      .foldLeft(Future(Map.empty[TokenId, PublicKey])) { (providersKey, provider) =>
+        val provKey = JwkClient(provider)
+          .map { key =>
+            log.info("key for the provider '{}' has been retrieved from {}", provider.issuer, provider.jwkCert)
+            key
+          }
+          .recoverWith {
+            log.warning("key for the provider '{}' has failed to be retrieved from {}",
+              provider.issuer,
+              provider.jwkCert)
+            Map()
+          }
+        (providersKey zip provKey).map {
+          case (acc, current) => acc ++ current
         }
-        .recoverWith {
-          log.warning("key for the provider '{}' has failed to be retrieved from {}", provider.issuer, provider.jwkCert)
-          Map()
-        }
-      (providersKey zip provKey).map {
-        case (acc, current) => acc ++ current
       }
-    }
+      .map(keysMap => keys = keysMap)
+  }
 }
 
 object CredentialsStoreActor {

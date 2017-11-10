@@ -41,7 +41,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import io.circe.{Decoder, Encoder, Json}
+import io.circe.{Decoder, Encoder}
 
 class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
@@ -165,7 +165,6 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        println(responseAs[Json])
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
     }
