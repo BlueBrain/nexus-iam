@@ -77,10 +77,7 @@ object Main {
       val acl                   = Acls[Future](aggregate)
       val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
       implicit val ce: ClaimExtractor =
-        ClaimExtractor(new CredentialsStore("credentialsStore",
-                                            CredentialsStoreActor.start("credentialsStore"),
-                                            Logging(as, s"CredentialsStore(name)")),
-                       downStreamAuthClients)
+        ClaimExtractor(CredentialsStore("credentialsStore"), downStreamAuthClients)
       val ownRead = Permissions(Permission.Own, Permission.Read)
       if (appConfig.auth.testMode) {
         val anonymousCaller = CallerCtx(clock, AnonymousUser)
