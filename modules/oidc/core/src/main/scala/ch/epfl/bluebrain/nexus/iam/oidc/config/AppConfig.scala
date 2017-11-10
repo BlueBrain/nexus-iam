@@ -1,6 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.oidc.config
 
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.commons.iam.acls
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Path
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
 import ch.epfl.bluebrain.nexus.iam.oidc.config.AppConfig._
 
 import scala.concurrent.duration.FiniteDuration
@@ -44,6 +47,9 @@ object AppConfig {
                               clientId: String,
                               clientSecret: String,
                               scopes: List[String],
-                              tokenUri: Uri)
+                              tokenUri: Uri,
+                              realm: String) {
+    lazy val tokenWithRealm: Uri = tokenUri.copy(path = (tokenUri.path: Path) ++ acls.Path(realm))
+  }
 
 }

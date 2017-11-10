@@ -3,12 +3,13 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Meta
+
 /**
   * Base enumeration type for __command__ definitions.  Commands are attempts to change the system internal state, not
   * necessarily successful.  Command execution may have side effects and result in one or multiple
-  * [[ch.epfl.bluebrain.nexus.iam.core.acls.Event]]s.
+  * [[ch.epfl.bluebrain.nexus.commons.iam.acls.Event]]s.
   *
-  * @see [[ch.epfl.bluebrain.nexus.iam.core.acls.Event]]
+  * @see [[ch.epfl.bluebrain.nexus.commons.iam.acls.Event]]
   */
 sealed trait Command extends Product with Serializable {
 

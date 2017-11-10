@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import ch.epfl.bluebrain.nexus.iam.oidc.api.UserInfo
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.UserInfoActor.Protocol._
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 

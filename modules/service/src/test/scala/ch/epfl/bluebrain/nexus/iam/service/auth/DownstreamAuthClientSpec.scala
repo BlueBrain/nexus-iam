@@ -11,12 +11,13 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
   UnauthorizedCaller,
   UnexpectedAuthenticationFailure
 }
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{OidcConfig, OidcProviderConfig}
+import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import io.circe.DecodingFailure
 import io.circe.syntax._
 import org.mockito.ArgumentMatchers.isA
@@ -27,7 +28,6 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -41,18 +41,30 @@ class DownstreamAuthClientSpec
     with ScalaFutures {
 
   private implicit val oidc = OidcConfig(
-    "http://example.com/realm",
-    "realm",
-    "http://example.com/authorize",
-    "http://example.com/token",
-    "http://example.com/userinfo",
+    List(
+      OidcProviderConfig("realm",
+                         "http://example.com/issuer",
+                         "http://example.com/cert",
+                         "http://example.com/authorize",
+                         "http://example.com/token",
+                         "http://example.com/userinfo"),
+      OidcProviderConfig(
+        "realm2",
+        "http://example.com/issuer2",
+        "http://example.com/cert2",
+        "http://example.com/authorize2",
+        "http://example.com/token2",
+        "http://example.com/userinfo2"
+      )
+    ),
+    "realm"
   )
   implicit val as = ActorSystem("as")
   implicit val mt = ActorMaterializer()
   implicit val cl = mock[UntypedHttpClient[Future]]
 
   private val uicl   = HttpClient.withAkkaUnmarshaller[UserInfo]
-  private val client = DownstreamAuthClient(cl, uicl)
+  private val client = DownstreamAuthClient(cl, uicl, oidc.providers(0))
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 100 millis)
 
@@ -108,7 +120,7 @@ class DownstreamAuthClientSpec
        """.stripMargin
     val user =
       UserInfo("sub", "name", "preferredUsername", "givenName", "familyName", "email@example.com", Set("group"))
-        .toUser(oidc.realm)
+        .toUser(oidc.defaultRealm)
 
     "transform userinfo requests properly" when {
       "authentication is successful" in {

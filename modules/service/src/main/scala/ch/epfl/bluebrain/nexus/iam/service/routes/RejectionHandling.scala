@@ -28,15 +28,15 @@ object RejectionHandling {
     RejectionHandler
       .newBuilder()
       .handle {
-        case AuthenticationFailedRejection(CredentialsRejected, _)        =>
+        case AuthenticationFailedRejection(CredentialsRejected, _) =>
           complete(Unauthorized)
-        case AuthorizationFailedRejection                                 =>
+        case AuthorizationFailedRejection =>
           complete(Forbidden)
-        case ValidationRejection(_, Some(e: IllegalPermissionString))     =>
+        case ValidationRejection(_, Some(e: IllegalPermissionString)) =>
           complete(BadRequest -> (e: CommonRejection))
         case MalformedQueryParamRejection(_, _, Some(e: CommonRejection)) =>
           complete(BadRequest -> (e: CommonRejection))
-        case MalformedRequestContentRejection(_, e: CommonRejection)      =>
+        case MalformedRequestContentRejection(_, e: CommonRejection) =>
           complete(BadRequest -> (e: CommonRejection))
       }
       .handleAll[MalformedRequestContentRejection] { rejection =>

@@ -11,15 +11,16 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault._
+import ch.epfl.bluebrain.nexus.iam.oidc.api.IdAccessToken._
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.AuthorizationAttemptWithInvalidState
-import ch.epfl.bluebrain.nexus.iam.oidc.api.{IdAccessToken, OidcOps, UserInfo}
+import ch.epfl.bluebrain.nexus.iam.oidc.api.{IdAccessToken, OidcOps}
 import ch.epfl.bluebrain.nexus.iam.oidc.config.AppConfig.OidcConfig
 import ch.epfl.bluebrain.nexus.iam.oidc.config.OidcProviderConfig
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import io.circe.DecodingFailure
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.auto._
+import io.circe.{Decoder, DecodingFailure}
 import journal.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,7 +39,8 @@ class ShardedOidcOps(stateRef: ActorRef, userInfoRef: ActorRef, cfg: OidcConfig,
     implicit ec: ExecutionContext,
     mt: Materializer,
     tm: Timeout,
-    cl: UntypedHttpClient[Future])
+    cl: UntypedHttpClient[Future],
+    userInfoDec: Decoder[UserInfo])
     extends OidcOps[Future] {
 
   private val log = Logger[this.type]
@@ -62,7 +64,7 @@ class ShardedOidcOps(stateRef: ActorRef, userInfoRef: ActorRef, cfg: OidcConfig,
               Query(
                 "response_type" -> "code",
                 "client_id"     -> cfg.clientId,
-                "redirect_uri"  -> cfg.tokenUri.toString(),
+                "redirect_uri"  -> cfg.tokenWithRealm.toString(),
                 "scope"         -> cfg.scopes.mkString(" "),
                 "state"         -> state.uuid
               )))
@@ -101,11 +103,13 @@ class ShardedOidcOps(stateRef: ActorRef, userInfoRef: ActorRef, cfg: OidcConfig,
           // $COVERAGE-ON$
         }
     def executeExchange: Future[IdAccessToken] = {
-      val data = FormData("code" -> code,
-                          "client_id"     -> cfg.clientId,
-                          "client_secret" -> cfg.clientSecret,
-                          "redirect_uri"  -> cfg.tokenUri.toString(),
-                          "grant_type"    -> "authorization_code")
+      val data = FormData(
+        "code"          -> code,
+        "client_id"     -> cfg.clientId,
+        "client_secret" -> cfg.clientSecret,
+        "redirect_uri"  -> cfg.tokenWithRealm.toString(),
+        "grant_type"    -> "authorization_code"
+      )
       iaClient(HttpRequest(HttpMethods.POST, pcfg.token, entity = data.toEntity))
         .recoverWith {
           case df: DecodingFailure =>

@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 /**
   * Case class which aggregates the configuration parameters
@@ -36,7 +36,7 @@ object AppConfig {
 
   final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri)
 
-  final case class RuntimeConfig(defaultTimeout: Duration)
+  final case class RuntimeConfig(defaultTimeout: FiniteDuration)
 
   final case class ClusterConfig(passivationTimeout: Duration, shards: Int, seeds: Option[String]) {
     lazy val seedAddresses: Set[String] =
@@ -47,11 +47,14 @@ object AppConfig {
 
   final case class AuthConfig(testMode: Boolean, adminGroups: Set[String])
 
-  final case class OidcConfig(issuer: Uri,
-                              realm: String,
-                              authorizeEndpoint: Uri,
-                              tokenEndpoint: Uri,
-                              userinfoEndpoint: Uri)
+  final case class OidcConfig(providers: List[OidcProviderConfig], defaultRealm: String)
+
+  final case class OidcProviderConfig(realm: String,
+                                      issuer: Uri,
+                                      jwkCert: Uri,
+                                      authorizeEndpoint: Uri,
+                                      tokenEndpoint: Uri,
+                                      userinfoEndpoint: Uri)
 
   final case class Kafka(permissionsTopic: String, permissionsProjectionId: String)
 

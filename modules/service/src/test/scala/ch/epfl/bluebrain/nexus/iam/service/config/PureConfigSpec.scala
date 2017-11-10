@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{Kafka, OidcConfig}
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{Kafka, OidcConfig, OidcProviderConfig}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpecLike}
 
@@ -39,11 +39,25 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
       appConfig.auth.adminGroups shouldEqual Set("nexus-admin-group")
 
       appConfig.oidc shouldEqual OidcConfig(
-        "http://localhost:8080/realm",
-        "realm",
-        "http://localhost:8080/oauth2/authorize",
-        "http://localhost:8080/token",
-        "http://localhost:8080/userinfo"
+        List(
+          OidcProviderConfig(
+            "BBP",
+            "http://localhost:8080/BBP/realm",
+            "http://localhost:8080/BBP/cert",
+            "http://localhost:8081/oauth2/authorize",
+            "http://localhost:8081/oauth2/token",
+            "http://localhost:8081/oauth2/userinfo"
+          ),
+          OidcProviderConfig(
+            "HBP",
+            "http://localhost:8080/HBP/realm",
+            "http://localhost:8080/HBP/cert",
+            "http://localhost:8081/HBP/oauth2/authorize",
+            "http://localhost:8081/oauth2/HBP/token",
+            "http://localhost:8081/HBP/oauth2/userinfo"
+          )
+        ),
+        "BBP"
       )
       appConfig.kafka shouldEqual Kafka("permissions-topic", "permissions-persistence-id")
     }

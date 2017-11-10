@@ -21,7 +21,7 @@ final case class CallerCtx(clock: Clock, user: User) {
       case id: UserRef => id
     } orElse (user.identities.collectFirst {
       case id: AuthenticatedRef => id
-    }) getOrElse (Identity.Anonymous)
+    }) getOrElse (Identity.Anonymous())
 }
 
 object CallerCtx {

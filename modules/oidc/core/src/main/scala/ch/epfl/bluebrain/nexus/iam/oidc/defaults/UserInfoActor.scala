@@ -7,7 +7,7 @@ import java.security.MessageDigest
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
-import ch.epfl.bluebrain.nexus.iam.oidc.api.UserInfo
+import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.config.Settings
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.UserInfoActor.Protocol._
 

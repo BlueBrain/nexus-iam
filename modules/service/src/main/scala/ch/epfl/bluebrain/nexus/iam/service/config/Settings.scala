@@ -27,9 +27,12 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[ClusterConfig](config, "app.cluster"),
     loadConfigOrThrow[PersistenceConfig](config, "app.persistence"),
     loadConfigOrThrow[AuthConfig](config, "app.auth"),
-    loadConfigOrThrow[OidcConfig](config, "app.oidc"),
+    removeUnsetProviders(loadConfigOrThrow[OidcConfig](config, "app.oidc")),
     loadConfigOrThrow[Kafka](config, "app.kafka")
   )
+
+  private def removeUnsetProviders(oidc: OidcConfig): OidcConfig =
+    oidc.copy(providers = oidc.providers.filter(_.realm != "CHANGE_ME"))
 
 }
 
