@@ -63,6 +63,12 @@ class CredentialsStoreActor(providers: List[OidcProviderConfig])(implicit ucl: U
             log.info("key for the provider '{}' has been retrieved from {}", provider.issuer, provider.jwkCert)
             keys = keys ++ key
           }
+          .recover {
+            case _ =>
+              log.warning("key for the provider '{}' has failed to be retrieved from {}",
+                          provider.issuer,
+                          provider.jwkCert)
+          }
       }
 }
 
