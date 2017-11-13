@@ -1,0 +1,6 @@
+{
+  "@id": "https://example.com/realms/realm/groups/some-group",
+  "realm": "realm",
+  "group": "some-group",
+  "@type": "GroupRef"
+}

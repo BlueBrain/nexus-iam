@@ -1,0 +1,5 @@
+{
+  "@id": "https://example.com/realms/realm/authenticated",
+  "realm": "realm",
+  "@type": "AuthenticatedRef"
+}
