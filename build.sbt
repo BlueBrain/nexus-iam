@@ -218,7 +218,7 @@ lazy val root = project
   .in(file("."))
   .settings(common, noPublish)
   .settings(name := "iam", moduleName := "iam", description := "Nexus Identity & Access Management")
-  .aggregate(docs, core, service, oidcCore, oidcBbp)
+  .aggregate(docs, core, service, oidcCore, oidcBbp, oidcHbp)
 
 /* Common settings */
 
