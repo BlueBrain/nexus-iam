@@ -5,8 +5,9 @@
         "read"
       ],
       "identity": {
-        "type": "AuthenticatedRef",
-        "origin": "https://example.com/realm"
+        "@id": "https://example.com/realms/realm",
+        "realm": "realm",
+        "@type": "AuthenticatedRef"
       }
     },
     {
@@ -14,9 +15,10 @@
         "read", "write"
       ],
       "identity": {
-        "type": "GroupRef",
-        "origin": "https://example.com/realm",
-        "group": "some-group"
+        "@id": "https://example.com/realms/realm/groups/some-group",
+        "realm": "realm",
+        "group": "some-group",
+        "@type": "GroupRef"
       }
     },
     {
@@ -24,9 +26,10 @@
         "read", "write", "own"
       ],
       "identity": {
-        "type": "UserRef",
-        "origin": "https://example.com/realm",
-        "name": "alice"
+        "@id": "https://example.com/realms/realm/users/user",
+        "realm": "realm",
+        "sub": "alice",
+        "@type": "UserRef"
       }
     }
   ]

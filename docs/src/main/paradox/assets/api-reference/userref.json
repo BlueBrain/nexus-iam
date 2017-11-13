@@ -1,0 +1,6 @@
+{
+  "@id": "https://example.com/realms/realm/users/user",
+  "realm": "realm",
+  "sub": "alice",
+  "@type": "UserRef"
+}

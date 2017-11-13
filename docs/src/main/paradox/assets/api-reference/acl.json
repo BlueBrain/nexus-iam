@@ -3,6 +3,7 @@
     "read"
   ],
   "identity": {
-    "type": "Anonymous"
+    "@id" : "https://example.com/realms/anonymous",
+    "@type": "Anonymous"
   }
 }

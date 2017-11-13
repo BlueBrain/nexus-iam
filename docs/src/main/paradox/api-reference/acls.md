@@ -122,10 +122,7 @@ Request
 Payload
 :   @@snip [acl.json](../assets/api-reference/acl.json)
 
-Response
-:   @@snip [acl.json](../assets/api-reference/acl.json)
-
-**Note**: Request and response body follow the same format.  The response shows the resulting permissions.
+**Note**: Request and response body follow the same format.
 
 #### Status Codes
 
@@ -174,17 +171,21 @@ to publish new instances of existing schemas hosted by the platform, without giv
 
 ### Identity
 
-The `identity` object in the payload (in both request and response body) is qualified by
-a mandatory `type` field that needs to match one of the literals described below. Additionally,
-any authenticated identity has an `origin` which is the URI of the provider realm. Groups
-have a `group` identifier, and users a `name`.
+The `identity` object's request payload is qualified by the mandatory `@type` field, while the response is qualified by `@id` (unique identifier of the identity)  and `@type`. Additionally, `UserRef` and `GroupRef` have a `realm` field which matches their provider. Groups
+have a `group` identifier, and users a `sub`. Those are the available `@type`s (this is the response's payload since it contains `@id`):
 
-| Type | Additional fields | Description |
-| --- | --- | --- |
-| Anonymous | *None* | Represents unauthenticated users |
-| AuthenticatedRef | `origin` | Represents any user authenticated by a provider of a specific *origin* |
-| GroupRef | `origin`, `group` | Represents users belonging to a specific *group* within the *origin* realm |
-| UserRef | `origin`, `name` | Represents a single user identified by *name* within the *origin* realm |
+UserRef
+:   @@snip [userref.json](../assets/api-reference/userref.json)
+
+GroupRef
+:   @@snip [groupref.json](../assets/api-reference/groupref.json)
+
+AuthenticatedRef
+:   @@snip [authref.json](../assets/api-reference/authref.json)
+
+Anonymous
+:   @@snip [anonref.json](../assets/api-reference/anonref.json)
+
 
 ## Error Signaling
 

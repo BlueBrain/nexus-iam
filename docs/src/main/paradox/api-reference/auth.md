@@ -9,9 +9,9 @@ See [OpenID Connect explained](https://connect2id.com/learn/openid-connect).
 ### Authorization
 
 ```
-GET /v0/oauth2/authorize?redirect={callback}
+GET /v0/oauth2/authorize?realm={realm}&redirect={callback}
 ```
-... where `{callback}` is an optional callback URI.
+... where `{realm}` is an optional realm name (if not present, the default one chosen by the configuration properties will be used) and `{callback}` is an optional callback URI.
 
 Forwards authorization request to the OIDC provider endpoint (typically, a login prompt).
 Upon success, the client is redirected to the *token* endpoint, or to the callback URI if provided.
@@ -24,9 +24,9 @@ Upon success, the client is redirected to the *token* endpoint, or to the callba
 ### Token
 
 ```
-GET /v0/oauth2/authorize?state={state}&code={code}
+GET /v0/oauth2/token/{realm}/?state={state}&code={code}
 ```
-... where `{state}` is the client internal state and `{code}` the code received from the provider.
+... where `{realm}` is the provider realm, `{state}` is the client internal state and `{code}` the code received from the provider.
 
 Gets the OAuth 2.0 access token from the provider.
 
