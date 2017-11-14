@@ -266,7 +266,7 @@ abstract class AclsRoutesSpecInstances
   implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
   implicit val tm: Timeout                     = Timeout(appConfig.runtime.defaultTimeout.toMillis, TimeUnit.MILLISECONDS)
   implicit val rt: RouteTestTimeout            = RouteTestTimeout(5.seconds.dilated)
-  implicit val config: Configuration           = Configuration.default.withDiscriminator("type")
+  implicit val config: Configuration           = Configuration.default.withDiscriminator("@type")
 
   protected val ownReadWrite = Permissions(Own, Read, Write)
   protected val readWrite    = Permissions(Read, Write)
