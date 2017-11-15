@@ -13,12 +13,13 @@ import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulH
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
+import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import io.circe.{Decoder, Encoder}
+import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax._
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -35,7 +36,8 @@ class AuthRoutesSpec
     with ScalatestRouteTest
     with MockitoSugar
     with ScalaFutures
-    with Fixtures {
+    with Fixtures
+    with Resources {
 
   implicit val ec: ExecutionContextExecutor = system.dispatcher
   implicit val ucl                          = mock[UntypedHttpClient[Future]]
@@ -157,10 +159,10 @@ class AuthRoutesSpec
 
     "resolve the user request using the JWT payload" in {
       val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
-      val user        = userInfo.toUser("realm")
+      val userJson        = jsonContentOf("/auth/user.json")
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         response.status shouldBe StatusCodes.OK
-        responseAs[User] shouldEqual user
+        responseAs[Json] shouldEqual userJson
       }
     }
 

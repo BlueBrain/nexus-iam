@@ -28,7 +28,7 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]])(implicit oidc: Oid
                                                               ec: ExecutionContext)
     extends DefaultRoutes("oauth2") {
 
-  private implicit val enc: Encoder[Identity] = identityEncoder(api.base.copy(path = api.base.path / "realms"))
+  private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?) & parameter('realm ? oidc.defaultRealm)) { (redirectUri, realm) =>
