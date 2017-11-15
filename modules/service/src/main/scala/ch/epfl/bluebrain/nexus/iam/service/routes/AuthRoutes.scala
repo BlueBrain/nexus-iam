@@ -3,9 +3,13 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import cats.implicits._
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo.userInfoEncoder
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
+import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
@@ -22,10 +26,10 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @param clients OIDC provider clients
   */
-class AuthRoutes(clients: List[DownstreamAuthClient[Future]])(implicit oidc: OidcConfig,
-                                                              api: ApiUri,
-                                                              ce: ClaimExtractor,
-                                                              ec: ExecutionContext)
+class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGroups[Future])(implicit oidc: OidcConfig,
+                                                                                              api: ApiUri,
+                                                                                              ce: ClaimExtractor,
+                                                                                              ec: ExecutionContext)
     extends DefaultRoutes("oauth2") {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
@@ -57,20 +61,41 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]])(implicit oidc: Oid
           }
         }
       } ~
-      (get & path("user") & extractBearerToken) { credentials =>
-        traceName("user") {
-          complete {
-            credentials.extractClaim.flatMap {
-              case (client, json) =>
-                json
-                  .extractUser(client.config)
-                  .recoverWith {
-                    case _ => client.getUser(credentials)
-                  }
+      (get & path("user") & extractBearerToken & parameter('filterGroups.as[Boolean] ? false)) {
+        (credentials, filterGroups) =>
+          traceName("user") {
+            complete {
+              credentials.extractClaim.flatMap {
+                case (client, json) =>
+                  val user = json
+                    .extractUser(client.config)
+                    .recoverWith {
+                      case _ => client.getUser(credentials)
+                    }
+                  if (filterGroups) {
+                    val realmUsedGroups = json
+                      .extractRealm(oidc.providers)
+                      .map(usedGroups.fetch)
+                      .getOrElse(Future.successful(Set.empty[GroupRef]))
+                    user product realmUsedGroups map { case (u, groups) => filterUserGroups(u, groups) }
+                  } else user
+
+              }
             }
           }
-        }
       }
+
+  private def filterUserGroups(user: User, usedGroups: Set[GroupRef]): User = {
+    user match {
+      case au @ AuthenticatedUser(identities) =>
+        val filteredIdentities = identities filter {
+          case group: GroupRef => usedGroups(group)
+          case _               => true
+        }
+        au.copy(identities = filteredIdentities)
+      case other => other
+    }
+  }
 }
 
 object AuthRoutes {
@@ -81,11 +106,12 @@ object AuthRoutes {
     * @param clients OIDC provider clients
     * @return new instance of AuthRoutes
     */
-  def apply(clients: List[DownstreamAuthClient[Future]])(implicit oidc: OidcConfig,
-                                                         api: ApiUri,
-                                                         ce: ClaimExtractor,
-                                                         ec: ExecutionContext): AuthRoutes =
-    new AuthRoutes(clients)
+  def apply(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGroups[Future])(
+      implicit oidc: OidcConfig,
+      api: ApiUri,
+      ce: ClaimExtractor,
+      ec: ExecutionContext): AuthRoutes =
+    new AuthRoutes(clients, usedGroups: UsedGroups[Future])
 
   // $COVERAGE-ON$
 }
