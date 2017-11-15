@@ -1,0 +1,32 @@
+{
+  "identities" : [
+    {
+      "@id" : "localhost:8080/v0/realms/realm/authenticated",
+      "realm" : "realm",
+      "@type" : "AuthenticatedRef"
+    },
+    {
+      "@id" : "localhost:8080/v0/anonymous",
+      "@type" : "Anonymous"
+    },
+    {
+      "@id" : "localhost:8080/v0/realms/realm/users/f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero",
+      "realm" : "realm",
+      "sub" : "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero",
+      "@type" : "UserRef"
+    },
+    {
+      "@id" : "localhost:8080/v0/realms/realm/groups/some",
+      "realm" : "realm",
+      "group" : "some",
+      "@type" : "GroupRef"
+    },
+    {
+      "@id" : "localhost:8080/v0/realms/realm/groups/other",
+      "realm" : "realm",
+      "group" : "other",
+      "@type" : "GroupRef"
+    }
+  ],
+  "@type" : "AuthenticatedUser"
+}

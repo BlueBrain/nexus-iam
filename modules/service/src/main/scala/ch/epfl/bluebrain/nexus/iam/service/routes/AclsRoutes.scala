@@ -37,7 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, api: ApiUri)
     extends DefaultRoutes("acls") {
 
-  private implicit val enc: Encoder[Identity] = identityEncoder(api.base.copy(path = api.base.path / "realms"))
+  private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
 
   override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
