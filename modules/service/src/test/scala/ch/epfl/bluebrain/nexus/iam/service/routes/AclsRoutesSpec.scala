@@ -292,7 +292,7 @@ abstract class AclsRoutesSpecInstances
 
   protected val user = AuthenticatedUser(Set(Anonymous(), AuthenticatedRef(Some(realm)), someGroup, alice))
   implicit val enc: Encoder[Identity] =
-    JsonLdSerialization.identityEncoder(apiUri.base.copy(path = apiUri.base.path / "realms"))
+    JsonLdSerialization.identityEncoder(apiUri.base)
   implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
 
   var routes: Route = _

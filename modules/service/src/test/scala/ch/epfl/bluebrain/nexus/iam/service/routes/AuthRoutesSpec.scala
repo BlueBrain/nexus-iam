@@ -52,7 +52,7 @@ class AuthRoutesSpec
   val routes                                         = AuthRoutes(cl).routes
 
   implicit val enc: Encoder[Identity] =
-    JsonLdSerialization.identityEncoder(apiUri.base.copy(path = apiUri.base.path / "realms"))
+    JsonLdSerialization.identityEncoder(apiUri.base)
   implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
 
   before {
