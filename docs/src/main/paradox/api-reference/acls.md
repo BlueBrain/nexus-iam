@@ -195,8 +195,6 @@ complemented by a consistent response data model for reporting client and system
 Format
 :   @@snip [error.json](../assets/api-reference/error.json)
 
-Example
-:   @@snip [error-example.json](../assets/api-reference/error-example.json)
 
 While the format only specifies `code` and `message` fields, additional fields may be presented for additional
 information in certain scenarios.
