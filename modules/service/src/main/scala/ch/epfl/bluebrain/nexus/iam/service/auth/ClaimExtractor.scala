@@ -5,7 +5,6 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp._
 import ch.epfl.bluebrain.nexus.iam.service.auth.TokenId._
 import ch.epfl.bluebrain.nexus.iam.service.auth.TokenValidationFailure._
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcProviderConfig
 import ch.epfl.bluebrain.nexus.iam.service.routes._
 import io.circe._
@@ -82,18 +81,6 @@ object ClaimExtractor {
     * @param claim the JWT Claim
     */
   implicit class JsonSyntax(claim: Json) {
-
-    /**
-      * Exposes a method to exctract realm name from ''json'' JWT Claim
-      * @param providers list of the OIDC provider config
-      * @return the realm name if found
-      */
-    def extractRealm(providers: List[AppConfig.OidcProviderConfig]): Option[String] = {
-      claim.as[TokenId] match {
-        case Right(TokenId(iss, _)) => providers.find(_.issuer equals iss).map(_.realm)
-        case Left(_)                => None
-      }
-    }
 
     /**
       * Exposes a method to extract the user from the ''json'' JWT Claim.

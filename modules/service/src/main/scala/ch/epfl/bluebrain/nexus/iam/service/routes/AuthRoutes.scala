@@ -73,10 +73,8 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
                       case _ => client.getUser(credentials)
                     }
                   if (filterGroups) {
-                    val realmUsedGroups = json
-                      .extractRealm(oidc.providers)
-                      .map(usedGroups.fetch)
-                      .getOrElse(Future.successful(Set.empty[GroupRef]))
+                    val realmUsedGroups = usedGroups
+                      .fetch(client.config.realm)
                     user product realmUsedGroups map { case (u, groups) => filterUserGroups(u, groups) }
                   } else user
 

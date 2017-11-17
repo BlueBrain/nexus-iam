@@ -167,7 +167,7 @@ object Main {
         appConfig.kafka.permissionsTopic
       )
 
-      implicit val ee: Encoder[Event] = eventEncoder(apiUri.copy(path = apiUri.path / "realms"))
+      implicit val ee: Encoder[Event] = eventEncoder(apiUri)
       SequentialTagIndexer.start[Event](
         UsedGroupsAggregator[Future](usedGroups).apply _,
         "used-groups",

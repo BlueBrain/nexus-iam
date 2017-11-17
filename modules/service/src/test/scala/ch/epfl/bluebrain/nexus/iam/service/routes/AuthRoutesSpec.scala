@@ -192,7 +192,7 @@ class AuthRoutesSpec
 
     "resolve the user request using the JWT payload" in {
       val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
-      val userJson        = jsonContentOf("/auth/user.json")
+      val userJson    = jsonContentOf("/auth/user.json")
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         response.status shouldBe StatusCodes.OK
         responseAs[Json] shouldEqual userJson
