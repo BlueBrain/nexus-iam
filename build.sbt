@@ -209,6 +209,7 @@ lazy val service = project
       akkaHttpTestkit % Test,
       scalaTest       % Test,
       akkaPersMem     % Test,
+      sourcingMem     % Test,
       mockitoCore     % Test,
       commonsTest     % Test
     )

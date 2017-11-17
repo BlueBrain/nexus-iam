@@ -10,15 +10,19 @@ import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{User, UserInfo}
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
+import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
+import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax._
 import org.mockito.Mockito
@@ -27,6 +31,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class AuthRoutesSpec
@@ -39,17 +44,22 @@ class AuthRoutesSpec
     with Fixtures
     with Resources {
 
-  implicit val ec: ExecutionContextExecutor = system.dispatcher
-  implicit val ucl                          = mock[UntypedHttpClient[Future]]
-  implicit val mt: ActorMaterializer        = ActorMaterializer()
-  val uicl                                  = HttpClient.withAkkaUnmarshaller[UserInfo]
+  implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = 5 seconds, interval = 50 millis)
+  implicit val ec: ExecutionContextExecutor    = system.dispatcher
+  implicit val ucl                             = mock[UntypedHttpClient[Future]]
+  implicit val mt: ActorMaterializer           = ActorMaterializer()
+  val uicl                                     = HttpClient.withAkkaUnmarshaller[UserInfo]
 
   private val provider: AppConfig.OidcProviderConfig = oidc.providers(0)
   val cl1                                            = DownstreamAuthClient(ucl, uicl, provider)
   val cl                                             = List[DownstreamAuthClient[Future]](cl1)
   implicit val claimExtractor                        = claim(cl)
   implicit val apiUri: ApiUri                        = ApiUri("localhost:8080/v0")
-  val routes                                         = AuthRoutes(cl).routes
+
+  val aggregate  = MemoryAggregate("used-groups")(Set.empty[GroupRef], UsedGroups.next, UsedGroups.eval).toF[Future]
+  val usedGroups = UsedGroups[Future](aggregate)
+
+  val routes = AuthRoutes(cl, usedGroups).routes
 
   implicit val enc: Encoder[Identity] =
     JsonLdSerialization.identityEncoder(apiUri.base)
@@ -157,9 +167,32 @@ class AuthRoutesSpec
       }
     }
 
+    "request user endpoint and return a user entity response with filtered groups" in {
+      val credentials = genCredentailsNoUserInfo(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
+      val uinfo = UserInfo("sub",
+                           "name",
+                           "preferredUsername",
+                           "givenName",
+                           "familyName",
+                           "email@example.com",
+                           Set("group1", "group2"))
+      val user = uinfo.toUser("realm")
+
+      val entity = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, uinfo.asJson.noSpaces))
+      when(ucl.apply(Get(provider.userinfoEndpoint).addCredentials(credentials))).thenReturn(Future.successful(entity))
+      usedGroups.add(GroupRef("realm", "group1")).futureValue
+
+      Get(s"/oauth2/user?filterGroups=true") ~> addCredentials(credentials) ~> routes ~> check {
+        response.status shouldBe StatusCodes.OK
+        responseAs[User] shouldEqual user
+          .asInstanceOf[AuthenticatedUser]
+          .copy(identities = user.identities - GroupRef("realm", "group2"))
+      }
+    }
+
     "resolve the user request using the JWT payload" in {
       val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
-      val userJson        = jsonContentOf("/auth/user.json")
+      val userJson    = jsonContentOf("/auth/user.json")
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         response.status shouldBe StatusCodes.OK
         responseAs[Json] shouldEqual userJson

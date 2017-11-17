@@ -64,7 +64,7 @@ class CredentialsStoreSpec
     val store = CredentialsStore("name")
 
     "return the correct key when it is present" in {
-        store.fetchKey(TokenId(provider1Issuer, "kid1")).futureValue shouldBe a[PublicKey]
+      store.fetchKey(TokenId(provider1Issuer, "kid1")).futureValue shouldBe a[PublicKey]
     }
 
     "return KidOrIssuerNotFound when the key is not present" in {
