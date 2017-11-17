@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.groups
 
 /**
-  * Rejection signalizing that a groups has already been added
+  * Rejection signaling that a group has already been added
   */
 final case object GroupAlreadyAddedRejection

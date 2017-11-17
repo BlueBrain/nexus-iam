@@ -35,7 +35,7 @@ object UsedGroups {
 
   /**
     * Command evaluation logic for used groups. It rejects the command to add groups which already have been added in order
-    * to avoid storing to many messages in the event log.
+    * to avoid storing too many messages in the event log.
     * @param state groups currently in use
     * @param cmd command wrapping group to be added
     * @return either ''GroupAlreadyAddedRejection'' or ''GroupPermissionAddedEvent''
