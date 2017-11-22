@@ -21,7 +21,7 @@ object KafkaPublisher {
 
   private def flow(producerSettings: ProducerSettings[String, String], topic: String)(
       implicit api: ApiUri): Flow[(Offset, String, Event), Offset, NotUsed] = {
-    implicit val ee: Encoder[Event] = eventEncoder(api.base.copy(path = api.base.path / "realms"))
+    implicit val ee: Encoder[Event] = eventEncoder(api.base)
     val m                           = jsonLdMarshaller(api.base)
     Flow[(Offset, String, Event)]
       .map {
