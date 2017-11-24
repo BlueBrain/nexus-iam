@@ -4,6 +4,7 @@ import java.time.{Clock, Instant, ZoneId}
 import java.util.concurrent.TimeUnit
 
 import akka.cluster.Cluster
+import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -12,22 +13,28 @@ import akka.testkit.TestDuration
 import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, UserInfo}
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.{AppConfig, Settings}
-import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
+import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
+import io.circe.{Decoder, Encoder}
 import org.mockito.Mockito.when
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
@@ -36,12 +43,6 @@ import org.scalatest.mockito.MockitoSugar
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future, Promise}
 import scala.util.Random
-import akka.http.scaladsl.model.ContentTypes._
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
-import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import io.circe.{Decoder, Encoder}
 
 class AclsRoutesSpec extends AclsRoutesSpecInstances {
 
@@ -164,6 +165,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         responseAs[AccessControlList].acl shouldBe empty
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
@@ -181,6 +183,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         status shouldEqual StatusCodes.Created
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(
           someGroup   -> ownReadWrite,
@@ -294,6 +297,7 @@ abstract class AclsRoutesSpecInstances
   implicit val enc: Encoder[Identity] =
     JsonLdSerialization.identityEncoder(apiUri.base)
   implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
+  implicit val ordered                = Main.iamOrderedKeys
 
   var routes: Route = _
 

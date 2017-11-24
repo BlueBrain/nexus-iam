@@ -16,6 +16,7 @@ import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
@@ -75,11 +76,12 @@ object Main {
     cluster.registerOnMemberUp({
       logger.info("==== Cluster is Live ====")
 
-      implicit val oidcConfig = appConfig.oidc
-      implicit val baseApiUri = ApiUri(apiUri)
-      implicit val clock      = Clock.systemUTC
-      val aclAggregate        = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
-      val acl                 = Acls[Future](aclAggregate)
+      implicit val oidcConfig  = appConfig.oidc
+      implicit val baseApiUri  = ApiUri(apiUri)
+      implicit val clock       = Clock.systemUTC
+      implicit val orderedKeys = iamOrderedKeys
+      val aclAggregate         = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
+      val acl                  = Acls[Future](aclAggregate)
       val usedGroupsAgg =
         ShardingAggregate("used-groups", sourcingSettings)(Set.empty[GroupRef], UsedGroups.next, UsedGroups.eval)
       val usedGroups            = UsedGroups(usedGroupsAgg)
@@ -192,5 +194,17 @@ object Main {
       val _ = Await.result(as.terminate(), 5.seconds)
     }
   }
+
+  def iamOrderedKeys: OrderedKeys =
+    OrderedKeys(
+      List(
+        "@context",
+        "@id",
+        "@type",
+        "identity",
+        "permissions",
+        "realm",
+        "",
+      ))
 }
 // $COVERAGE-ON$

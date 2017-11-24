@@ -9,7 +9,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
@@ -17,9 +17,13 @@ import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
+import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
-import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
+import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.unmarshaller
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.jsonUnmarshaller
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
@@ -55,6 +59,7 @@ class AuthRoutesSpec
   val cl                                             = List[DownstreamAuthClient[Future]](cl1)
   implicit val claimExtractor                        = claim(cl)
   implicit val apiUri: ApiUri                        = ApiUri("localhost:8080/v0")
+  implicit val ordered                               = Main.iamOrderedKeys
 
   val aggregate  = MemoryAggregate("used-groups")(Set.empty[GroupRef], UsedGroups.next, UsedGroups.eval).toF[Future]
   val usedGroups = UsedGroups[Future](aggregate)
@@ -148,6 +153,7 @@ class AuthRoutesSpec
     }
 
     "request user endpoint and return a user entity response" in {
+
       val credentials = genCredentailsNoUserInfo(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
       val uinfo = UserInfo("sub",
                            "name",
@@ -162,12 +168,14 @@ class AuthRoutesSpec
       when(ucl.apply(Get(provider.userinfoEndpoint).addCredentials(credentials))).thenReturn(Future.successful(entity))
 
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         response.status shouldBe StatusCodes.OK
         responseAs[User] shouldEqual user
       }
     }
 
     "request user endpoint and return a user entity response with filtered groups" in {
+
       val credentials = genCredentailsNoUserInfo(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
       val uinfo = UserInfo("sub",
                            "name",
@@ -183,6 +191,7 @@ class AuthRoutesSpec
       usedGroups.add(GroupRef("realm", "group1")).futureValue
 
       Get(s"/oauth2/user?filterGroups=true") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         response.status shouldBe StatusCodes.OK
         responseAs[User] shouldEqual user
           .asInstanceOf[AuthenticatedUser]
@@ -194,6 +203,7 @@ class AuthRoutesSpec
       val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
       val userJson    = jsonContentOf("/auth/user.json")
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         response.status shouldBe StatusCodes.OK
         responseAs[Json] shouldEqual userJson
       }
