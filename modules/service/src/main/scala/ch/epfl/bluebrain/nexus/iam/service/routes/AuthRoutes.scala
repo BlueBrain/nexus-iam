@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import cats.implicits._
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo.userInfoEncoder
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
@@ -29,7 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGroups[Future])(implicit oidc: OidcConfig,
                                                                                               api: ApiUri,
                                                                                               ce: ClaimExtractor,
-                                                                                              ec: ExecutionContext)
+                                                                                              ec: ExecutionContext,
+                                                                                              orderedKeys: OrderedKeys)
     extends DefaultRoutes("oauth2") {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
@@ -62,6 +64,7 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
         }
       } ~
       (get & path("user") & extractBearerToken & parameter('filterGroups.as[Boolean] ? false)) {
+        import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
         (credentials, filterGroups) =>
           traceName("user") {
             complete {
@@ -108,7 +111,8 @@ object AuthRoutes {
       implicit oidc: OidcConfig,
       api: ApiUri,
       ce: ClaimExtractor,
-      ec: ExecutionContext): AuthRoutes =
+      ec: ExecutionContext,
+      orderedKeys: OrderedKeys): AuthRoutes =
     new AuthRoutes(clients, usedGroups: UsedGroups[Future])
 
   // $COVERAGE-ON$
