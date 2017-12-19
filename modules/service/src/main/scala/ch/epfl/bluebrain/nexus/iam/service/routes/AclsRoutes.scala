@@ -50,7 +50,7 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, a
               authorizeAsync(check(path, user, Permission.Own)) {
                 traceName("addPermissions") {
                   onSuccess(acl.add(path, list)) {
-                    complete(StatusCodes.OK)
+                    complete(StatusCodes.OK -> HttpEntity.Empty)
                   }
                 }
               }
