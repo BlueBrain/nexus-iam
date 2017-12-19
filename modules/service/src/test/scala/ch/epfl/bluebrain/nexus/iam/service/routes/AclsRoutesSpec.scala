@@ -122,7 +122,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
             """{"acl" : [{"identity" : {"@type" : "Anonymous"}, "permissions" : [] } ] }""")) ~> addCredentials(
         credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
-        responseAs[Error].code shouldEqual classNameOf[CannotCreateVoidPermissions.type]
+        responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
       }
     }
 
@@ -135,11 +135,11 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
           """{"acl": [{"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["own", "read", "write"] } ] }"""
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Created
+        status shouldEqual StatusCodes.OK
       }
-      Post(
-        s"/acls${path.repr}",
-        HttpEntity(`application/json`, """{"identity" : {"@type" : "Anonymous"}, "permissions" : [] }""")) ~> addCredentials(
+      Put(s"/acls${path.repr}",
+          HttpEntity(`application/json`,
+                     """{"acl": [{"identity" : {"@type" : "Anonymous"}, "permissions" : [] } ] }""")) ~> addCredentials(
         credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
@@ -155,7 +155,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
           """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Created
+        status shouldEqual StatusCodes.OK
       }
       Delete(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.NoContent
@@ -171,7 +171,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
       }
     }
 
-    "create and get permissions" in {
+    "add initial and get permissions" in {
       val path = Path(s"/some/$rand")
       Put(
         s"/acls${path.repr}",
@@ -180,7 +180,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
           """{"acl": [{"identity": {"realm": "realm", "group": "some", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "group": "other-group", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] }, {"identity": {"@type": "Anonymous"}, "permissions": ["read"] } ] }"""
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Created
+        status shouldEqual StatusCodes.OK
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
@@ -211,23 +211,30 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
           """{"acl": [{"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
-        status shouldEqual StatusCodes.Created
+        status shouldEqual StatusCodes.OK
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> ownReadWrite)
       }
 
-      Post(s"/acls${path.repr}",
-           HttpEntity(`application/json`,
-                      """{"identity": {"@type": "Anonymous"}, "permissions": ["read", "write"] }""")) ~> addCredentials(
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["read", "write"] } ] }""")) ~> addCredentials(
         credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[AccessControl] shouldEqual AccessControl(Anonymous(), readWrite)
       }
+
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(Anonymous() -> readWrite, alice -> readWrite)
+      }
+
+      Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldEqual AccessControlList(Anonymous() -> readWrite, alice -> ownReadWrite)
       }
     }
 
@@ -311,7 +318,7 @@ abstract class AclsRoutesSpecInstances
                                                                                                          Acls.next,
                                                                                                          Acls.eval)
       val acl = Acls[Future](aggregate)
-      acl.create(Path./, AccessControlList(alice -> own))(aliceCaller)
+      acl.add(Path./, AccessControlList(alice -> own))(aliceCaller)
       routes = AclsRoutes(acl).routes
       p.success(())
     }

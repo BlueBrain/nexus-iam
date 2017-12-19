@@ -21,8 +21,7 @@ class TaggingAdapterSpec extends WordSpecLike with Matchers with TableDrivenProp
       "event",
       PermissionsCleared(path, meta),
       PermissionsRemoved(path, user, meta),
-      PermissionsCreated(path, AccessControlList(user -> permissions, group -> permissions), meta),
-      PermissionsAdded(path, user, permissions, meta),
+      PermissionsAdded(path, AccessControlList(user -> permissions, group -> permissions), meta),
       PermissionsSubtracted(path, user, permissions, meta)
     )
 

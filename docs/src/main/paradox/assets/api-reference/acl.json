@@ -1,9 +1,0 @@
-{
-  "permissions": [
-    "read"
-  ],
-  "identity": {
-    "@id" : "https://example.com/anonymous",
-    "@type": "Anonymous"
-  }
-}

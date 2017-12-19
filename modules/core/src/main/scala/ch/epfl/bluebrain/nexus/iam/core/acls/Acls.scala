@@ -96,47 +96,24 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
   }
 
   /**
-    * Creates initial permissions ''mapping'' on a ''path''
+    * Creates or appends permissions ''mapping'' on a ''path''
     *
     * @param path the path
     * @param acl  the identity to permissions mapping to create
     * @param ctx  the implicit identity context calling this action
     * @return Unit in an ''F[_]'' context if the action was successful
     */
-  def create(path: Path, acl: AccessControlList)(implicit ctx: CallerCtx): F[Unit] = {
+  def add(path: Path, acl: AccessControlList)(implicit ctx: CallerCtx): F[Unit] = {
     log.debug(s"Creating permissions mapping '$acl' for path '${path.show}'")
-    agg.eval(path.show, CreatePermissions(path, acl, ctx.meta)).flatMap {
+    agg.eval(path.show, AddPermissions(path, acl, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
       case Right(Initial) =>
         val th = UnexpectedState[Current, Initial]()
         log.error("Received an unexpected Initial state", th)
         F.raiseError(th)
       case Right(Current(_, _)) =>
-        log.debug(s"CreatePermissions succeeded for path '${path.show}''")
+        log.debug(s"AddPermissions succeeded for path '${path.show}''")
         F.pure(())
-    }
-  }
-
-  /**
-    * Creates or appends ''permissions'' on a ''path'' for an ''identity''.
-    *
-    * @param path        the path
-    * @param identity    the target identity
-    * @param permissions the permissions to add
-    * @param ctx         the implicit identity context calling this action
-    * @return the resulting permissions set on this path for this identity, in an ''F[_]'' context
-    */
-  def add(path: Path, identity: Identity, permissions: Permissions)(implicit ctx: CallerCtx): F[Permissions] = {
-    log.debug(s"Adding permissions '$permissions' for path '${path.show}' and identity '${identity.show}'")
-    agg.eval(path.show, AddPermissions(path, identity, permissions, ctx.meta)).flatMap {
-      case Left(rejection) => F.raiseError(CommandRejected(rejection))
-      case Right(Initial) =>
-        val th = UnexpectedState[Current, Initial]()
-        log.error("Received an unexpected Initial state", th)
-        F.raiseError(th)
-      case Right(Current(_, mapping)) =>
-        log.debug(s"AddPermissions succeeded for path '${path.show}' and identity '${identity.show}'")
-        F.pure(mapping(identity))
     }
   }
 
@@ -181,6 +158,14 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
 
 object Acls {
 
+  private def diffPermissions(previous: Map[Identity, Permissions], additional: Map[Identity, Permissions]) =
+    additional.foldLeft(Map.empty[Identity, Permissions]) {
+      case (acc, (id, perms)) =>
+        val diff = perms -- previous.getOrElse(id, Permissions.empty)
+        if (diff.nonEmpty) acc + (id -> diff)
+        else acc
+    }
+
   type PermissionAggregate[F[_]] = Aggregate.Aux[F, String, Event, State, Command, CommandRejection]
 
   /**
@@ -208,25 +193,16 @@ object Acls {
       case _                                                   => Left(CannotRemoveForNonexistentIdentity)
     }
 
-    def create(c: CreatePermissions): Either[CommandRejection, Event] = state match {
-      case Initial =>
-        if (c.acl.hasVoidPermissions) Left(CannotCreateVoidPermissions)
-        else Right(PermissionsCreated(c.path, c.acl, c.meta))
-      case _ =>
-        Left(CannotCreateExistingPermissions)
-    }
-
     def add(c: AddPermissions): Either[CommandRejection, Event] = state match {
-      case _ if c.permissions.isEmpty => Left(CannotAddVoidPermissions)
-      case Initial                    => Right(PermissionsAdded(c.path, c.identity, c.permissions, c.meta))
+      case Initial =>
+        if (c.acl.hasVoidPermissions) Left(CannotAddVoidPermissions)
+        else Right(PermissionsAdded(c.path, c.acl, c.meta))
       case Current(_, mapping) =>
-        mapping.get(c.identity) match {
-          case Some(existing) =>
-            val diff = c.permissions -- existing
-            if (diff.isEmpty) Left(CannotAddVoidPermissions)
-            else Right(PermissionsAdded(c.path, c.identity, diff, c.meta))
-          case None => Right(PermissionsAdded(c.path, c.identity, c.permissions, c.meta))
-        }
+        if (c.acl.hasVoidPermissions) Left(CannotAddVoidPermissions)
+        val newMapping = c.acl.toMap
+        val diff       = diffPermissions(mapping, newMapping)
+        if (diff.nonEmpty) Right(PermissionsAdded(c.path, AccessControlList.fromMap(diff), c.meta))
+        else Left(CannotAddVoidPermissions)
     }
 
     def subtract(c: SubtractPermissions): Either[CommandRejection, Event] = state match {
@@ -249,7 +225,6 @@ object Acls {
     cmd match {
       case c: ClearPermissions    => clear(c)
       case c: RemovePermissions   => remove(c)
-      case c: CreatePermissions   => create(c)
       case c: AddPermissions      => add(c)
       case c: SubtractPermissions => subtract(c)
     }
@@ -264,13 +239,11 @@ object Acls {
     * @return the next state
     */
   final def next(state: State, event: Event): State = (state, event) match {
-    case (Initial, PermissionsAdded(path, id, perms, _))             => Current(path, Map(id -> perms))
-    case (Initial, PermissionsCreated(path, acl, _))                 => Current(path, acl.toMap)
-    case (Initial, _: Event)                                         => Initial
-    case (_: Current, PermissionsCleared(path, _))                   => Current(path, Map.empty)
-    case (c: Current, _: PermissionsCreated)                         => c
-    case (Current(_, mapping), PermissionsRemoved(path, id, _))      => Current(path, mapping - id)
-    case (Current(_, mapping), PermissionsAdded(path, id, perms, _)) => Current(path, mapping |+| Map(id -> perms))
+    case (Initial, PermissionsAdded(path, acl, _))              => Current(path, acl.toMap)
+    case (Initial, _: Event)                                    => Initial
+    case (_: Current, PermissionsCleared(path, _))              => Current(path, Map.empty)
+    case (Current(_, mapping), PermissionsRemoved(path, id, _)) => Current(path, mapping - id)
+    case (Current(_, mapping), PermissionsAdded(path, acl, _))  => Current(path, mapping |+| acl.toMap)
     case (Current(_, mapping), PermissionsSubtracted(path, id, perms, _)) =>
       Current(path, mapping.updated(id, mapping(id) -- perms))
   }

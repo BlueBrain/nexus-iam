@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.service.groups
 import cats.MonadError
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event.{PermissionsAdded, PermissionsCreated}
+import ch.epfl.bluebrain.nexus.commons.iam.acls.Event.PermissionsAdded
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 
@@ -17,15 +17,10 @@ class UsedGroupsAggregator[F[_]](usedGroups: UsedGroups[F])(implicit F: MonadErr
 
   final def apply(event: Event): F[Unit] = {
     val groups: Set[GroupRef] = event match {
-      case PermissionsCreated(_, acl, _) =>
+      case PermissionsAdded(_, acl, _) =>
         acl.acl.map(_.identity).flatMap {
           case g: GroupRef => Set(g)
           case _           => Set.empty[GroupRef]
-        }
-      case PermissionsAdded(_, identity, _, _) =>
-        identity match {
-          case g: GroupRef => Set(g)
-          case _           => Set.empty
         }
       case _ => Set.empty[GroupRef]
     }

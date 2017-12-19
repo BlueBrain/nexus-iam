@@ -98,12 +98,9 @@ object Main {
             mapping.get(Anonymous()) match {
               case Some(permissions) if permissions.containsAll(ownRead) =>
                 logger.info("Top-level permissions found for anonymous; nothing to do")
-              case Some(_) =>
+              case _ =>
                 logger.info("Adding 'own' & 'read' to top-level permissions for anonymous")
-                acl.add(Path./, Anonymous(), ownRead)(anonymousCaller)
-              case None =>
-                logger.info("Creating top-level permissions for anonymous")
-                acl.create(Path./, AccessControlList(Anonymous() -> ownRead))(anonymousCaller)
+                acl.add(Path./, AccessControlList(Anonymous() -> ownRead))(anonymousCaller)
             }
           case Failure(e) =>
             logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")
@@ -121,18 +118,14 @@ object Main {
                 s"Found top-level permissions: ${permissions.set} for anonymous; removing them for security reasons!")
               acl.remove(Path./, Anonymous())(adminCaller)
             }
-            adminGroups.foreach {
-              adminGroup =>
-                mapping.get(adminGroup) match {
-                  case Some(permissions) if permissions.containsAll(ownRead) =>
-                    logger.info(s"Top-level permissions found for $adminGroup; nothing to do")
-                  case Some(_) =>
-                    logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
-                    acl.add(Path./, adminGroup, ownRead)(adminCaller)
-                  case None =>
-                    logger.info(s"Creating top-level permissions for $adminGroup")
-                    acl.create(Path./, AccessControlList(adminGroup -> ownRead))(adminCaller)
-                }
+            adminGroups.foreach { adminGroup =>
+              mapping.get(adminGroup) match {
+                case Some(permissions) if permissions.containsAll(ownRead) =>
+                  logger.info(s"Top-level permissions found for $adminGroup; nothing to do")
+                case _ =>
+                  logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
+                  acl.add(Path./, AccessControlList(adminGroup -> ownRead))(adminCaller)
+              }
             }
           case Failure(e) =>
             logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")

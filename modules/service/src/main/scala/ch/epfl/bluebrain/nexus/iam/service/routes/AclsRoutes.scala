@@ -48,25 +48,14 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, a
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {
-                traceName("createPermissions") {
-                  onSuccess(acl.create(path, list)) {
-                    complete(StatusCodes.Created)
+                traceName("addPermissions") {
+                  onSuccess(acl.add(path, list)) {
+                    complete(StatusCodes.OK)
                   }
                 }
               }
             }
           } ~
-            post {
-              entity(as[AccessControl]) { ac =>
-                authorizeAsync(check(path, user, Permission.Own)) {
-                  traceName("addPermisssions") {
-                    onSuccess(acl.add(path, ac.identity, ac.permissions)) { result =>
-                      complete(StatusCodes.OK -> AccessControl(ac.identity, result))
-                    }
-                  }
-                }
-              }
-            } ~
             delete {
               authorizeAsync(check(path, user, Permission.Own)) {
                 traceName("deletePermissions") {
