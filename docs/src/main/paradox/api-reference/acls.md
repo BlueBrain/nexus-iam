@@ -36,7 +36,6 @@ when present. See [Actions](#actions) and [Data formats](#data-formats) for deta
 | GET | /v0/acls/{address} | *N/A* | [Own ACL](../assets/api-reference/own-acls.json) |
 | GET | /v0/acls/{address}?all=true | *N/A* | [Full ACL](../assets/api-reference/acls.json) |
 | PUT | /v0/acls/{address} | [Full ACL](../assets/api-reference/acls.json) | *N/A* |
-| POST | /v0/acls/{address} | [Additional permissions](../assets/api-reference/acl.json) | [Resulting permissions](../assets/api-reference/acl.json) |
 | DELETE | /v0/acls/{address} | *N/A* | *N/A* |
 
 ## Actions
@@ -85,7 +84,7 @@ Response
 - **200 OK**: the entire ACL is fetched is returned successfully
 - **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
-### Create a new ACL
+### Add new ACL
 
 ```
 PUT /v0/acls/{address}
@@ -102,33 +101,10 @@ Payload
 
 #### Status Codes
 
-- **201 Created**: the resource ACL was created successfully
+- **200 OK**: the resource ACL was added successfully
 - **400 Bad Request**: the request payload is not valid
 - **403 Forbidden**: the caller doesn't have `own` rights on this resource
 - **409 Conflict**: the resource ACL already exists
-
-### Add permissions to a resource ACL
-
-```
-POST /v0/acls/{address}
-{...}
-```
-
-#### Example
-
-Request
-:   @@snip [acl-post.sh](../assets/api-reference/acl-post.sh)
-
-Payload
-:   @@snip [acl.json](../assets/api-reference/acl.json)
-
-**Note**: Request and response body follow the same format.
-
-#### Status Codes
-
-- **200 OK**: the resource ACL was updated successfully
-- **400 Bad Request**: the request payload is not valid
-- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
 ### Clear ACL on a resource
 
