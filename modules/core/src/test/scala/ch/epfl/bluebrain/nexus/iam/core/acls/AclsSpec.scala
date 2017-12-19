@@ -39,51 +39,48 @@ class AclsSpec extends WordSpecLike with Matchers {
 
     "fetch all created permissions" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
-      acls.add(path, alice, OwnReadWrite) shouldEqual Success(OwnReadWrite)
+      acls.add(path, AccessControlList(Anonymous()         -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
       acls.fetch(path) shouldEqual Success(Map(Anonymous() -> OwnRead, alice -> OwnReadWrite))
     }
 
     "fetch created permissions for a specific identity" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.fetch(path, Anonymous()) shouldEqual Success(Some(OwnRead))
     }
 
-    "not create empty permissions mapping" in {
+    "prevent adding empty permissions mapping" in {
       val path = genPath(genId)
-      acls.create(path, AccessControlList()) shouldEqual Failure(CommandRejected(CannotCreateVoidPermissions))
+      acls.add(path, AccessControlList()) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
     }
 
-    "not create permissions mapping if it already exists" in {
+    "prevent adding permissions mapping if it already exists" in {
       val path = genPath(genId)
-      acls.create(path, AccessControlList(Anonymous() -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
-      acls.create(path, AccessControlList(Anonymous() -> OwnRead, alice -> OwnReadWrite)) shouldEqual Failure(
-        CommandRejected(CannotCreateExistingPermissions))
+      acls.add(path, AccessControlList(Anonymous() -> Read, alice -> OwnReadWrite)) shouldEqual Success(())
+      acls.add(path, AccessControlList(alice       -> OwnReadWrite)) shouldEqual Failure(
+        CommandRejected(CannotAddVoidPermissions))
     }
 
-    "create permissions" in {
+    "add permissions" in {
       val path = genPath(genId)
-      acls.create(path, AccessControlList(Anonymous() -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead, alice -> OwnReadWrite)) shouldEqual Success(())
       acls.fetch(path, Anonymous()) shouldEqual Success(Some(OwnRead))
       acls.fetch(path, alice) shouldEqual Success(Some(OwnReadWrite))
     }
 
     "not add empty set of permissions" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), Permissions.empty) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
-      acls.create(path, AccessControlList(alice -> OwnReadWrite)) shouldEqual Success(())
-      acls.add(path, Anonymous(), Permissions.empty) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Failure(CommandRejected(CannotAddVoidPermissions))
-    }
-
-    "add permissions" in {
-      val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
-      acls.fetch(path, Anonymous()) shouldEqual Success(Some(OwnRead))
-      acls.add(path, Anonymous(), Write) shouldEqual Success(OwnReadWrite)
+      acls.add(path, AccessControlList(Anonymous() -> Permissions.empty)) shouldEqual Failure(
+        CommandRejected(CannotAddVoidPermissions))
+      acls.add(path, AccessControlList(alice       -> OwnRead)) shouldEqual Success(())
+      acls.add(path, AccessControlList(Anonymous() -> Permissions.empty)) shouldEqual Failure(
+        CommandRejected(CannotAddVoidPermissions))
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Failure(
+        CommandRejected(CannotAddVoidPermissions))
+      acls.add(path, AccessControlList(Anonymous() -> Write)) shouldEqual Success(())
       acls.fetch(path, Anonymous()) shouldEqual Success(Some(OwnReadWrite))
+      acls.fetch(path, alice) shouldEqual Success(Some(OwnRead))
     }
 
     "not subtract from nonexistent permissions" in {
@@ -94,19 +91,19 @@ class AclsSpec extends WordSpecLike with Matchers {
 
     "not subtract from nonexistent permissions for a specific identity" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.subtract(path, alice, OwnRead) shouldEqual Failure(CommandRejected(CannotSubtractForNonexistentIdentity))
     }
 
     "not subtract all permissions for a specific identity" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.subtract(path, Anonymous(), OwnRead) shouldEqual Failure(CommandRejected(CannotSubtractAllPermissions))
     }
 
     "subtract permissions" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.subtract(path, Anonymous(), Own) shouldEqual Success(Some(Read))
       acls.fetch(path, Anonymous()) shouldEqual Success(Some(Read))
     }
@@ -118,21 +115,21 @@ class AclsSpec extends WordSpecLike with Matchers {
 
     "not remove permissions from nonexistent identity" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.remove(path, alice) shouldEqual Failure(CommandRejected(CannotRemoveForNonexistentIdentity))
     }
 
     "remove permissions" in {
       val path = genPath(genId)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.remove(path, Anonymous()) shouldEqual Success(())
       acls.fetch(path) shouldEqual Success(Map.empty)
     }
 
     "clear permissions" in {
       val path = genPath(genId)
-      acls.add(path, alice, OwnReadWrite) shouldEqual Success(OwnReadWrite)
-      acls.add(path, Anonymous(), OwnRead) shouldEqual Success(OwnRead)
+      acls.add(path, AccessControlList(alice       -> OwnReadWrite)) shouldEqual Success(())
+      acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
       acls.clear(path) shouldEqual Success(())
       acls.fetch(path) shouldEqual Success(Map.empty)
     }
@@ -140,8 +137,8 @@ class AclsSpec extends WordSpecLike with Matchers {
     "retrieve permissions for nested paths" in {
       val parent = genPath(genId)
       val path   = parent / "a" / "b" / "c"
-      acls.create(parent, AccessControlList(Anonymous() -> OwnRead, alice -> OwnRead)) shouldEqual Success(())
-      acls.add(path, alice, Write)
+      acls.add(parent, AccessControlList(Anonymous() -> OwnRead, alice -> OwnRead)) shouldEqual Success(())
+      acls.add(path, AccessControlList(alice         -> Write)) shouldEqual Success(())
       acls.retrieve(path, Set(Anonymous(), alice)) shouldEqual Success(
         Map(Anonymous() -> OwnRead, alice -> OwnReadWrite))
       acls.retrieve(path / "d" / "e", Set(Anonymous(), alice)) shouldEqual Success(

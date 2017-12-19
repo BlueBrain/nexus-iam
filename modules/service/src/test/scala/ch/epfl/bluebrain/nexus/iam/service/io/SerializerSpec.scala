@@ -77,8 +77,8 @@ object SerializerSpec {
 
   val results = List(
     DataAndJson[Event](
-      PermissionsAdded(path, group, permissions, meta),
-      s"""{"path":$pathString,"identity":$identityString,"permissions":$permissionsString,"meta":$metaString,"type":"PermissionsAdded"}"""
+      PermissionsAdded(path, AccessControlList(group -> permissions), meta),
+      s"""{"path":$pathString,"acl":{"acl":[{"identity":$identityString,"permissions":$permissionsString}]},"meta":$metaString,"type":"PermissionsAdded"}"""
     ),
     DataAndJson[Event](
       PermissionsSubtracted(path, group, permissions, meta),

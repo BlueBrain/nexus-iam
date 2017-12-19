@@ -15,16 +15,6 @@ object CommandRejection {
   final case object CannotClearNonexistentPermissions extends CommandRejection
 
   /**
-    * Descriptive rejection name when attempting to create a permissions mapping that already exists.
-    */
-  final case object CannotCreateExistingPermissions extends CommandRejection
-
-  /**
-    * Descriptive rejection name when attempting to create an empty mapping of permissions.
-    */
-  final case object CannotCreateVoidPermissions extends CommandRejection
-
-  /**
     * Descriptive rejection name when attempting to add an empty set or delta of permissions.
     */
   final case object CannotAddVoidPermissions extends CommandRejection
