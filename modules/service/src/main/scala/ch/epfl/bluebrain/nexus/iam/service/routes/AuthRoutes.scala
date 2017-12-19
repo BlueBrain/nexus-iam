@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import cats.implicits._
+import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, JsonLdCirceSupport}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo.userInfoEncoder
@@ -13,7 +14,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient}
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcConfig
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{ContextConfig, OidcConfig}
 import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
@@ -29,12 +30,14 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGroups[Future])(implicit oidc: OidcConfig,
                                                                                               api: ApiUri,
+                                                                                              contexts: ContextConfig,
                                                                                               ce: ClaimExtractor,
                                                                                               ec: ExecutionContext,
                                                                                               orderedKeys: OrderedKeys)
-    extends DefaultRoutes("oauth2") {
+    extends DefaultRoutes("oauth2", contexts.error) {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
+  private implicit val iamContext: ContextUri = contexts.iam
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?) & parameter('realm ? oidc.defaultRealm)) { (redirectUri, realm) =>
@@ -64,7 +67,8 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
         }
       } ~
       (get & path("user") & extractBearerToken & parameter('filterGroups.as[Boolean] ? false)) {
-        import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+        import JsonLdCirceSupport.marshallerHttp
+
         (credentials, filterGroups) =>
           traceName("user") {
             complete {
@@ -110,6 +114,7 @@ object AuthRoutes {
   def apply(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGroups[Future])(
       implicit oidc: OidcConfig,
       api: ApiUri,
+      contexts: ContextConfig,
       ce: ClaimExtractor,
       ec: ExecutionContext,
       orderedKeys: OrderedKeys): AuthRoutes =

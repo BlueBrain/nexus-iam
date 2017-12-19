@@ -14,9 +14,9 @@ class PartialUpdateSpec extends WordSpecLike with Matchers with Resources with T
   "A PartialUpdate" should {
     val results = Table[Json, PartialUpdate](
       "json" -> "event",
-      jsonContentOf("/patch/subtract_1.json") -> Subtract(
-        UserRef("realm", "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero"),
-        Permissions(Read, Permission("other"))),
+      jsonContentOf("/patch/subtract_1.json") -> Subtract(UserRef("realm",
+                                                                  "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero"),
+                                                          Permissions(Read, Permission("other"))),
       jsonContentOf("/patch/subtract_2.json") -> Subtract(GroupRef("BBP", "group"), Permissions(Read, Write))
     )
 

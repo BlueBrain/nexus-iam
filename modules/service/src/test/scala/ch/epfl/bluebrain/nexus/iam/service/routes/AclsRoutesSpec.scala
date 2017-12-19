@@ -13,8 +13,9 @@ import akka.testkit.TestDuration
 import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.unmarshaller
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
+import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, UserInfo}
@@ -28,6 +29,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
 import ch.epfl.bluebrain.nexus.iam.service.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
@@ -35,7 +37,7 @@ import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
-import io.circe.{Decoder, Encoder}
+import io.circe._
 import org.mockito.Mockito.when
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
@@ -76,6 +78,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[WrongOrInvalidJson.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -86,6 +90,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[IllegalPermissionString.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -96,6 +102,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       Put(s"/acls${path.repr}", content) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[IllegalIdentityFormat.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -104,6 +112,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       Options(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.MethodNotAllowed
         responseAs[Error].code shouldEqual classNameOf[MethodNotSupported.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -112,6 +122,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       Delete(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.NotFound
         responseAs[Error].code shouldEqual classNameOf[CannotClearNonexistentPermissions.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -124,6 +136,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
         credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -144,6 +158,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
         credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
         responseAs[Error].code shouldEqual classNameOf[CannotAddVoidPermissions.type]
+        responseAs[Error].`@context` shouldEqual contexts.error.toString
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
       }
     }
 
@@ -162,11 +178,14 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
         status shouldEqual StatusCodes.NoContent
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList].acl shouldBe empty
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
       }
@@ -236,6 +255,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(
           someGroup   -> ownReadWrite,
@@ -245,6 +265,8 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
         )
       }
       Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(
           someGroup   -> ownReadWrite,
@@ -344,19 +366,20 @@ abstract class AclsRoutesSpecInstances
   implicit val ucl                           = mock[UntypedHttpClient[Future]]
   implicit val mt: ActorMaterializer         = ActorMaterializer()
   val uicl                                   = HttpClient.withAkkaUnmarshaller[UserInfo]
-  val provider: AppConfig.OidcProviderConfig = oidc.providers(0)
+  val provider: AppConfig.OidcProviderConfig = oidc.providers.head
   val cl                                     = List[DownstreamAuthClient[Future]](DownstreamAuthClient(ucl, uicl, provider))
   implicit val claimExtractor                = claim(cl)
   implicit val apiUri: ApiUri                = ApiUri("localhost:8080/v0")
-  protected val credentials                  = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
+  implicit val contexts = ContextConfig(ContextUri("http://localhost:8080/v0/contexts/nexus/core/error/v0.1.0"),
+                                        ContextUri("http://localhost:8080/v0/contexts/nexus/core/iam/v0.1.0"))
+  protected val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
   protected val credentialsNoUser =
     genCredentailsNoUserInfo(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
 
-  protected val user = AuthenticatedUser(Set(Anonymous(), AuthenticatedRef(Some(realm)), someGroup, alice))
-  implicit val enc: Encoder[Identity] =
-    JsonLdSerialization.identityEncoder(apiUri.base)
+  protected val user                  = AuthenticatedUser(Set(Anonymous(), AuthenticatedRef(Some(realm)), someGroup, alice))
+  implicit val enc: Encoder[Identity] = JsonLdSerialization.identityEncoder(apiUri.base)
   implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
-  implicit val ordered                = Main.iamOrderedKeys
+  implicit val ordered: OrderedKeys   = Main.iamOrderedKeys
 
   var routes: Route = _
 

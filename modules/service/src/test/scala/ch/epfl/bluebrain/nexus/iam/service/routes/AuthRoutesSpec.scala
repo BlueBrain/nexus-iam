@@ -9,7 +9,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
@@ -23,11 +23,11 @@ import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.unmarshaller
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.jsonUnmarshaller
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
-import io.circe.{Decoder, Encoder, Json}
+import io.circe._
 import io.circe.syntax._
 import org.mockito.Mockito
 import org.mockito.Mockito._
@@ -59,7 +59,9 @@ class AuthRoutesSpec
   val cl                                             = List[DownstreamAuthClient[Future]](cl1)
   implicit val claimExtractor                        = claim(cl)
   implicit val apiUri: ApiUri                        = ApiUri("localhost:8080/v0")
-  implicit val ordered                               = Main.iamOrderedKeys
+  implicit val contexts = ContextConfig(ContextUri("http://localhost:8080/v0/contexts/nexus/core/error/v0.1.0"),
+                                        ContextUri("http://localhost:8080/v0/contexts/nexus/core/iam/v0.1.0"))
+  implicit val ordered = Main.iamOrderedKeys
 
   val aggregate  = MemoryAggregate("used-groups")(Set.empty[GroupRef], UsedGroups.next, UsedGroups.eval).toF[Future]
   val usedGroups = UsedGroups[Future](aggregate)
@@ -148,7 +150,6 @@ class AuthRoutesSpec
 
       Get(s"/oauth2/userinfo") ~> addCredentials(credentials) ~> routes ~> check {
         responseAs[UserInfo] shouldEqual userInfo
-
       }
     }
 
@@ -169,7 +170,8 @@ class AuthRoutesSpec
 
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
-        response.status shouldBe StatusCodes.OK
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
+        status shouldBe StatusCodes.OK
         responseAs[User] shouldEqual user
       }
     }
@@ -192,6 +194,7 @@ class AuthRoutesSpec
 
       Get(s"/oauth2/user?filterGroups=true") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         response.status shouldBe StatusCodes.OK
         responseAs[User] shouldEqual user
           .asInstanceOf[AuthenticatedUser]
@@ -204,6 +207,7 @@ class AuthRoutesSpec
       val userJson    = jsonContentOf("/auth/user.json")
       Get(s"/oauth2/user") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        responseAs[JsonObject].apply("@context") shouldEqual Some(Json.fromString(contexts.iam.toString))
         response.status shouldBe StatusCodes.OK
         responseAs[Json] shouldEqual userJson
       }
