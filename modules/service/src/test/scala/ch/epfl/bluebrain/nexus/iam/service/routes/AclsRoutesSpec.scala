@@ -181,6 +181,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
+        responseEntity shouldEqual HttpEntity.Empty
       }
       Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
