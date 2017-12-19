@@ -158,12 +158,12 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
 
 object Acls {
 
-  private def diffPermissions(previous: Map[Identity, Permissions], recent: Map[Identity, Permissions]) =
-    recent.foldLeft(Map.empty[Identity, Permissions]) {
-      case (diff, (id, recentPerms)) =>
-        val diffPerms = recentPerms -- previous.getOrElse(id, Permissions.empty)
-        if (diffPerms.nonEmpty) diff + (id -> diffPerms)
-        else diff
+  private def diffPermissions(previous: Map[Identity, Permissions], additional: Map[Identity, Permissions]) =
+    additional.foldLeft(Map.empty[Identity, Permissions]) {
+      case (acc, (id, perms)) =>
+        val diff = perms -- previous.getOrElse(id, Permissions.empty)
+        if (diff.nonEmpty) acc + (id -> diff)
+        else acc
     }
 
   type PermissionAggregate[F[_]] = Aggregate.Aux[F, String, Event, State, Command, CommandRejection]
