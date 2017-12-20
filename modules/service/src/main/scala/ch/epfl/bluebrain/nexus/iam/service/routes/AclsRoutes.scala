@@ -59,7 +59,7 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, a
           } ~
             patch {
               (entity(as[PartialUpdate]) & authorizeAsync(check(path, user, Permission.Own))) {
-                case Subtract(identity, permissions, _) =>
+                case Subtract(identity, permissions) =>
                   traceName("subtractPermissions") {
                     onSuccess(acl.subtract(path, identity, permissions)) { result =>
                       complete(StatusCodes.OK -> AccessControl(identity, result))
