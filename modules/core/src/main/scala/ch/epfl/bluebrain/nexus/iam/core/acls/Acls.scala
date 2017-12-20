@@ -124,7 +124,7 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
     * @param identity    the target identity
     * @param permissions the permissions to subtract
     * @param ctx         the implicit identity context calling this action
-    * @return an option containing the resulting permissions in an ''F[_]'' context
+    * @return the resulting permissions in an ''F[_]'' context
     */
   def subtract(path: Path, identity: Identity, permissions: Permissions)(implicit ctx: CallerCtx): F[Permissions] = {
     log.debug(s"Subtracting permissions '$permissions' for path '${path.show}' and identity '${identity.show}'")
