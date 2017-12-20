@@ -25,11 +25,6 @@ object CommandRejection {
   final case object CannotSubtractVoidPermissions extends CommandRejection
 
   /**
-    * Descriptive rejection name when attempting to subtract all permissions for an identity.
-    */
-  final case object CannotSubtractAllPermissions extends CommandRejection
-
-  /**
     * Descriptive rejection name when attempting to subtract permissions from a nonexistent mapping.
     */
   final case object CannotSubtractFromNonexistentPermissions extends CommandRejection

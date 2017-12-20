@@ -124,10 +124,9 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
     * @param identity    the target identity
     * @param permissions the permissions to subtract
     * @param ctx         the implicit identity context calling this action
-    * @return an option containing the resulting permissions, or None if none exists, in an ''F[_]'' context
+    * @return an option containing the resulting permissions in an ''F[_]'' context
     */
-  def subtract(path: Path, identity: Identity, permissions: Permissions)(
-      implicit ctx: CallerCtx): F[Option[Permissions]] = {
+  def subtract(path: Path, identity: Identity, permissions: Permissions)(implicit ctx: CallerCtx): F[Permissions] = {
     log.debug(s"Subtracting permissions '$permissions' for path '${path.show}' and identity '${identity.show}'")
     agg.eval(path.show, SubtractPermissions(path, identity, permissions, ctx.meta)).flatMap {
       case Left(rejection) => F.raiseError(CommandRejected(rejection))
@@ -137,7 +136,7 @@ final class Acls[F[_]](agg: PermissionAggregate[F])(implicit F: MonadError[F, Th
         F.raiseError(th)
       case Right(Current(_, mapping)) =>
         log.debug(s"SubtractPermissions succeeded for path '${path.show}' and identity '${identity.show}'")
-        F.pure(mapping.get(identity))
+        F.pure(mapping.getOrElse(identity, Permissions.empty))
     }
   }
 
@@ -210,14 +209,9 @@ object Acls {
       case Current(_, mapping) =>
         mapping.get(c.identity) match {
           case Some(existing) =>
-            val diff = existing -- c.permissions
-            if (diff.isEmpty) {
-              Left(CannotSubtractAllPermissions)
-            } else {
-              val intersection = c.permissions & existing
-              if (intersection.isEmpty) Left(CannotSubtractVoidPermissions)
-              else Right(PermissionsSubtracted(c.path, c.identity, intersection, c.meta))
-            }
+            val intersection = c.permissions & existing
+            if (intersection.isEmpty) Left(CannotSubtractVoidPermissions)
+            else Right(PermissionsSubtracted(c.path, c.identity, intersection, c.meta))
           case None => Left(CannotSubtractForNonexistentIdentity)
         }
     }

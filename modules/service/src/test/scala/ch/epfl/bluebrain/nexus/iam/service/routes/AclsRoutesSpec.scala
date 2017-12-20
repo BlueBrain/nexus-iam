@@ -21,6 +21,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
+import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
@@ -44,7 +45,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future, Promise}
 import scala.util.Random
 
-class AclsRoutesSpec extends AclsRoutesSpecInstances {
+class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
 
   "The ACL service" should {
     "reject unauthorized requests" in {
@@ -168,6 +169,56 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances {
         contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
         status shouldEqual StatusCodes.OK
         responseAs[AccessControlList] shouldEqual AccessControlList(alice -> own)
+      }
+    }
+
+    "subtract permissions" in {
+      val path    = Path(s"/some/$rand")
+      val publish = Permission("publish")
+
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write", "publish"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+
+      Patch(s"/acls${path.repr}", HttpEntity(`application/json`, contentOf("/patch/subtract_1.json"))) ~> addCredentials(
+        credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControl] shouldEqual AccessControl(alice, Permissions(Write, publish))
+      }
+
+      Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldBe AccessControlList(Anonymous() -> ownReadWrite,
+                                                                 alice       -> Permissions(Write, publish))
+      }
+
+      Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldEqual AccessControlList(Anonymous() -> ownReadWrite,
+                                                                    alice       -> Permissions(Own, Write, publish))
+      }
+
+      Patch(s"/acls${path.repr}", HttpEntity(`application/json`, contentOf("/patch/subtract_3.json"))) ~> addCredentials(
+        credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControl] shouldEqual AccessControl(alice, Permissions.empty)
+      }
+      Get(s"/acls${path.repr}?all=true") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldBe AccessControlList(Anonymous() -> ownReadWrite,
+                                                                 alice       -> Permissions.empty)
+      }
+      Get(s"/acls${path.repr}") ~> addCredentials(credentials) ~> routes ~> check {
+        contentType shouldEqual RdfMediaTypes.`application/ld+json`.toContentType
+        status shouldEqual StatusCodes.OK
+        responseAs[AccessControlList] shouldEqual AccessControlList(Anonymous() -> ownReadWrite, alice -> own)
       }
     }
 
