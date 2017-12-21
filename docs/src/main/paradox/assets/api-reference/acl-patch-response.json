@@ -1,0 +1,11 @@
+{
+  "identity": {
+    "@id": "https://example.com/realms/realm/groups/students",
+    "@type": "GroupRef",
+    "realm": "realm",
+    "group": "students"
+  },
+  "permissions": [
+    "own"
+  ]
+}
