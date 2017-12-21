@@ -29,7 +29,6 @@ import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization.identityDecoder
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
