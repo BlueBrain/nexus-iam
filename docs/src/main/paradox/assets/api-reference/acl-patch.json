@@ -1,0 +1,11 @@
+{
+  "@type": "Subtract",
+  "identity": {
+    "@type": "GroupRef",
+    "realm": "realm",
+    "group": "students"
+  },
+  "permissions": [
+    "read"
+  ]
+}

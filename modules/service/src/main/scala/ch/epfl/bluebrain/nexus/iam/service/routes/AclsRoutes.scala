@@ -24,11 +24,11 @@ import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.printer
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
-import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import ch.epfl.bluebrain.nexus.iam.service.types.Subtract
+import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
-
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -56,6 +56,16 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, a
               }
             }
           } ~
+            patch {
+              (entity(as[PartialUpdate]) & authorizeAsync(check(path, user, Permission.Own))) {
+                case Subtract(identity, permissions) =>
+                  traceName("subtractPermissions") {
+                    onSuccess(acl.subtract(path, identity, permissions)) { result =>
+                      complete(StatusCodes.OK -> AccessControl(identity, result))
+                    }
+                  }
+              }
+            } ~
             delete {
               authorizeAsync(check(path, user, Permission.Own)) {
                 traceName("deletePermissions") {

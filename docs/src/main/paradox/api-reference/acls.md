@@ -32,11 +32,12 @@ Here is a summary of ACL actions with relevant samples for the corresponding req
 when present. See [Actions](#actions) and [Data formats](#data-formats) for detailed usage.
 
 | HTTP Verb | Request path | Request payload | Response body |
-| --- | --- | --- | --- |
-| GET | /v0/acls/{address} | *N/A* | [Own ACL](../assets/api-reference/own-acls.json) |
-| GET | /v0/acls/{address}?all=true | *N/A* | [Full ACL](../assets/api-reference/acls.json) |
-| PUT | /v0/acls/{address} | [Full ACL](../assets/api-reference/acls.json) | *N/A* |
-| DELETE | /v0/acls/{address} | *N/A* | *N/A* |
+| ---       | --- | --- | --- |
+| GET       | /v0/acls/{address} | *N/A* | [Own ACL](../assets/api-reference/own-acls.json) |
+| GET       | /v0/acls/{address}?all=true | *N/A* | [Full ACL](../assets/api-reference/acls.json) |
+| PATCH     | /v0/acls/{address} | [Patch permissions](../assets/api-reference/acl-patch.json) | [Identity permissions](../assets/api-reference/acl-patch-response.json) |
+| PUT       | /v0/acls/{address} | [Full ACL](../assets/api-reference/acls.json) | *N/A* |
+| DELETE    | /v0/acls/{address} | *N/A* | *N/A* |
 
 ## Actions
 
@@ -61,7 +62,6 @@ This call computes the effective ACL for the caller on this resource.
 - **403 Forbidden**: the caller doesn't have any access rights (either `read`, `write` or `own`)
                      on this resource ACL
 
-## Administrative actions
 
 ### Fetch permissions for all users on a resource
 
@@ -84,8 +84,8 @@ Response
 - **200 OK**: the entire ACL is fetched is returned successfully
 - **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
-### Add new ACL
-
+### Append new ACL
+Appends certain `permissions` to some `identities` on the provided `address`
 ```
 PUT /v0/acls/{address}
 {...}
@@ -105,6 +105,32 @@ Payload
 - **400 Bad Request**: the request payload is not valid
 - **403 Forbidden**: the caller doesn't have `own` rights on this resource
 - **409 Conflict**: the resource ACL already exists
+
+### Subtract ACL
+Subtract certain `permissions` from an `identity` on the provided `address`
+
+```
+PATCH /v0/acls/{address}
+{...}
+```
+
+#### Example
+The initial conditions of this example are as follows: the permissions `own` and `read` for the identity group `students` from the realm `realm` are set on the path `myorg`
+
+Request
+:   @@snip [acl-patch.sh](../assets/api-reference/acl-patch.sh)
+
+Payload
+:   @@snip [acl-patch.json](../assets/api-reference/acl-patch.json)
+
+Response
+:   @@snip [acl-patch-response.json](../assets/api-reference/acl-patch-response.json)
+
+#### Status Codes
+
+- **200 OK**: the resource ACL was subtracted successfully
+- **400 Bad Request**: the request payload is not valid
+- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
 ### Clear ACL on a resource
 
@@ -128,11 +154,6 @@ Request
 ### Full ACL
 
 The `acl` object in the payload is an array of `identity` and `permissions` pairs.
-
-### ACL patch
-
-To add additional permissions to an existing ACL, the payload consists in a pair of `identity`
-and `permissions`.
 
 ### Permissions
 

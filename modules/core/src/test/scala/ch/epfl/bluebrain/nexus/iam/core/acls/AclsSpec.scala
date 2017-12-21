@@ -98,13 +98,13 @@ class AclsSpec extends WordSpecLike with Matchers {
     "not subtract all permissions for a specific identity" in {
       val path = genPath(genId)
       acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
-      acls.subtract(path, Anonymous(), OwnRead) shouldEqual Failure(CommandRejected(CannotSubtractAllPermissions))
+      acls.subtract(path, Anonymous(), OwnRead) shouldEqual Success(Permissions.empty)
     }
 
     "subtract permissions" in {
       val path = genPath(genId)
       acls.add(path, AccessControlList(Anonymous() -> OwnRead)) shouldEqual Success(())
-      acls.subtract(path, Anonymous(), Own) shouldEqual Success(Some(Read))
+      acls.subtract(path, Anonymous(), Own) shouldEqual Success(Read)
       acls.fetch(path, Anonymous()) shouldEqual Success(Some(Read))
     }
 

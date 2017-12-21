@@ -1,0 +1,12 @@
+{
+  "@type": "Subtract",
+  "identity": {
+    "realm": "BBP",
+    "group": "group",
+    "@type": "GroupRef"
+  },
+  "permissions": [
+    "read",
+    "write"
+  ]
+}

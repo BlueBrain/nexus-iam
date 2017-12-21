@@ -1,0 +1,2 @@
+curl -H "Authorization: Bearer ***" -H "Content-Type: application/json" -XPATCH "https://nexus.example.com/v0/acls/myorg" \
+  -d '{"@type": "Subtract", "identity": {"@type": "GroupRef", "realm": "realm", "group": "students"}, "permissions": ["read"] }'

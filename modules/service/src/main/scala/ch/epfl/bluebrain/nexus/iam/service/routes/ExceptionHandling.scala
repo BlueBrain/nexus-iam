@@ -69,7 +69,6 @@ object ExceptionHandling {
   private implicit val commandStatusFrom: StatusFrom[CommandRejection] = StatusFrom {
     case CannotAddVoidPermissions                 => BadRequest
     case CannotSubtractVoidPermissions            => BadRequest
-    case CannotSubtractAllPermissions             => BadRequest
     case CannotSubtractFromNonexistentPermissions => NotFound
     case CannotSubtractForNonexistentIdentity     => NotFound
     case CannotRemoveForNonexistentIdentity       => NotFound
