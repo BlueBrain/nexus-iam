@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.IllegalUriException
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.ExceptionHandler
-import ch.epfl.bluebrain.nexus.commons.http.UnexpectedUnsuccessfulHttpResponse
+import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.service.directives.ErrorDirectives._
 import ch.epfl.bluebrain.nexus.commons.service.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
@@ -23,7 +23,7 @@ import journal.Logger
   * all rejections and unexpected failures are gracefully handled
   * and presented to the caller.
   */
-object ExceptionHandling {
+class ExceptionHandling(implicit context: ContextUri) {
 
   private val logger = Logger[this.type]
 
@@ -84,6 +84,13 @@ object ExceptionHandling {
     *
     * @param code the code displayed as a response (InternalServerError as default)
     */
-  private final case class InternalError(code: String = "InternalServerError")
+  private case class InternalError(code: String = "InternalServerError")
 
+}
+
+object ExceptionHandling {
+  final def exceptionHandler(contextUri: ContextUri): ExceptionHandler = {
+    val handling = new ExceptionHandling()(contextUri)
+    handling.exceptionHandler
+  }
 }

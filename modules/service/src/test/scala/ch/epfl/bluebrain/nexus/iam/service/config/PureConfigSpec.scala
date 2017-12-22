@@ -2,7 +2,8 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{Kafka, OidcConfig, OidcProviderConfig}
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{ContextConfig, Kafka, OidcConfig, OidcProviderConfig}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpecLike}
 
@@ -60,6 +61,10 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
         "BBP"
       )
       appConfig.kafka shouldEqual Kafka("permissions-topic", "permissions-persistence-id")
+
+      appConfig.context shouldEqual ContextConfig(
+        ContextUri("http://localhost:8080/v0/contexts/nexus/core/error/v0.1.0"),
+        ContextUri("http://localhost:8080/v0/contexts/nexus/core/iam/v0.1.0"))
     }
   }
 }

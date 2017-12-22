@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -23,6 +24,7 @@ final case class AppConfig(description: DescriptionConfig,
                            persistence: PersistenceConfig,
                            auth: AuthConfig,
                            oidc: OidcConfig,
+                           context: ContextConfig,
                            kafka: Kafka)
 
 object AppConfig {
@@ -55,6 +57,8 @@ object AppConfig {
                                       authorizeEndpoint: Uri,
                                       tokenEndpoint: Uri,
                                       userinfoEndpoint: Uri)
+
+  final case class ContextConfig(error: ContextUri, iam: ContextUri)
 
   final case class Kafka(permissionsTopic: String, permissionsProjectionId: String)
 

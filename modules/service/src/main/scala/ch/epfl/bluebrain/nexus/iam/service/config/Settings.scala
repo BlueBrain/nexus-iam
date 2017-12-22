@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import akka.http.scaladsl.model.Uri
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 import com.typesafe.config.Config
 import pureconfig.ConvertHelpers.catchReadError
@@ -19,6 +20,9 @@ class Settings(config: Config) extends Extension {
   private implicit val uriConverter: ConfigConvert[Uri] =
     ConfigConvert.viaString[Uri](catchReadError(s => Uri(s)), _.toString)
 
+  private implicit val contextUriConverter: ConfigConvert[ContextUri] =
+    ConfigConvert.viaString[ContextUri](catchReadError(s => ContextUri(Uri(s))), _.toString)
+
   val appConfig = AppConfig(
     loadConfigOrThrow[DescriptionConfig](config, "app.description"),
     loadConfigOrThrow[InstanceConfig](config, "app.instance"),
@@ -28,6 +32,7 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[PersistenceConfig](config, "app.persistence"),
     loadConfigOrThrow[AuthConfig](config, "app.auth"),
     removeUnsetProviders(loadConfigOrThrow[OidcConfig](config, "app.oidc")),
+    loadConfigOrThrow[ContextConfig](config, "app.context"),
     loadConfigOrThrow[Kafka](config, "app.kafka")
   )
 

@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 
 import akka.http.scaladsl.server.Directives.{handleExceptions, handleRejections, pathPrefix}
 import akka.http.scaladsl.server.Route
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 
 /**
   * Abstract class for prefixed HTTP routes implementing a specific functionality.
@@ -9,7 +10,7 @@ import akka.http.scaladsl.server.Route
   *
   * @param prefix the initial top-level prefix to be consumed
   */
-abstract class DefaultRoutes(prefix: String) {
+abstract class DefaultRoutes(prefix: String, errorContext: ContextUri) {
 
   /**
     * Placeholder method that needs to be implemented by a concrete type.
@@ -19,8 +20,8 @@ abstract class DefaultRoutes(prefix: String) {
   /**
     * @return ''apiRoutes'' wrapped in exception and rejection handlers
     */
-  def routes: Route = handleExceptions(ExceptionHandling.exceptionHandler) {
-    handleRejections(RejectionHandling.rejectionHandler) {
+  def routes: Route = handleExceptions(ExceptionHandling.exceptionHandler(errorContext)) {
+    handleRejections(RejectionHandling.rejectionHandler(errorContext)) {
       pathPrefix(prefix)(apiRoutes)
     }
   }

@@ -16,7 +16,7 @@ import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
@@ -38,7 +38,6 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSet
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import kamon.Kamon
 import org.apache.kafka.common.serialization.StringSerializer
 
@@ -78,6 +77,7 @@ object Main {
 
       implicit val oidcConfig  = appConfig.oidc
       implicit val baseApiUri  = ApiUri(apiUri)
+      implicit val contexts    = appConfig.context
       implicit val clock       = Clock.systemUTC
       implicit val orderedKeys = iamOrderedKeys
       val aclAggregate         = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)

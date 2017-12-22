@@ -5,6 +5,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import io.circe.Decoder
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveDecoder
+
 /**
   * Base enumeration type for PartialUpdate message classes.
   */

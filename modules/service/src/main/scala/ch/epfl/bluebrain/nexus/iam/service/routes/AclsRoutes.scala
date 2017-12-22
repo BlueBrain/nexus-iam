@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.Credentials
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth._
@@ -19,6 +20,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
+import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.printer
@@ -36,10 +38,15 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @param acl  the ACL operations bundle
   */
-class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, api: ApiUri, orderedKeys: OrderedKeys)
-    extends DefaultRoutes("acls") {
+class AclsRoutes(acl: Acls[Future])(implicit clock: Clock,
+                                    ce: ClaimExtractor,
+                                    api: ApiUri,
+                                    contexts: ContextConfig,
+                                    orderedKeys: OrderedKeys)
+    extends DefaultRoutes("acls", contexts.error) {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
+  private implicit val iamContext: ContextUri = contexts.iam
 
   override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
@@ -130,12 +137,15 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, a
 object AclsRoutes {
 
   /**
-    * Constructs a new ''AclsRoutes'' instance that defines the http routes specific to ACL endopints.
+    * Constructs a new ''AclsRoutes'' instance that defines the http routes specific to ACL endpoints.
     *
     * @param acl   the ACL operation bundle
     */
-  def apply(
-      acl: Acls[Future])(implicit clock: Clock, ce: ClaimExtractor, api: ApiUri, orderedKeys: OrderedKeys): AclsRoutes =
+  def apply(acl: Acls[Future])(implicit clock: Clock,
+                               ce: ClaimExtractor,
+                               api: ApiUri,
+                               contexts: ContextConfig,
+                               orderedKeys: OrderedKeys): AclsRoutes =
     new AclsRoutes(acl)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>

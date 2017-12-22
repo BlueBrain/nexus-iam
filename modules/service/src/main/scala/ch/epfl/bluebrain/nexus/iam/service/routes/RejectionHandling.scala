@@ -5,10 +5,11 @@ import akka.http.scaladsl.model.headers.Authorization
 import akka.http.scaladsl.server.AuthenticationFailedRejection.CredentialsRejected
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server._
+import ch.epfl.bluebrain.nexus.commons.http.ContextUri
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.marshallerHttp
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
 
@@ -24,7 +25,7 @@ object RejectionHandling {
     * in the routes evaluation process, the priority order to handle them is defined
     * by the order of appearance in this method.
     */
-  final def rejectionHandler: RejectionHandler =
+  final def rejectionHandler(implicit context: ContextUri): RejectionHandler =
     RejectionHandler
       .newBuilder()
       .handle {
