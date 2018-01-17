@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion = "0.5.23"
+val commonsVersion = "0.5.30"
 
 val akkaVersion            = "2.5.4"
 val akkaHttpVersion        = "10.0.10"
@@ -70,9 +70,9 @@ lazy val docs = project
   .enablePlugins(ParadoxPlugin)
   .settings(common, noPublish)
   .settings(
-    name := "iam-docs",
-    moduleName := "iam-docs",
-    paradoxTheme := Some(builtinParadoxTheme("generic")),
+    name                         := "iam-docs",
+    moduleName                   := "iam-docs",
+    paradoxTheme                 := Some(builtinParadoxTheme("generic")),
     target in (Compile, paradox) := (resourceManaged in Compile).value / "docs",
     resourceGenerators in Compile += {
       (paradox in Compile).map { parent =>
@@ -85,7 +85,7 @@ lazy val core = project
   .in(file("modules/core"))
   .settings(
     common,
-    name := "iam-core",
+    name       := "iam-core",
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
       sourcingCore,
@@ -113,9 +113,9 @@ lazy val oidcCore = project
   .enablePlugins(BuildInfoPlugin)
   .settings(
     common,
-    name := "iam-oidc-core",
-    moduleName := "iam-oidc-core",
-    buildInfoKeys := Seq[BuildInfoKey](version),
+    name             := "iam-oidc-core",
+    moduleName       := "iam-oidc-core",
+    buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "ch.epfl.bluebrain.nexus.iam.oidc.config",
     libraryDependencies ++= kamonDeps ++
       Seq(
@@ -145,10 +145,10 @@ lazy val oidcBbp = project
   .settings(
     common,
     monitoringSettings,
-    name := "iam-bbp",
-    moduleName := "iam-bbp",
+    name                  := "iam-bbp",
+    moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
-    description := "Nexus IAM BBP Integration Service",
+    description           := "Nexus IAM BBP Integration Service",
     libraryDependencies ++= Seq(akkaHttp,
                                 circeCore,
                                 circeParser,
@@ -165,10 +165,10 @@ lazy val oidcHbp = project
   .settings(
     common,
     monitoringSettings,
-    name := "iam-hbp",
-    moduleName := "iam-hbp",
+    name                  := "iam-hbp",
+    moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
-    description := "Nexus IAM HBP Integration Service",
+    description           := "Nexus IAM HBP Integration Service",
     libraryDependencies ++= Seq(akkaHttp,
                                 circeCore,
                                 circeParser,
@@ -185,12 +185,12 @@ lazy val service = project
   .settings(
     common,
     monitoringSettings,
-    name := "iam-service",
-    moduleName := "iam-service",
+    name                  := "iam-service",
+    moduleName            := "iam-service",
     packageName in Docker := "iam",
-    description := "Nexus IAM Service",
-    buildInfoKeys := Seq[BuildInfoKey](version),
-    buildInfoPackage := "ch.epfl.bluebrain.nexus.iam.service.config",
+    description           := "Nexus IAM Service",
+    buildInfoKeys         := Seq[BuildInfoKey](version),
+    buildInfoPackage      := "ch.epfl.bluebrain.nexus.iam.service.config",
     libraryDependencies ++= Seq(
       commonsService,
       sourcingAkka,
@@ -226,8 +226,11 @@ lazy val root = project
 lazy val noPublish = Seq(publishLocal := {}, publish := {})
 
 lazy val common = Seq(
-  homepage := Some(new URL("https://github.com/BlueBrain/nexus-iam")),
-  licenses := Seq(("Apache 2.0", new URL("https://github.com/BlueBrain/nexus-iam/blob/master/LICENSE")))
+  scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+  homepage := Some(url("https://github.com/BlueBrain/nexus-iam")),
+  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+  scmInfo := Some(
+    ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git"))
 )
 
 lazy val monitoringSettings = Seq(
