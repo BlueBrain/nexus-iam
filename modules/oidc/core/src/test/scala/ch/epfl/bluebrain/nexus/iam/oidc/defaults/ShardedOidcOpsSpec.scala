@@ -51,7 +51,7 @@ class ShardedOidcOpsSpec
   implicit val ec                             = system.dispatcher
   implicit val cl                             = mock[UntypedHttpClient[Future]]
   implicit val tm                             = Timeout(3 seconds)
-  implicit val config                         = Configuration.default.withSnakeCaseKeys
+  implicit val config                         = Configuration.default.withSnakeCaseMemberNames
   implicit val userInfoDec: Decoder[UserInfo] = deriveDecoder[UserInfo]
 
   before {

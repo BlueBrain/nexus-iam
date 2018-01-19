@@ -11,7 +11,7 @@ object UserInfoDecoder {
 
   object bbp {
     implicit def userInfoDecoder: Decoder[UserInfo] = {
-      implicit val config = Configuration.default.withSnakeCaseKeys
+      implicit val config = Configuration.default.withSnakeCaseMemberNames
       Decoder.decodeJson.emap { json =>
         deriveDecoder[UserInfo]
           .decodeJson(json)

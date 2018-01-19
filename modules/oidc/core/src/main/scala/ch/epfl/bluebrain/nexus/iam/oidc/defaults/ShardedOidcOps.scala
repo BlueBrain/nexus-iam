@@ -45,7 +45,7 @@ class ShardedOidcOps(stateRef: ActorRef, userInfoRef: ActorRef, cfg: OidcConfig,
 
   private val log = Logger[this.type]
 
-  protected implicit val configuration: Configuration = Configuration.default.withSnakeCaseKeys
+  protected implicit val configuration: Configuration = Configuration.default.withSnakeCaseMemberNames
 
   private val iaClient = HttpClient.withAkkaUnmarshaller[IdAccessToken]
   private val uiClient = HttpClient.withAkkaUnmarshaller[UserInfo]

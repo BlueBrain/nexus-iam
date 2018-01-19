@@ -149,7 +149,7 @@ object AclsRoutes {
     new AclsRoutes(acl)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
-    val fields = cursor.fields.toSeq.flatten
+    val fields = cursor.keys.toSeq.flatten
     if (!fields.contains("permissions"))
       throw WrongOrInvalidJson(Some("Missing field 'permissions' in payload"))
     else if (!fields.contains("identity"))
