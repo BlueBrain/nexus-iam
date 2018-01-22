@@ -9,7 +9,7 @@ import io.circe.generic.extras.Configuration
   */
 trait CirceSupport extends FailFastCirceSupport {
   implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
-  implicit val printer               = Printer.noSpaces.copy(dropNullKeys = true)
+  implicit val printer               = Printer.noSpaces.copy(dropNullValues = true)
 
 }
 object CirceSupport extends CirceSupport

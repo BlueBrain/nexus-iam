@@ -36,7 +36,7 @@ class AuthRoutesSpec
   implicit val ec = system.dispatcher
   implicit val op = mock[OidcOps[Future]]
   implicit val tm = Timeout(3 seconds)
-  implicit val cf = Configuration.default.withSnakeCaseKeys
+  implicit val cf = Configuration.default.withSnakeCaseMemberNames
 
   val routes = handleExceptions(ExceptionHandling.exceptionHandler) {
     handleRejections(RejectionHandling.rejectionHandler) {
