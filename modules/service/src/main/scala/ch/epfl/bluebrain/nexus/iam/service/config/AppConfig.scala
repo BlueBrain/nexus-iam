@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.http.ContextUri
+import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIndexingSettings
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -25,7 +26,8 @@ final case class AppConfig(description: DescriptionConfig,
                            auth: AuthConfig,
                            oidc: OidcConfig,
                            context: ContextConfig,
-                           kafka: Kafka)
+                           kafka: Kafka,
+                           elastic: ElasticIndexingSettings)
 
 object AppConfig {
 
