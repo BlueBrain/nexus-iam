@@ -8,7 +8,7 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
 import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
-import ch.epfl.bluebrain.nexus.iam.elastic.EventElasticIndexer
+import ch.epfl.bluebrain.nexus.iam.elastic.AclIndexer
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,15 +22,15 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param ec            the implicitly available [[ExecutionContext]]
   */
 class StartElasticIndexer(settings: AppConfig, elasticClient: ElasticClient[Future])(implicit
-                                                                                    as: ActorSystem,
-                                                                                    ec: ExecutionContext) {
+                                                                                     as: ActorSystem,
+                                                                                     ec: ExecutionContext) {
 
   private implicit val config: Configuration =
     Configuration.default.withDiscriminator("type")
 
   SequentialTagIndexer.start[Event](
-    EventElasticIndexer[Future](elasticClient, settings.elastic).apply _,
-    "event-es-to-3s",
+    AclIndexer[Future](elasticClient, settings.elastic).apply _,
+    "events-to-es",
     settings.persistence.queryJournalPlugin,
     "permission",
     "event-permission-es-indexer"
@@ -47,9 +47,10 @@ object StartElasticIndexer {
     * @param settings      the app settings
     * @param elasticClient the ElasticSearch client implementation
     */
-  final def apply(settings: AppConfig, elasticClient: ElasticClient[Future])(implicit
-                                                                            as: ActorSystem,
-                                                                            ec: ExecutionContext): StartElasticIndexer =
+  final def apply(settings: AppConfig, elasticClient: ElasticClient[Future])(
+      implicit
+      as: ActorSystem,
+      ec: ExecutionContext): StartElasticIndexer =
     new StartElasticIndexer(settings, elasticClient)
 
   // $COVERAGE-ON$

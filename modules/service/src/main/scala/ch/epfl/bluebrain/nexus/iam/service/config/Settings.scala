@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.service.config
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.http.ContextUri
-import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIndexingSettings
+import ch.epfl.bluebrain.nexus.iam.elastic.ElasticConfig
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 import com.typesafe.config.Config
 import pureconfig.ConvertHelpers.catchReadError
@@ -34,9 +34,8 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[AuthConfig](config, "app.auth"),
     removeUnsetProviders(loadConfigOrThrow[OidcConfig](config, "app.oidc")),
     loadConfigOrThrow[ContextConfig](config, "app.context"),
-    loadConfigOrThrow[Kafka](config, "app.kafka"),
-    loadConfigOrThrow[ElasticIndexingSettings](config, "app.elastic")
-
+    loadConfigOrThrow[KafkaConfig](config, "app.kafka"),
+    loadConfigOrThrow[ElasticConfig](config, "app.elastic")
   )
 
   private def removeUnsetProviders(oidc: OidcConfig): OidcConfig =

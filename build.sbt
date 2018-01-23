@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion         = "0.6.4"
+val commonsVersion         = "0.6.5"
 val akkaVersion            = "2.5.9"
 val akkaHttpVersion        = "10.0.11"
 val akkaPersCassVersion    = "0.55"
@@ -38,6 +38,7 @@ lazy val akkaClusterSharding = "com.typesafe.akka"     %% "akka-cluster-sharding
 lazy val akkaDData           = "com.typesafe.akka"     %% "akka-distributed-data"      % akkaVersion
 lazy val akkaHttpTestkit     = "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion
 lazy val akkaPersCass        = "com.typesafe.akka"     %% "akka-persistence-cassandra" % akkaPersCassVersion
+lazy val akkaStream          = "com.typesafe.akka"     %% "akka-stream"                % akkaVersion
 lazy val akkaStreamKafka     = "com.typesafe.akka"     %% "akka-stream-kafka"          % akkaStreamKafkaVersion
 lazy val akkaPersMem         = "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersMemVersion
 lazy val akkaHttpCirce       = "de.heikoseeberger"     %% "akka-http-circe"            % akkaHttpCirceVersion
@@ -183,20 +184,20 @@ lazy val elastic = project
   .in(file("modules/elastic"))
   .settings(common)
   .settings(
-    name := "iam-elastic",
+    name       := "iam-elastic",
     moduleName := "iam-elastic",
     libraryDependencies ++= Seq(
       akkaHttp,
       akkaHttpCirce,
       elasticClient,
       iamTypes,
-      commonsTest  % Test,
+      commonsTest,
+      akkaStream,
+      circeCore,
+      circeParser,
+      akkaTestkit  % Test,
       elasticEmbed % Test,
-      "com.typesafe.akka"  %% "akka-stream"      % akkaVersion,
-      "io.circe"           %% "circe-core"       % circeVersion,
-      "io.circe"           %% "circe-parser"     % circeVersion,
-      "com.typesafe.akka"  %% "akka-testkit"     % akkaVersion % Test,
-      "org.scalatest"      %% "scalatest"        % scalaTestVersion % Test
+      scalaTest    % Test
     )
   )
 

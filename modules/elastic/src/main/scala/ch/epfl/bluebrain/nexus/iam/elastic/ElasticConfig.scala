@@ -9,4 +9,4 @@ import akka.http.scaladsl.model.Uri
   * @param indexPrefix the name of the index
   * @param docType     the name of the `type`
   */
-final case class ElasticIndexingSettings(baseUri: Uri, indexPrefix: String, docType: String)
+final case class ElasticConfig(baseUri: Uri, indexPrefix: String, docType: String)

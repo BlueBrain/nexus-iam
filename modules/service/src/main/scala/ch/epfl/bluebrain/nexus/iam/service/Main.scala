@@ -173,7 +173,7 @@ object Main {
       )
 
       val elasticQueryClient = ElasticQueryClient[Future](appConfig.elastic.baseUri)
-      val elasticClient = ElasticClient[Future](appConfig.elastic.baseUri, elasticQueryClient)
+      val elasticClient      = ElasticClient[Future](appConfig.elastic.baseUri, elasticQueryClient)
       StartElasticIndexer(appConfig, elasticClient)
 
     })
