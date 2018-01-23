@@ -1,0 +1,40 @@
+{
+  "mappings": {
+    "{{type}}": {
+      "properties": {
+        "path": {
+          "type": "keyword"
+        },
+        "pathDepth": {
+          "type": "integer"
+        },
+        "identity": {
+          "type": "nested",
+          "properties": {
+            "realm": {
+              "type": "keyword"
+            },
+            "sub": {
+              "type": "keyword"
+            },
+            "group": {
+              "type": "keyword"
+            },
+            "@type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "permissions": {
+          "type": "keyword"
+        },
+        "created": {
+          "type": "date"
+        },
+        "updated": {
+          "type": "date"
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import cats.instances.future._
+import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticQueryClient}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
@@ -170,6 +171,11 @@ object Main {
         TaggingAdapter.tag,
         "used-group-aggregator"
       )
+
+      val elasticQueryClient = ElasticQueryClient[Future](appConfig.elastic.baseUri)
+      val elasticClient      = ElasticClient[Future](appConfig.elastic.baseUri, elasticQueryClient)
+      StartElasticIndexer(appConfig, elasticClient)
+
     })
 
     val provided = appConfig.cluster.seedAddresses
