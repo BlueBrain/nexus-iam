@@ -85,7 +85,6 @@ class ExceptionHandling(implicit context: ContextUri) {
     * @param code the code displayed as a response (InternalServerError as default)
     */
   private case class InternalError(code: String = "InternalServerError")
-
 }
 
 object ExceptionHandling {

@@ -63,7 +63,7 @@ class AclIndexer[F[_]](client: ElasticClient[F], settings: ElasticConfig)(implic
       val patchQuery = Json.obj(
         "script" -> Json.obj(
           "source" -> Json.fromString(
-            s"ctx._source.permissions.removeAll(params.permissions);ctx._source.updated = params.updated"),
+            "ctx._source.permissions.removeAll(params.permissions);ctx._source.updated = params.updated"),
           "params" -> Json.obj("permissions" -> perms.set.asJson, "updated" -> Json.fromString(m.instant.toString))
         ))
       client.update(indexId(identity), settings.docType, id(path), patchQuery)
