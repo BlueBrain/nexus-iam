@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.service
 import java.time.Clock
 
 import _root_.io.circe.Encoder
+import _root_.io.circe.java8.time._
 import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
@@ -16,7 +17,7 @@ import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticQueryClient}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
-import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
@@ -24,10 +25,13 @@ import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, Authent
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
+import ch.epfl.bluebrain.nexus.commons.types.search.QueryResults
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
+import ch.epfl.bluebrain.nexus.iam.elastic.{AclDocument, ElasticConfig}
+import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.groups.UsedGroupsAggregator
@@ -43,7 +47,7 @@ import kamon.Kamon
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 // $COVERAGE-OFF$
@@ -141,7 +145,7 @@ object Main {
                      appConfig.http.prefix).routes
       }
 
-      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl).routes)
+      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl, aclsFilter(appConfig.elastic)).routes)
       val authRoutes = uriPrefix(apiUri)(AuthRoutes(downStreamAuthClients, usedGroups).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
@@ -192,6 +196,16 @@ object Main {
     val _ = sys.addShutdownHook {
       val _ = Await.result(as.terminate(), 5.seconds)
     }
+  }
+
+  private def aclsFilter(elasticConfig: ElasticConfig)(implicit ec: ExecutionContext,
+                                                       mt: ActorMaterializer,
+                                                       cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
+    import _root_.io.circe.generic.auto._
+
+    implicit val rsSearch = withAkkaUnmarshaller[QueryResults[AclDocument]]
+    val client            = ElasticClient[Future](elasticConfig.baseUri, ElasticQueryClient[Future](elasticConfig.baseUri))
+    FilterAcls(client, elasticConfig)
   }
 
   def iamOrderedKeys: OrderedKeys =

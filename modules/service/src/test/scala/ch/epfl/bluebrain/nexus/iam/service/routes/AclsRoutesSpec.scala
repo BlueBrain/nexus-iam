@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.routes
 
 import java.time.{Clock, Instant, ZoneId}
 import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 
 import akka.cluster.Cluster
 import akka.http.scaladsl.model.ContentTypes._
@@ -13,8 +14,7 @@ import akka.testkit.TestDuration
 import akka.util.Timeout
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.unmarshaller
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.{OrderedKeys, unmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
@@ -27,6 +27,7 @@ import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
@@ -35,16 +36,18 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
+import io.circe._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
-import io.circe._
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.isA
 import org.mockito.Mockito.when
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 
+import scala.concurrent._
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future, Promise}
 import scala.util.Random
 
 class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
@@ -312,6 +315,35 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       }
     }
 
+    "get permissions with a certain maxDepth" in {
+      val path = Path(s"/some/$rand")
+      val identitiesAcls = IdentityAccessControlList(
+        Anonymous() -> List(PathAccessControl(path, read)),
+        alice       -> List(PathAccessControl(path, readWrite), PathAccessControl(path / "two", ownReadWrite))
+      )
+      when(filter(isA(classOf[Set[Identity]]), ArgumentMatchers.eq(path), ArgumentMatchers.eq(Some(5))))
+        .thenReturn(Future.successful(identitiesAcls))
+
+      Get(s"/acls${path.repr}?maxDepth=5") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val expected = jsonContentOf("/identities-acls.json",
+                                     Map(Pattern.quote("{{path1}}") -> s"$path",
+                                         Pattern.quote("{{path2}}") -> (path / "two").toString))
+        responseAs[Json] shouldEqual expected
+      }
+    }
+
+    "get permissions with a certain maxDepth from /" in {
+      val identitiesAcls = IdentityAccessControlList(Anonymous() -> List(PathAccessControl(Path("one/two"), read)))
+      when(filter(isA(classOf[Set[Identity]]), ArgumentMatchers.eq(Path("/")), ArgumentMatchers.eq(Some(2))))
+        .thenReturn(Future.successful(identitiesAcls))
+
+      Get(s"/acls?maxDepth=2") ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[Json] shouldEqual jsonContentOf("/identities-acls-simple.json")
+      }
+    }
+
     "handle downstream error codes" in {
       when(ucl.apply(Get(provider.userinfoEndpoint).addCredentials(credentialsNoUser)))
         .thenReturn(Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized))))
@@ -380,6 +412,7 @@ abstract class AclsRoutesSpecInstances
   implicit val enc: Encoder[Identity] = JsonLdSerialization.identityEncoder(apiUri.base)
   implicit val dec: Decoder[Identity] = SimpleIdentitySerialization.identityDecoder
   implicit val ordered: OrderedKeys   = Main.iamOrderedKeys
+  val filter                          = mock[FilterAcls[Future]]
 
   var routes: Route = _
 
@@ -394,13 +427,12 @@ abstract class AclsRoutesSpecInstances
                                                                                                          Acls.eval)
       val acl = Acls[Future](aggregate)
       acl.add(Path./, AccessControlList(alice -> own))(aliceCaller)
-      routes = AclsRoutes(acl).routes
+      routes = AclsRoutes(acl, filter).routes
       p.success(())
     }
     cluster.join(cluster.selfAddress)
     Await.result(p.future, rt.duration)
   }
-
   def rand: String = Math.abs(Random.nextLong).toString
 
 }
