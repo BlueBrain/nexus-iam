@@ -17,6 +17,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerial
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
+import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
@@ -31,18 +32,20 @@ import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 import kamon.akka.http.KamonTraceDirectives.traceName
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * HTTP routes for ACL specific functionality.
   *
-  * @param acl  the ACL operations bundle
+  * @param acl        the ACL operations bundle
+  * @param aclsFilter queries for ACLs
   */
-class AclsRoutes(acl: Acls[Future])(implicit clock: Clock,
-                                    ce: ClaimExtractor,
-                                    api: ApiUri,
-                                    contexts: ContextConfig,
-                                    orderedKeys: OrderedKeys)
+class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clock: Clock,
+                                                                    ce: ClaimExtractor,
+                                                                    api: ApiUri,
+                                                                    contexts: ContextConfig,
+                                                                    orderedKeys: OrderedKeys)
     extends DefaultRoutes("acls", contexts.error) {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
@@ -83,7 +86,7 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock,
               }
             } ~
             get {
-              parameters('all.as[Boolean].?) {
+              parameter('all.as[Boolean].?) {
                 case Some(true) =>
                   authorizeAsync(check(path, user, Permission.Own)) {
                     traceName("getAllPermissions") {
@@ -93,12 +96,21 @@ class AclsRoutes(acl: Acls[Future])(implicit clock: Clock,
                     }
                   }
                 case _ =>
-                  authorizeAsync(check(path, user, Permission.Read, Permission.Write, Permission.Own)) {
-                    traceName("getPermissions") {
-                      onSuccess(acl.retrieve(path, user.identities)) { result =>
-                        complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                  (parameter('maxDepth.as[Int].?) & authorizeAsync(
+                    check(path, user, Permission.Read, Permission.Write, Permission.Own))) {
+                    case Some(depth) =>
+                      traceName("getPermissionsWithDepth") {
+                        val pathDepthOpt = if (depth == 0) None else Some(depth)
+                        onSuccess(aclsFilter(user.identities, path, pathDepthOpt)) { result =>
+                          complete(StatusCodes.OK -> result)
+                        }
                       }
-                    }
+                    case None =>
+                      traceName("getPermissions") {
+                        onSuccess(acl.retrieve(path, user.identities)) { result =>
+                          complete(StatusCodes.OK -> AccessControlList.fromMap(result))
+                        }
+                      }
                   }
               }
             }
@@ -139,14 +151,15 @@ object AclsRoutes {
   /**
     * Constructs a new ''AclsRoutes'' instance that defines the http routes specific to ACL endpoints.
     *
-    * @param acl   the ACL operation bundle
+    * @param acl        the ACL operation bundle
+    * @param aclsFilter queries for ACLs
     */
-  def apply(acl: Acls[Future])(implicit clock: Clock,
-                               ce: ClaimExtractor,
-                               api: ApiUri,
-                               contexts: ContextConfig,
-                               orderedKeys: OrderedKeys): AclsRoutes =
-    new AclsRoutes(acl)
+  def apply(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clock: Clock,
+                                                               ce: ClaimExtractor,
+                                                               api: ApiUri,
+                                                               contexts: ContextConfig,
+                                                               orderedKeys: OrderedKeys): AclsRoutes =
+    new AclsRoutes(acl, aclsFilter)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
     val fields = cursor.keys.toSeq.flatten

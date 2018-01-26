@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion         = "0.6.5"
+val commonsVersion         = "0.6.8"
 val akkaVersion            = "2.5.9"
 val akkaHttpVersion        = "10.0.11"
 val akkaPersCassVersion    = "0.55"
@@ -200,6 +200,7 @@ lazy val elastic = project
       scalaTest    % Test
     )
   )
+  .settings(parallelExecution in Test := false)
 
 lazy val service = project
   .in(file("modules/service"))
