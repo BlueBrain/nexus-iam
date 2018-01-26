@@ -1,0 +1,19 @@
+{
+  "@context" : "http://localhost:8080/v0/contexts/nexus/core/iam/v0.1.0",
+  "acls" : [
+    {
+      "identity" : {
+        "@id" : "localhost:8080/v0/anonymous",
+        "@type" : "Anonymous"
+      },
+      "acl" : [
+        {
+          "permissions" : [
+            "read"
+          ],
+          "path" : "/one/two"
+        }
+      ]
+    }
+  ]
+}

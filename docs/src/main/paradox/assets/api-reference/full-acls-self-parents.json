@@ -1,0 +1,51 @@
+{
+  "acl": [
+    {
+      "path": "/myorg",
+      "identity": {
+        "@id": "https://example.com/realms/realm",
+        "realm": "realm",
+        "@type": "AuthenticatedRef"
+      },
+      "permissions": [ "publish" ]
+    },
+    {
+      "path": "/myorg/mydom/myschema",
+      "identity": {
+        "@id": "https://example.com/realms/realm",
+        "realm": "realm",
+        "@type": "AuthenticatedRef"
+      },
+      "permissions": [ "own" ]
+    },
+    {
+      "path": "/myorg/mydom/myschema/1.0.0/42ae55e3-7746-45ed-a9fd-a7ccdd1d736f",
+      "identity": {
+        "@id": "https://example.com/realms/realm",
+        "realm": "realm",
+        "@type": "AuthenticatedRef"
+      },
+      "permissions": [ "read" ]
+    },
+    {
+      "path": "/myorg/mydom/myschema/1.0.1/9af28cf6-05e6-11e8-ba89-0ed5f89f718b",
+      "identity": {
+        "@id": "https://example.com/realms/realm/users/alice",
+        "realm": "realm",
+        "sub": "alice",
+        "@type": "UserRef"
+      },
+      "permissions": [ "read", "write" ]
+    },
+    {
+      "path": "/myorg/mydom/myschema/1.0.1/a8fcded2-05e6-11e8-ba89-0ed5f89f718b",
+      "identity": {
+        "@id": "https://example.com/realms/realm/users/alice",
+        "realm": "realm",
+        "sub": "alice",
+        "@type": "UserRef"
+      },
+      "permissions": [ "own", "read", "write" ]
+    }
+  ]
+}

@@ -33,15 +33,80 @@ when present. See [Actions](#actions) and [Data formats](#data-formats) for deta
 
 | HTTP Verb | Request path | Request payload | Response body |
 | ---       | --- | --- | --- |
-| GET       | /v0/acls/{address} | *N/A* | [Own ACL](../assets/api-reference/own-acls.json) |
-| GET       | /v0/acls/{address}?all=true | *N/A* | [Full ACL](../assets/api-reference/acls.json) |
+| GET       | /v0/acls/{address}?self=[true\|**false**]&parents=[true\|**false**] | *N/A* | [Full ACL](../assets/api-reference/full-acls-self.json) |
 | PATCH     | /v0/acls/{address} | [Patch permissions](../assets/api-reference/acl-patch.json) | [Identity permissions](../assets/api-reference/acl-patch-response.json) |
-| PUT       | /v0/acls/{address} | [Full ACL](../assets/api-reference/acls.json) | *N/A* |
+| PUT       | /v0/acls/{address} | [ACL](../assets/api-reference/acls.json) | *N/A* |
 | DELETE    | /v0/acls/{address} | *N/A* | *N/A* |
 
 ## Actions
 
+All `GET` operations specify an `{address}` which can be a regular path (`a/b/c`) or can be a filter path, expressed as (`a/*/c/*`). 
+The character `*` is reserved to indicate that this segment of the path can be matched by any word. As an example, `a/*/c/*` will be matched by `a/b/c/d` and also by `a/something/c/else`. The response for this example will only contain paths with length 4.
+
 ### Fetch own permissions on a resource
+
+```
+GET /v0/acls/{address}?self=true
+```
+This call will return the ACLs for the caller's identities on the provided `{address}`. 
+
+Request
+:   @@snip [acl-get-self.sh](../assets/api-reference/acl-get-self.sh)
+
+Response
+:   @@snip [full-acls-self.json](../assets/api-reference/full-acls-self.json)
+
+
+#### Status Codes
+
+- **200 OK**: the ACLs for the provided `{address}` with the associated caller are returned successfully
+
+
+### Fetch own permissions on a resource and its parents
+
+This call will return the ACLs for the caller's identities on the provided `{address}` and its parents. For example, being `/a/b/c` the address, it will return
+the self ACLs for `/`, `/a`, `/a/b` and `/a/b/c`.
+
+```
+GET /v0/acls/{address}?self=true&parents=true
+```
+
+Request
+:   @@snip [acl-get-self-parents.sh](../assets/api-reference/acl-get-self-parents.sh)
+
+Response
+:   @@snip [full-acls-self-parents.json](../assets/api-reference/full-acls-self-parents.json)
+
+
+#### Status Codes
+
+- **200 OK**: the ACLs for the provided `{address}` (including parents) with the associated caller are returned successfully
+
+
+### Fetch all permissions on a resource and its parents
+
+This call will return all the ACLs the caller has access to on the provided `{address}` and its parents. For example, being `/a/b/c` the address, it will return
+all the ACLs for `/`, `/a`, `/a/b` and `/a/b/c`.
+
+```
+GET /v0/acls/{address}?parents=true
+```
+
+Request
+:   @@snip [acl-get-parents.sh](../assets/api-reference/acl-get-parents.sh)
+
+Response
+:   @@snip [full-acls-parents.json](../assets/api-reference/full-acls-parents.json)
+
+
+#### Status Codes
+
+- **200 OK**: the ACLs for the provided `{address}` (including parents) are returned successfully
+
+
+### Fetch all permissions on a resource
+
+This call will return all the ACLs the caller has access to on the provided `{address}`. 
 
 ```
 GET /v0/acls/{address}
@@ -51,38 +116,13 @@ Request
 :   @@snip [acl-get.sh](../assets/api-reference/acl-get.sh)
 
 Response
-:   @@snip [own-acls.json](../assets/api-reference/own-acls.json)
+:   @@snip [full-acls.json](../assets/api-reference/full-acls.json)
 
-**Note**: Permissions are transitively inherited from the resource ACL and all its ancestors.
-This call computes the effective ACL for the caller on this resource.
 
 #### Status Codes
 
-- **200 OK**: the ACL is computed and the associated caller permissions are returned successfully
-- **403 Forbidden**: the caller doesn't have any access rights (either `read`, `write` or `own`)
-                     on this resource ACL
+- **200 OK**: the ACLs for the provided `{address}` (including parents) are returned successfully
 
-
-### Fetch permissions for all users on a resource
-
-```
-GET /v0/acls/{address}?all=true
-```
-
-#### Example
-
-Request
-:   @@snip [acl-get-all.sh](../assets/api-reference/acl-get-all.sh)
-
-Response
-:   @@snip [acls.json](../assets/api-reference/acls.json)
-
-**Note**: This action *does not* show inherited permissions.
-
-#### Status Codes
-
-- **200 OK**: the entire ACL is fetched is returned successfully
-- **403 Forbidden**: the caller doesn't have `own` rights on this resource
 
 ### Append new ACL
 Appends certain `permissions` to some `identities` on the provided `address`

@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.elastic
 import akka.http.scaladsl.model.Uri
 
 /**
-  * Collection of configurable settings specific to organization indexing in the ElasticSearch indexer.
+  * Collection of configurable settings specific to  the ElasticSearch indexer.
   *
   * @param baseUri     the application base uri for operating on resources
   * @param indexPrefix the name of the index
