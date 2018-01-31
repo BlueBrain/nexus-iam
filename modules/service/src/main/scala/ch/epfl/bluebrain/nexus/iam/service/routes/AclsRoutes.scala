@@ -31,7 +31,7 @@ import ch.epfl.bluebrain.nexus.iam.service.types.Subtract
 import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
-import kamon.akka.http.KamonTraceDirectives.traceName
+import kamon.akka.http.KamonTraceDirectives.operationName
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -58,7 +58,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clo
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {
-                traceName("addPermissions") {
+                operationName("addPermissions") {
                   onSuccess(acl.add(path, list)) {
                     complete(StatusCodes.OK -> HttpEntity.Empty)
                   }
@@ -69,7 +69,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clo
             patch {
               (entity(as[PartialUpdate]) & authorizeAsync(check(path, user, Permission.Own))) {
                 case Subtract(identity, permissions) =>
-                  traceName("subtractPermissions") {
+                  operationName("subtractPermissions") {
                     onSuccess(acl.subtract(path, identity, permissions)) { result =>
                       complete(StatusCodes.OK -> AccessControl(identity, result))
                     }
@@ -78,7 +78,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clo
             } ~
             delete {
               authorizeAsync(check(path, user, Permission.Own)) {
-                traceName("deletePermissions") {
+                operationName("deletePermissions") {
                   onSuccess(acl.clear(path)) {
                     complete(StatusCodes.NoContent)
                   }
@@ -87,7 +87,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clo
             } ~
             get {
               parameters(('self.as[Boolean] ? false, 'parents.as[Boolean] ? false)) { (self, parents) =>
-                traceName("getPermissions") {
+                operationName("getPermissions") {
                   onSuccess(aclsFilter(path, parents, self)) { result =>
                     complete(StatusCodes.OK -> result)
                   }

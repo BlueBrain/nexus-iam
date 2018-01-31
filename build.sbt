@@ -55,17 +55,6 @@ lazy val scalaTest           = "org.scalatest"         %% "scalatest"           
 lazy val mockitoCore         = "org.mockito"           % "mockito-core"                % mockitoVersion
 lazy val jwtCirce            = "com.pauldijou"         %% "jwt-circe"                  % jwtVersion
 lazy val asm                 = "org.ow2.asm"           % "asm"                         % "5.1"
-lazy val kamonDeps = Seq(
-  "io.kamon"    %% "kamon-core"            % "0.6.7",
-  "io.kamon"    %% "kamon-akka-http"       % "0.6.8",
-  "io.kamon"    %% "kamon-statsd"          % "0.6.7" % Runtime,
-  "io.kamon"    %% "kamon-system-metrics"  % "0.6.7" % Runtime,
-  "io.kamon"    %% "kamon-akka-2.5"        % "0.6.8" % Runtime,
-  "io.kamon"    %% "kamon-akka-remote-2.4" % "0.6.7" % Runtime,
-  "io.kamon"    %% "kamon-autoweave"       % "0.6.5" % Runtime,
-  "io.kamon"    % "sigar-loader"           % sigarLoaderVersion % Runtime,
-  "org.aspectj" % "aspectjweaver"          % aspectJVersion % Runtime
-)
 
 lazy val docs = project
   .in(file("docs"))
@@ -112,14 +101,15 @@ lazy val core = project
 lazy val oidcCore = project
   .in(file("modules/oidc/core"))
   .dependsOn(core)
-  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(BuildInfoPlugin, MonitoringPlugin)
   .settings(
     common,
     name             := "iam-oidc-core",
     moduleName       := "iam-oidc-core",
     buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "ch.epfl.bluebrain.nexus.iam.oidc.config",
-    libraryDependencies ++= kamonDeps ++
+    resolvers += Resolver.bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
+    libraryDependencies ++=
       Seq(
         commonsHttp,
         akkaHttp,
@@ -146,7 +136,6 @@ lazy val oidcBbp = project
   .enablePlugins(ServicePackagingPlugin)
   .settings(
     common,
-    monitoringSettings,
     name                  := "iam-bbp",
     moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
@@ -166,7 +155,6 @@ lazy val oidcHbp = project
   .enablePlugins(ServicePackagingPlugin)
   .settings(
     common,
-    monitoringSettings,
     name                  := "iam-hbp",
     moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
@@ -204,13 +192,13 @@ lazy val service = project
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
   .settings(
     common,
-    monitoringSettings,
     name                  := "iam-service",
     moduleName            := "iam-service",
     packageName in Docker := "iam",
     description           := "Nexus IAM Service",
     buildInfoKeys         := Seq[BuildInfoKey](version),
     buildInfoPackage      := "ch.epfl.bluebrain.nexus.iam.service.config",
+    resolvers += Resolver.bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
     libraryDependencies ++= Seq(
       commonsService,
       sourcingAkka,
@@ -253,13 +241,5 @@ lazy val common = Seq(
     ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git"))
 )
 
-lazy val monitoringSettings = Seq(
-  libraryDependencies ++= kamonDeps,
-  bashScriptExtraDefines ++= Seq(
-    s"""addJava "-javaagent:$$lib_dir/org.aspectj.aspectjweaver-$aspectJVersion.jar"""",
-    s"""addJava "-javaagent:$$lib_dir/io.kamon.sigar-loader-$sigarLoaderVersion.jar""""
-  )
-)
-
-addCommandAlias("review", ";clean;coverage;scapegoat;test;coverageReport;coverageAggregate")
+addCommandAlias("review", ";clean;scalafmtSbtCheck;coverage;scapegoat;test;coverageReport;coverageAggregate")
 addCommandAlias("rel", ";release with-defaults skip-tests")

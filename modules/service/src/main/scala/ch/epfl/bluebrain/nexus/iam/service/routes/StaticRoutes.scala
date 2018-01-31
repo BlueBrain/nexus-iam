@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types._
 import io.circe.generic.auto._
-import kamon.akka.http.KamonTraceDirectives.traceName
+import kamon.akka.http.KamonTraceDirectives.operationName
 
 /**
   * Akka HTTP route definition for things that can be considered static, namely:
@@ -20,7 +20,7 @@ class StaticRoutes(serviceDescription: ServiceDescription, publicUri: Uri, apiPr
 
   private def serviceDescriptionRoute: Route = pathEndOrSingleSlash {
     get {
-      traceName("serviceDescription") {
+      operationName("serviceDescription") {
         complete(Boxed(serviceDescription, List(Link("api", s"$publicUri/$apiPrefix/acls"))))
       }
     }

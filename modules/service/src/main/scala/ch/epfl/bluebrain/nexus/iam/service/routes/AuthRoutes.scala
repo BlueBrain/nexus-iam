@@ -19,7 +19,7 @@ import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.Encoder
-import kamon.akka.http.KamonTraceDirectives.traceName
+import kamon.akka.http.KamonTraceDirectives.operationName
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,21 +41,21 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
 
   def apiRoutes: Route =
     (get & path("authorize") & parameter('redirect.?) & parameter('realm ? oidc.defaultRealm)) { (redirectUri, realm) =>
-      traceName("authorize") {
+      operationName("authorize") {
         clients
           .findByRealm(realm)
           .fold(complete(StatusCodes.NotFound))(cl => complete(cl.authorize(redirectUri)))
       }
     } ~
       (get & pathPrefix("token") & pathPrefix(Segment) & parameters(('code, 'state))) { (realm, code, state) =>
-        traceName("token") {
+        operationName("token") {
           clients
             .findByRealm(realm)
             .fold(complete(StatusCodes.NotFound))(cl => complete(cl.token(code, state)))
         }
       } ~
       (get & path("userinfo") & extractBearerToken) { credentials =>
-        traceName("userinfo") {
+        operationName("userinfo") {
           complete {
             credentials.extractClaim.flatMap {
               case (client, json) =>
@@ -70,7 +70,7 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
         import JsonLdCirceSupport.marshallerHttp
 
         (credentials, filterGroups) =>
-          traceName("user") {
+          operationName("user") {
             complete {
               credentials.extractClaim.flatMap {
                 case (client, json) =>
