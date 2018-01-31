@@ -94,8 +94,22 @@ object FilterAcls {
 private object QueryBuilder {
 
   final def apply(path: Path, parents: Boolean, self: Boolean): Json = {
-    def queryDepthIfNotHashIn: Json =
+
+    def queryDepth: Json =
       Json.obj("range" -> Json.obj("pathDepth" -> Json.obj("lte" -> Json.fromInt(path.length))))
+
+    def queryExactTerms: Json = {
+      @tailrec
+      def buildExactTermPropagation(p: Path, terms: List[Json] = List.empty): List[Json] = {
+        val newTerms = Json.obj("term" -> Json.obj("path" -> Json.fromString(p.show))) :: terms
+        if (p.head == Empty) newTerms
+        else buildExactTermPropagation(p.tail, newTerms)
+      }
+      if (!parents && self)
+        Json.obj("term" -> Json.obj("path" -> Json.fromString(path.show)))
+      else
+        Json.obj("bool" -> Json.obj("should" -> Json.arr(buildExactTermPropagation(path): _*)))
+    }
 
     def queryRegex: Json = {
       def regex(p: Path): String = p.show.replaceAll(quote("*"), ".*")
@@ -111,7 +125,8 @@ private object QueryBuilder {
       Json.obj("regexp" -> Json.obj("path" -> Json.fromString(r)))
     }
 
-    val terms = List(queryRegex, queryDepthIfNotHashIn)
+    val pathQuery = if (path.show.contains("*")) queryRegex else queryExactTerms
+    val terms     = List(queryDepth, pathQuery)
     Json.obj(
       "query" -> Json.obj("bool" -> Json.obj("filter" -> Json.obj("bool" -> Json.obj("must" -> Json.arr(terms: _*))))))
   }
