@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion         = "0.6.5"
+val commonsVersion         = "0.7.0"
 val akkaVersion            = "2.5.9"
 val akkaHttpVersion        = "10.0.11"
 val akkaPersCassVersion    = "0.55"
@@ -54,7 +54,7 @@ lazy val pureconfigAkka      = "com.github.pureconfig" %% "pureconfig-akka"     
 lazy val scalaTest           = "org.scalatest"         %% "scalatest"                  % scalaTestVersion
 lazy val mockitoCore         = "org.mockito"           % "mockito-core"                % mockitoVersion
 lazy val jwtCirce            = "com.pauldijou"         %% "jwt-circe"                  % jwtVersion
-
+lazy val asm                 = "org.ow2.asm"           % "asm"                         % "5.1"
 lazy val kamonDeps = Seq(
   "io.kamon"    %% "kamon-core"            % "0.6.7",
   "io.kamon"    %% "kamon-akka-http"       % "0.6.8",
@@ -182,24 +182,21 @@ lazy val oidcHbp = project
 
 lazy val elastic = project
   .in(file("modules/elastic"))
+  .dependsOn(core)
   .settings(common)
   .settings(
     name       := "iam-elastic",
     moduleName := "iam-elastic",
     libraryDependencies ++= Seq(
-      akkaHttp,
-      akkaHttpCirce,
       elasticClient,
-      iamTypes,
       commonsTest,
-      akkaStream,
-      circeCore,
-      circeParser,
+      asm          % Test,
       akkaTestkit  % Test,
       elasticEmbed % Test,
       scalaTest    % Test
     )
   )
+  .settings(parallelExecution in Test := false)
 
 lazy val service = project
   .in(file("modules/service"))

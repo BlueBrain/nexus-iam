@@ -1,0 +1,23 @@
+{
+  "acl": [
+    {
+      "path": "/myorg/mydom/myschema",
+      "identity": {
+        "@id": "https://example.com/realms/realm",
+        "realm": "realm",
+        "@type": "AuthenticatedRef"
+      },
+      "permissions": [ "own" ]
+    },
+    {
+      "path": "/myorg/mydom/myschema",
+      "identity": {
+        "@id": "https://example.com/realms/realm/users/tom",
+        "realm": "realm",
+        "sub": "tom",
+        "@type": "UserRef"
+      },
+      "permissions": [ "read" ]
+    }
+  ]
+}
