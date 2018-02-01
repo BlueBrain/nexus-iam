@@ -1,6 +1,7 @@
 /* Project definitions */
 
-val commonsVersion         = "0.7.0"
+val commonsVersion = "0.7.1"
+
 val akkaVersion            = "2.5.9"
 val akkaHttpVersion        = "10.0.11"
 val akkaPersCassVersion    = "0.55"
@@ -108,7 +109,8 @@ lazy val oidcCore = project
     moduleName       := "iam-oidc-core",
     buildInfoKeys    := Seq[BuildInfoKey](version),
     buildInfoPackage := "ch.epfl.bluebrain.nexus.iam.oidc.config",
-    resolvers += Resolver.bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
+    resolvers += Resolver
+      .bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
     libraryDependencies ++=
       Seq(
         commonsHttp,
@@ -198,7 +200,8 @@ lazy val service = project
     description           := "Nexus IAM Service",
     buildInfoKeys         := Seq[BuildInfoKey](version),
     buildInfoPackage      := "ch.epfl.bluebrain.nexus.iam.service.config",
-    resolvers += Resolver.bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
+    resolvers += Resolver
+      .bintrayRepo("kamon-io", "releases"), // TODO: remove once artifacts are synced to maven central
     libraryDependencies ++= Seq(
       commonsService,
       sourcingAkka,
