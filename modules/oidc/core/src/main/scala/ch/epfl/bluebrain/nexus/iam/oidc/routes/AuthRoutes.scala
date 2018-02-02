@@ -12,7 +12,7 @@ import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault.{Rejected, Unauthorized}
 import ch.epfl.bluebrain.nexus.iam.oidc.api.OidcOps
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.IllegalRedirectUri
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-import kamon.akka.http.KamonTraceDirectives.traceName
+import kamon.akka.http.KamonTraceDirectives.operationName
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
@@ -29,7 +29,7 @@ final class AuthRoutes(oidcOps: OidcOps[Future]) {
               .map(str => Future.fromTry(parseFinalRedirect(str).map(uri => Some(uri))))
               .getOrElse(Future.successful(None))
             val eventualUri = eventualMaybeUri.flatMap(uriOpt => oidcOps.buildRedirectUri(uriOpt))
-            traceName("authorize") {
+            operationName("authorize") {
               onSuccess(eventualUri) { uri =>
                 redirect(uri, StatusCodes.Found)
               }
@@ -37,7 +37,7 @@ final class AuthRoutes(oidcOps: OidcOps[Future]) {
           }
         } ~ (pathPrefix("token") & pathEndOrSingleSlash & get) {
           (parameter('code) & parameter('state)) { (code, state) =>
-            traceName("token") {
+            operationName("token") {
               onSuccess(oidcOps.exchangeCode(code, state)) {
 
                 case (token, Some(finalRedirect)) =>
@@ -50,7 +50,7 @@ final class AuthRoutes(oidcOps: OidcOps[Future]) {
           }
         } ~ (pathPrefix("userinfo") & pathEndOrSingleSlash & get) {
           authenticateOAuth2Async[UserInfo]("*", authenticator).apply { userInfo =>
-            traceName("userinfo") {
+            operationName("userinfo") {
               complete(userInfo)
             }
           }

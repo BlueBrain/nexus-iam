@@ -55,7 +55,7 @@ object Main {
 
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
-    Kamon.start()
+    Kamon.loadReportersFromConfig()
 
     // generic implicits
     val config    = ConfigFactory.load()
@@ -190,7 +190,7 @@ object Main {
 
     as.registerOnTermination {
       cluster.leave(cluster.selfAddress)
-      Kamon.shutdown()
+      Kamon.stopAllReporters()
     }
     // attempt to leave the cluster before shutting down
     val _ = sys.addShutdownHook {
