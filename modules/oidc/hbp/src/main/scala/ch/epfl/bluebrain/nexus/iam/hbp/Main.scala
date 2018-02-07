@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.hbp
 
 import ch.epfl.bluebrain.nexus.iam.oidc.BootstrapService
 import kamon.Kamon
+import kamon.system.SystemMetrics
 
 /**
   * Service entry point.
@@ -12,7 +13,18 @@ object Main {
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
     import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.hbp._
-    val _ = BootstrapService(() => Kamon.loadReportersFromConfig(), () => Kamon.stopAllReporters())
+    val _ = BootstrapService(startMonitoring, stopMonitoring)
   }
+
+  private def startMonitoring = () => {
+    SystemMetrics.startCollecting()
+    Kamon.loadReportersFromConfig()
+  }
+
+  private def stopMonitoring = () => {
+    Kamon.stopAllReporters()
+    SystemMetrics.stopCollecting()
+  }
+
 }
 // $COVERAGE-ON$

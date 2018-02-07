@@ -44,6 +44,7 @@ import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
+import kamon.system.SystemMetrics
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.duration._
@@ -55,6 +56,7 @@ object Main {
 
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
+    SystemMetrics.startCollecting()
     Kamon.loadReportersFromConfig()
 
     // generic implicits
@@ -191,6 +193,7 @@ object Main {
     as.registerOnTermination {
       cluster.leave(cluster.selfAddress)
       Kamon.stopAllReporters()
+      SystemMetrics.startCollecting()
     }
     // attempt to leave the cluster before shutting down
     val _ = sys.addShutdownHook {
