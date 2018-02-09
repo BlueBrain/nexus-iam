@@ -27,6 +27,7 @@ import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
@@ -36,6 +37,8 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
+import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
+import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import io.circe._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
@@ -341,6 +344,9 @@ abstract class AclsRoutesSpecInstances
   implicit val ordered: OrderedKeys   = Main.iamOrderedKeys
   val filter                          = mock[FilterAcls[Future]]
 
+  val aggregate  = MemoryAggregate("used-groups")(Set.empty[GroupRef], UsedGroups.next, UsedGroups.eval).toF[Future]
+  val usedGroups = UsedGroups[Future](aggregate)
+
   var routes: Route = _
 
   override protected def beforeAll(): Unit = {
@@ -354,7 +360,7 @@ abstract class AclsRoutesSpecInstances
                                                                                                          Acls.eval)
       val acl = Acls[Future](aggregate)
       acl.add(Path./, AccessControlList(alice -> own))(aliceCaller)
-      routes = AclsRoutes(acl, filter).routes
+      routes = AclsRoutes(acl, filter, usedGroups).routes
       p.success(())
     }
     cluster.join(cluster.selfAddress)

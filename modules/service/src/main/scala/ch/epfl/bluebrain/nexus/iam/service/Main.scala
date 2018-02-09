@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.service
 import java.time.Clock
 
 import _root_.io.circe.Encoder
+import _root_.io.circe.Decoder
 import _root_.io.circe.java8.time._
 import akka.actor.{ActorSystem, AddressFromURIString}
 import akka.cluster.Cluster
@@ -11,6 +12,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
+import ch.epfl.bluebrain.nexus.commons.es.client.ElasticDecoder
 import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
@@ -147,7 +149,7 @@ object Main {
                      appConfig.http.prefix).routes
       }
 
-      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl, aclsFilter(appConfig.elastic)).routes)
+      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl, aclsFilter(appConfig.elastic), usedGroups).routes)
       val authRoutes = uriPrefix(apiUri)(AuthRoutes(downStreamAuthClients, usedGroups).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)
@@ -201,13 +203,15 @@ object Main {
     }
   }
 
-  private def aclsFilter(elasticConfig: ElasticConfig)(implicit ec: ExecutionContext,
-                                                       mt: ActorMaterializer,
-                                                       cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
+  def aclsFilter(elasticConfig: ElasticConfig)(implicit ec: ExecutionContext,
+                                               mt: ActorMaterializer,
+                                               cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
     import _root_.io.circe.generic.auto._
-
-    implicit val rsSearch = withAkkaUnmarshaller[QueryResults[AclDocument]]
-    val client            = ElasticClient[Future](elasticConfig.baseUri, ElasticQueryClient[Future](elasticConfig.baseUri))
+    import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization._
+    implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
+    implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
+      withAkkaUnmarshaller[QueryResults[AclDocument]]
+    val client = ElasticClient[Future](elasticConfig.baseUri, ElasticQueryClient[Future](elasticConfig.baseUri))
     FilterAcls(client, elasticConfig)
   }
 

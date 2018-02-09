@@ -1,0 +1,29 @@
+package ch.epfl.bluebrain.nexus.iam.service.groups
+
+import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
+import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
+
+object UserGroupsOps {
+
+  /**
+    * Syntax sugar to expose methods on ''User''
+    * @param user the user
+    */
+  implicit class UserGroupsSyntax(user: User) {
+
+    /**
+      * Add ''usedGroups'' to the ''user'' and remove the rest
+      *
+      * @param usedGroups the groups to add to the current user. The rest will be removed
+      */
+    def filterGroups(usedGroups: Set[GroupRef]): User =
+      user match {
+        case au @ AuthenticatedUser(identities) =>
+          au.copy(identities = identities.filter {
+            case _: GroupRef => false
+            case _           => true
+          } ++ usedGroups)
+        case other => other
+      }
+  }
+}

@@ -4,18 +4,17 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, JsonLdCirceSupport}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
+import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, JsonLdCirceSupport}
 import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo.userInfoEncoder
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{ContextConfig, OidcConfig}
 import ch.epfl.bluebrain.nexus.iam.service.directives.CredentialsDirectives._
+import ch.epfl.bluebrain.nexus.iam.service.groups.UserGroupsOps._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport._
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import io.circe.Encoder
@@ -80,27 +79,14 @@ class AuthRoutes(clients: List[DownstreamAuthClient[Future]], usedGroups: UsedGr
                       case _ => client.getUser(credentials)
                     }
                   if (filterGroups) {
-                    val realmUsedGroups = usedGroups
-                      .fetch(client.config.realm)
-                    user product realmUsedGroups map { case (u, groups) => filterUserGroups(u, groups) }
+                    val realmUsedGroups = usedGroups.fetch(client.config.realm)
+                    user product realmUsedGroups map { case (u, groups) => u.filterGroups(groups) }
                   } else user
 
               }
             }
           }
       }
-
-  private def filterUserGroups(user: User, usedGroups: Set[GroupRef]): User = {
-    user match {
-      case au @ AuthenticatedUser(identities) =>
-        val filteredIdentities = identities filter {
-          case group: GroupRef => usedGroups(group)
-          case _               => true
-        }
-        au.copy(identities = filteredIdentities)
-      case other => other
-    }
-  }
 }
 
 object AuthRoutes {
