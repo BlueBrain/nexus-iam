@@ -20,9 +20,9 @@ object UserGroupsOps {
       user match {
         case au @ AuthenticatedUser(identities) =>
           au.copy(identities = identities.filter {
-            case _: GroupRef => false
+            case group: GroupRef => usedGroups(group)
             case _           => true
-          } ++ usedGroups)
+          })
         case other => other
       }
   }
