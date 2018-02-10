@@ -55,8 +55,7 @@ class FilterAclsSpec
     withAkkaUnmarshaller[QueryResults[AclDocument]]
   private val client = ElasticClient[Future](esUri, ElasticQueryClient[Future](esUri))
 
-  private val base     = s"http://127.0.0.1/v0"
-  private val settings = ElasticConfig(base, genString(length = 6), genString(length = 6))
+  private val settings = ElasticConfig(esUri, genString(length = 6), genString(length = 6))
 
   private val filter = FilterAcls(client, settings)
   private def getAll: Future[QueryResults[AclDocument]] =
@@ -99,8 +98,13 @@ class FilterAclsSpec
       }
     }
 
+    "search for a user which is not indexed" in {
+      filter("*" / "*", self = true, parents = true)(AuthenticatedUser(Set(UserRef("realm3", "someother")))).futureValue shouldEqual FullAccessControlList()
+    }
+
     "search on path /*/*/*/*/*/*" in {
-      filter("*" / "*" / "*" / "*" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList()
+      filter("*" / "*" / "*" / "*" / "*" / "*", self = false, parents = false)(AuthenticatedUser(
+        Set(UserRef("realm3", "someother"), userIdentity))).futureValue shouldEqual FullAccessControlList()
 
       filter("*" / "*" / "*" / "*" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList()
 

@@ -17,12 +17,14 @@ import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerial
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
+import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
 import ch.epfl.bluebrain.nexus.iam.service.directives.AclDirectives._
+import ch.epfl.bluebrain.nexus.iam.service.groups.UserGroupsOps._
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
 import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.printer
 import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
@@ -41,11 +43,12 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param acl        the ACL operations bundle
   * @param aclsFilter queries for ACLs
   */
-class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clock: Clock,
-                                                                    ce: ClaimExtractor,
-                                                                    api: ApiUri,
-                                                                    contexts: ContextConfig,
-                                                                    orderedKeys: OrderedKeys)
+class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: UsedGroups[Future])(
+    implicit clock: Clock,
+    ce: ClaimExtractor,
+    api: ApiUri,
+    contexts: ContextConfig,
+    orderedKeys: OrderedKeys)
     extends DefaultRoutes("acls", contexts.error) {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
@@ -110,6 +113,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clo
               .recoverWith {
                 case _ => client.getUser(cred)
               }
+              .flatMap(u => usedGroups.fetch(client.config.realm).map(u.filterGroups))
         }
         .map(Some.apply)
         .recover { case UnauthorizedCaller => None }
@@ -134,12 +138,13 @@ object AclsRoutes {
     * @param acl        the ACL operation bundle
     * @param aclsFilter queries for ACLs
     */
-  def apply(acl: Acls[Future], aclsFilter: FilterAcls[Future])(implicit clock: Clock,
-                                                               ce: ClaimExtractor,
-                                                               api: ApiUri,
-                                                               contexts: ContextConfig,
-                                                               orderedKeys: OrderedKeys): AclsRoutes =
-    new AclsRoutes(acl, aclsFilter)
+  def apply(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: UsedGroups[Future])(
+      implicit clock: Clock,
+      ce: ClaimExtractor,
+      api: ApiUri,
+      contexts: ContextConfig,
+      orderedKeys: OrderedKeys): AclsRoutes =
+    new AclsRoutes(acl, aclsFilter, usedGroups)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>
     val fields = cursor.keys.toSeq.flatten
