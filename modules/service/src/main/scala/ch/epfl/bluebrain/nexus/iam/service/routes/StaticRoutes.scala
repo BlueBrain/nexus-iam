@@ -27,13 +27,15 @@ class StaticRoutes(serviceDescription: ServiceDescription, publicUri: Uri, apiPr
   }
   private def docsRoute =
     pathPrefix("docs") {
-      pathPrefix("iam") {
-        pathEndOrSingleSlash {
-          redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
-            getFromResource("docs/index.html")
-          }
-        } ~
-          getFromResourceDirectory("docs")
+      operationName("getDocumentation") {
+        pathPrefix("iam") {
+          pathEndOrSingleSlash {
+            redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
+              getFromResource("docs/index.html")
+            }
+          } ~
+            getFromResourceDirectory("docs")
+        }
       }
     }
 
