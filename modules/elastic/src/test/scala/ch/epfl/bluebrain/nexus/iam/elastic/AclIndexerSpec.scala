@@ -69,12 +69,13 @@ class AclIndexerSpec
 
   private def genPath = genString(length = 4) / genString(length = 4) / genString(length = 4)
 
-  private def permsResult(path: Path,
-                          identity: Identity,
-                          perms: Permissions,
-                          created: Meta,
-                          updated: Meta): ScoredQueryResult[AclDocument] =
-    ScoredQueryResult(1F, AclDocument(path, identity, perms, created.instant, updated.instant))
+  private def permsResults(path: Path,
+                           identity: Identity,
+                           perms: Permissions,
+                           created: Meta,
+                           updated: Meta): List[ScoredQueryResult[AclDocument]] =
+    perms.set.toList.map(perm =>
+      ScoredQueryResult(1F, AclDocument(path, identity, perm, created.instant, updated.instant)))
 
   "An AclIndexer" should {
     val indexer                 = AclIndexer(client, settings)
@@ -97,17 +98,17 @@ class AclIndexerSpec
       eventually {
         val rs = getAll.futureValue
         rs.results.size shouldEqual 1
-        rs.results.head.source shouldEqual AclDocument(path1, anon, Permissions(Read), meta.instant, meta.instant)
+        rs.results.head.source shouldEqual AclDocument(path1, anon, Read, meta.instant, meta.instant)
         client.existsIndex(index).futureValue shouldEqual (())
       }
     }
 
     val meta1 = Meta(Anonymous(), Clock.systemUTC.instant().plusMillis(genInt().toLong))
     "index another PermissionsAdded event on the same path" in {
-      val event = PermissionsAdded(path1,
-                                   AccessControlList(anon         -> Permissions(Read, Write, Own),
-                                                     userIdentity -> Permissions(Read, Write)),
-                                   meta1)
+      val event =
+        PermissionsAdded(path1,
+                         AccessControlList(anon -> Permissions(Write, Own), userIdentity -> Permissions(Read, Write)),
+                         meta1)
       val index = indexId(userIdentity)
 
       whenReady(client.existsIndex(index).failed) { e =>
@@ -115,15 +116,17 @@ class AclIndexerSpec
       }
       indexer(event).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path1, anon, Permissions(Read, Write, Own), meta, meta1),
-          permsResult(path1, userIdentity, Permissions(Read, Write), meta1, meta1)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path1, anon, Permissions(Read), meta, meta) ++
+            permsResults(path1, anon, Permissions(Write, Own), meta1, meta1) ++
+            permsResults(path1, userIdentity, Permissions(Read, Write), meta1, meta1)
         )
         client.existsIndex(index).futureValue shouldEqual (())
       }
     }
 
     val meta2 = Meta(Anonymous(), Clock.systemUTC.instant().plusMillis(genInt().toLong))
+
     "index another PermissionsAdded event on a separate path" in {
       val event  = PermissionsAdded(path2, AccessControlList(userIdentity  -> Permissions(Read, Write, Own)), meta2)
       val event2 = PermissionsAdded(path3, AccessControlList(groupIdentity -> Permissions(Read, Own)), meta2)
@@ -133,12 +136,13 @@ class AclIndexerSpec
       indexer(event2).futureValue
       indexer(event3).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path1, anon, Permissions(Read, Write, Own), meta, meta1),
-          permsResult(path1, userIdentity, Permissions(Read, Write), meta1, meta1),
-          permsResult(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2),
-          permsResult(path3, groupIdentity, Permissions(Read, Own), meta2, meta2),
-          permsResult(path3, anon, Permissions(Own, Write), meta2, meta2)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path1, anon, Permissions(Read), meta, meta) ++
+            permsResults(path1, anon, Permissions(Write, Own), meta1, meta1) ++
+            permsResults(path1, userIdentity, Permissions(Read, Write), meta1, meta1) ++
+            permsResults(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Own), meta2, meta2) ++
+            permsResults(path3, anon, Permissions(Own, Write), meta2, meta2)
         )
       }
     }
@@ -148,11 +152,12 @@ class AclIndexerSpec
         PermissionsRemoved(path3, anon, Meta(Anonymous(), Clock.systemUTC.instant().plusMillis(genInt().toLong)))
       indexer(event).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path1, anon, Permissions(Read, Write, Own), meta, meta1),
-          permsResult(path1, userIdentity, Permissions(Read, Write), meta1, meta1),
-          permsResult(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2),
-          permsResult(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path1, anon, Permissions(Read), meta, meta) ++
+            permsResults(path1, anon, Permissions(Write, Own), meta1, meta1) ++
+            permsResults(path1, userIdentity, Permissions(Read, Write), meta1, meta1) ++
+            permsResults(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
         )
       }
     }
@@ -161,9 +166,9 @@ class AclIndexerSpec
       val event = PermissionsCleared(path1, Meta(Anonymous(), Clock.systemUTC.instant().plusMillis(genInt().toLong)))
       indexer(event).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2),
-          permsResult(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path2, userIdentity, Permissions(Read, Write, Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
         )
       }
     }
@@ -173,9 +178,9 @@ class AclIndexerSpec
       val event = PermissionsSubtracted(path2, userIdentity, Permissions(Read, Write, Permission("publish")), meta3)
       indexer(event).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path2, userIdentity, Permissions(Own), meta2, meta3),
-          permsResult(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path2, userIdentity, Permissions(Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
         )
       }
     }
@@ -184,17 +189,17 @@ class AclIndexerSpec
     "index another PermissionsSubtracted" in {
       indexer(PermissionsSubtracted(path2, userIdentity, Permissions(Write), meta4)).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path2, userIdentity, Permissions(Own), meta2, meta4),
-          permsResult(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path2, userIdentity, Permissions(Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Own), meta2, meta2)
         )
       }
 
       indexer(PermissionsSubtracted(path3, groupIdentity, Permissions(Read, Own), meta4)).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path2, userIdentity, Permissions(Own), meta2, meta4),
-          permsResult(path3, groupIdentity, Permissions.empty, meta2, meta4)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path2, userIdentity, Permissions(Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions.empty, meta2, meta4)
         )
       }
     }
@@ -204,9 +209,9 @@ class AclIndexerSpec
       val event = PermissionsAdded(path3, AccessControlList(groupIdentity -> Permissions(Read, Write, Own)), meta5)
       indexer(event).futureValue
       eventually {
-        getAll.futureValue.results should contain theSameElementsAs List(
-          permsResult(path2, userIdentity, Permissions(Own), meta2, meta4),
-          permsResult(path3, groupIdentity, Permissions(Read, Write, Own), meta2, meta5)
+        getAll.futureValue.results should contain theSameElementsAs (
+          permsResults(path2, userIdentity, Permissions(Own), meta2, meta2) ++
+            permsResults(path3, groupIdentity, Permissions(Read, Write, Own), meta5, meta5)
         )
       }
     }
