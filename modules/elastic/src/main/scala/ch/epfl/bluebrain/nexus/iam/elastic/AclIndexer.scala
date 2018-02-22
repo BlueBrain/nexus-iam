@@ -8,7 +8,7 @@ import cats.syntax.functor._
 import cats.syntax.show._
 import cats.{MonadError, Traverse}
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
+import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event._
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization._
 import ch.epfl.bluebrain.nexus.commons.test.Resources
@@ -36,6 +36,8 @@ class AclIndexer[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
   private lazy val indexJson = jsonContentOf("/elastic-mappings.json", Map(quote("{{type}}") -> config.docType))
   private val printer        = Printer.noSpaces.copy(dropNullValues = true)
 
+
+
   /**
     * Indexes the event by pushing it's json ld representation into the ElasticSearch indexer while also updating the
     * existing content.
@@ -48,34 +50,42 @@ class AclIndexer[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
       log.debug(s"Indexing 'PermissionsAdded' event for path '${path.show}' with acls '$acls'")
       Traverse[List].sequence_(acls.toMap.foldLeft(List(F.pure(()))) {
         case (acc, (identity, perms)) =>
-          val eventUpdate   = AclDocument(path, identity, perms, updated = m.instant)
-          val eventCreate   = eventUpdate.copy(created = Some(m.instant))
-          val updateQuery   = Json.obj("doc" -> eventUpdate.asJson, "upsert" -> eventCreate.asJson)
           val index: String = identity
           createIndexIfNotExist(index)
-            .flatMap(_ => client.update(index, config.docType, id(path), updateQuery)) :: acc
+            .flatMap { _ =>
+              Traverse[List].sequence_(perms.set.map { perm =>
+                val eventUpdate = AclDocument(path, identity, perm, updated = m.instant)
+                val eventCreate = eventUpdate.copy(created = Some(m.instant))
+                val updateQuery = Json.obj("doc" -> eventUpdate.asJson, "upsert" -> eventCreate.asJson)
+                client.update(index, config.docType, id(path, perm), updateQuery)
+              }.toList)
+            } :: acc
       })
 
-    case PermissionsSubtracted(path, identity, perms, m) =>
+    case PermissionsSubtracted(path, identity, perms, _) =>
       log.debug(
         s"Indexing 'PermissionsSubtracted' event for path '${path.show}' with identity '$identity' and permisions '$perms'")
-      val patchQuery = Json.obj(
-        "script" -> Json.obj(
-          "source" -> Json.fromString(
-            "ctx._source.permissions.removeAll(params.permissions);ctx._source.updated = params.updated"),
-          "params" -> Json.obj("permissions" -> perms.set.asJson, "updated" -> Json.fromString(m.instant.toString))
-        ))
-      client.update(identity, config.docType, id(path), patchQuery)
+      val terms = perms.set.foldLeft(List.empty[Json])((acc, perm) => permTerm(perm) :: acc)
+      val query = Json.obj(
+        "query" -> Json.obj(
+          "bool" -> Json.obj("filter" -> Json.obj("bool" -> Json.obj("should" -> Json.arr(terms: _*))))))
+
+      client.deleteDocuments(Set(identity), query)
 
     case PermissionsRemoved(path, identity, _) =>
       log.debug(s"Indexing 'PermissionsRemoved' event for path '${path.show}' and identity $identity")
-      client.delete(identity, config.docType, id(path))
+      client.deleteDocuments(Set(identity), Json.obj("query" -> pathTerm(path)))
 
     case PermissionsCleared(path, _) =>
       log.debug(s"Indexing 'PermissionsCleared' event for path '${path.show}'")
-      client.deleteDocuments(
-        query = Json.obj("query" -> Json.obj("term" -> Json.obj("path" -> Json.fromString(path.show)))))
+      client.deleteDocuments(query = Json.obj("query" -> pathTerm(path)))
   }
+
+  private def pathTerm(path: Path): Json =
+    Json.obj("term" -> Json.obj("path" -> Json.fromString(path.show)))
+
+  private def permTerm(perm: Permission): Json =
+    Json.obj("term" -> Json.obj("permission" -> Json.fromString(perm.show)))
 
   private def createIndexIfNotExist(index: String): F[Unit] =
     if (!indices(index))
