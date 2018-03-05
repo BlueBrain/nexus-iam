@@ -1,6 +1,6 @@
 /* Project definitions */
 
-val commonsVersion  = "0.10.2"
+val commonsVersion  = "0.10.3"
 val serviceVersion  = "0.10.4"
 val sourcingVersion = "0.10.3"
 
