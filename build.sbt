@@ -1,6 +1,8 @@
 /* Project definitions */
 
-val commonsVersion = "0.7.5"
+val commonsVersion  = "0.10.3"
+val serviceVersion  = "0.10.4"
+val sourcingVersion = "0.10.3"
 
 val akkaVersion            = "2.5.9"
 val akkaHttpVersion        = "10.0.11"
@@ -20,17 +22,20 @@ val aspectJVersion     = "1.8.11"
 val sigarLoaderVersion = "1.6.6-rev002"
 val jwtVersion         = "0.14.1"
 
-lazy val commonsTypes   = "ch.epfl.bluebrain.nexus" %% "commons-types"        % commonsVersion
-lazy val commonsHttp    = "ch.epfl.bluebrain.nexus" %% "commons-http"         % commonsVersion
-lazy val commonsService = "ch.epfl.bluebrain.nexus" %% "commons-service"      % commonsVersion
-lazy val sourcingCore   = "ch.epfl.bluebrain.nexus" %% "sourcing-core"        % commonsVersion
-lazy val commonsTest    = "ch.epfl.bluebrain.nexus" %% "commons-test"         % commonsVersion
-lazy val elasticClient  = "ch.epfl.bluebrain.nexus" %% "elastic-client"       % commonsVersion
-lazy val elasticEmbed   = "ch.epfl.bluebrain.nexus" %% "elastic-server-embed" % commonsVersion
+lazy val serviceHttp          = "ch.epfl.bluebrain.nexus" %% "service-http"          % serviceVersion
+lazy val serviceKamon         = "ch.epfl.bluebrain.nexus" %% "service-kamon"         % serviceVersion
+lazy val serviceIndexing      = "ch.epfl.bluebrain.nexus" %% "service-indexing"      % serviceVersion
+lazy val serviceSerialization = "ch.epfl.bluebrain.nexus" %% "service-serialization" % serviceVersion
 
-lazy val sourcingMem  = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"  % commonsVersion
-lazy val sourcingAkka = "ch.epfl.bluebrain.nexus" %% "sourcing-akka" % commonsVersion
-lazy val iamTypes     = "ch.epfl.bluebrain.nexus" %% "iam"           % commonsVersion
+lazy val commonsTest   = "ch.epfl.bluebrain.nexus" %% "commons-test"         % commonsVersion
+lazy val commonsTypes  = "ch.epfl.bluebrain.nexus" %% "commons-types"        % commonsVersion
+lazy val elasticClient = "ch.epfl.bluebrain.nexus" %% "elastic-client"       % commonsVersion
+lazy val elasticEmbed  = "ch.epfl.bluebrain.nexus" %% "elastic-server-embed" % commonsVersion
+lazy val iamTypes      = "ch.epfl.bluebrain.nexus" %% "iam"                  % commonsVersion
+
+lazy val sourcingMem  = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"  % sourcingVersion
+lazy val sourcingCore = "ch.epfl.bluebrain.nexus" %% "sourcing-core" % sourcingVersion
+lazy val sourcingAkka = "ch.epfl.bluebrain.nexus" %% "sourcing-akka" % sourcingVersion
 
 lazy val akkaTestkit         = "com.typesafe.akka"     %% "akka-testkit"               % akkaVersion
 lazy val akkaHttp            = "com.typesafe.akka"     %% "akka-http"                  % akkaHttpVersion
@@ -80,14 +85,14 @@ lazy val core = project
     name       := "iam-core",
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
-      sourcingCore,
-      commonsService,
-      commonsHttp,
+      commonsTypes,
       iamTypes,
+      serviceKamon,
+      sourcingCore,
+      akkaHttp,
       akkaPersCass,
       akkaStreamKafka,
       journal,
-      akkaHttp,
       shapeless,
       circeCore,
       circeGenericExtras,
@@ -102,7 +107,7 @@ lazy val core = project
 lazy val oidcCore = project
   .in(file("modules/oidc/core"))
   .dependsOn(core)
-  .enablePlugins(BuildInfoPlugin, MonitoringPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     common,
     name             := "iam-oidc-core",
@@ -111,7 +116,7 @@ lazy val oidcCore = project
     buildInfoPackage := "ch.epfl.bluebrain.nexus.iam.oidc.config",
     libraryDependencies ++=
       Seq(
-        commonsHttp,
+        commonsTypes,
         akkaHttp,
         akkaCluster,
         akkaClusterSharding,
@@ -144,7 +149,8 @@ lazy val oidcBbp = project
                                 circeCore,
                                 circeParser,
                                 circeGenericExtras,
-                                commonsService,
+                                serviceHttp,
+                                serviceKamon,
                                 journal,
                                 scalaTest % Test)
   )
@@ -163,7 +169,8 @@ lazy val oidcHbp = project
                                 circeCore,
                                 circeParser,
                                 circeGenericExtras,
-                                commonsService,
+                                serviceHttp,
+                                serviceKamon,
                                 journal,
                                 scalaTest % Test)
   )
@@ -199,7 +206,10 @@ lazy val service = project
     buildInfoKeys         := Seq[BuildInfoKey](version),
     buildInfoPackage      := "ch.epfl.bluebrain.nexus.iam.service.config",
     libraryDependencies ++= Seq(
-      commonsService,
+      serviceHttp,
+      serviceKamon,
+      serviceIndexing,
+      serviceSerialization,
       sourcingAkka,
       akkaHttp,
       akkaHttpCors,

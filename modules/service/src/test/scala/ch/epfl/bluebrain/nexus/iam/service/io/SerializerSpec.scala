@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service.io
 
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.UUID
 
@@ -10,7 +11,6 @@ import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
 import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
-import ch.epfl.bluebrain.nexus.commons.service.io.UTF8
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
@@ -30,7 +30,7 @@ class SerializerSpec extends WordSpecLike with Matchers with Inspectors with Sca
         forAll(results) {
           case DataAndJson(event, json, _) =>
             val serializer = findConcreteSerializer[EventSerializer](event)
-            new String(serializer.toBinary(event), UTF8) shouldEqual json
+            new String(serializer.toBinary(event), StandardCharsets.UTF_8) shouldEqual json
         }
       }
 
@@ -38,7 +38,7 @@ class SerializerSpec extends WordSpecLike with Matchers with Inspectors with Sca
         forAll(results) {
           case DataAndJson(event, json, manifest) =>
             val serializer = findConcreteSerializer[EventSerializer](event)
-            serializer.fromBinary(json.getBytes(UTF8), manifest) shouldEqual event
+            serializer.fromBinary(json.getBytes(StandardCharsets.UTF_8), manifest) shouldEqual event
         }
       }
     }
