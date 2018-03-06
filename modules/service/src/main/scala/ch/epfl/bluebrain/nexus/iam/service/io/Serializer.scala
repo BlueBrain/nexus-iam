@@ -1,8 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.service.io
 
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
-import ch.epfl.bluebrain.nexus.commons.service.io.AkkaCoproductSerializer
 import ch.epfl.bluebrain.nexus.iam.core.groups.GroupPermissionAddedEvent
+import ch.epfl.bluebrain.nexus.service.serialization.AkkaCoproductSerializer
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
 import io.circe.java8.time._

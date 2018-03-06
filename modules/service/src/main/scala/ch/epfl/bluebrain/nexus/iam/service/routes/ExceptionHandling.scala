@@ -5,13 +5,13 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.ExceptionHandler
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.service.directives.ErrorDirectives._
-import ch.epfl.bluebrain.nexus.commons.service.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.auth.{AuthenticationFailure, TokenValidationFailure}
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
+import ch.epfl.bluebrain.nexus.service.http.directives.ErrorDirectives._
+import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
 import io.circe.DecodingFailure
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._

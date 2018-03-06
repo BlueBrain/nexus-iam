@@ -7,9 +7,9 @@ import akka.actor.{ActorRef, ActorSystem}
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
 import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
-import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.iam.elastic.AclIndexer
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
 
 import scala.concurrent.{ExecutionContext, Future}
 

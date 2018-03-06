@@ -4,18 +4,13 @@ import java.security.PublicKey
 
 import akka.actor.Status.Failure
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import akka.cluster.singleton.{
-  ClusterSingletonManager,
-  ClusterSingletonManagerSettings,
-  ClusterSingletonProxy,
-  ClusterSingletonProxySettings
-}
+import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings, ClusterSingletonProxy, ClusterSingletonProxySettings}
 import akka.stream.ActorMaterializer
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.service.stream.SingletonStreamCoordinator.Stop
 import ch.epfl.bluebrain.nexus.iam.service.auth.CredentialsStoreActor.Protocol._
 import ch.epfl.bluebrain.nexus.iam.service.auth.TokenValidationFailure.KidOrIssuerNotFound
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.{OidcConfig, OidcProviderConfig}
+import ch.epfl.bluebrain.nexus.service.indexer.stream.SingletonStreamCoordinator.Stop
 
 import scala.concurrent.{ExecutionContext, Future}
 
