@@ -21,7 +21,7 @@ object UserGroupsOps {
         case au @ AuthenticatedUser(identities) =>
           au.copy(identities = identities.filter {
             case group: GroupRef => usedGroups(group)
-            case _           => true
+            case _               => true
           })
         case other => other
       }

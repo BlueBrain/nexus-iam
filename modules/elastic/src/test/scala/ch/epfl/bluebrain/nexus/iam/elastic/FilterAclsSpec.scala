@@ -165,7 +165,7 @@ class FilterAclsSpec
     "search on path /*/*/*" in {
       filter("*" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
-          (authUser, "first" / "second" / "third", Permissions(laPerm))
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
 
       filter("*" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
@@ -191,7 +191,7 @@ class FilterAclsSpec
 
       filter("first" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
-          (authUser, "first" / "second" / "third", Permissions(laPerm))
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
 
       filter("first" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
@@ -208,7 +208,7 @@ class FilterAclsSpec
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
-          (authUser, "first" / "second" / "third", Permissions(laPerm))
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
     }
 

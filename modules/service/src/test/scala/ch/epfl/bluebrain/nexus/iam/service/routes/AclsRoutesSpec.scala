@@ -22,6 +22,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserIn
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
+import ch.epfl.bluebrain.nexus.commons.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
@@ -327,6 +328,7 @@ abstract class AclsRoutesSpecInstances
   implicit val ec: ExecutionContextExecutor  = system.dispatcher
   implicit val ucl                           = mock[UntypedHttpClient[Future]]
   implicit val mt: ActorMaterializer         = ActorMaterializer()
+  implicit val tracing: TracingDirectives    = TracingDirectives()
   val uicl                                   = HttpClient.withAkkaUnmarshaller[UserInfo]
   val provider: AppConfig.OidcProviderConfig = oidc.providers.head
   val cl                                     = List[DownstreamAuthClient[Future]](DownstreamAuthClient(ucl, uicl, provider))
