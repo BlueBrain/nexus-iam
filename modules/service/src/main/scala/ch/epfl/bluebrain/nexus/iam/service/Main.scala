@@ -25,6 +25,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.acls._
 import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.eventEncoder
+import ch.epfl.bluebrain.nexus.commons.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.service.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.commons.service.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResults
@@ -89,6 +90,7 @@ object Main {
       implicit val contexts    = appConfig.context
       implicit val clock       = Clock.systemUTC
       implicit val orderedKeys = iamOrderedKeys
+      implicit val tracing     = TracingDirectives()
       val aclAggregate         = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aclAggregate)
       val usedGroupsAgg =

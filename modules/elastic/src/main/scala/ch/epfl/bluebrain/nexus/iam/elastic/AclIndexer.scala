@@ -36,8 +36,6 @@ class AclIndexer[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
   private lazy val indexJson = jsonContentOf("/elastic-mappings.json", Map(quote("{{type}}") -> config.docType))
   private val printer        = Printer.noSpaces.copy(dropNullValues = true)
 
-
-
   /**
     * Indexes the event by pushing it's json ld representation into the ElasticSearch indexer while also updating the
     * existing content.
