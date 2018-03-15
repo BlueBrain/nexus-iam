@@ -239,8 +239,7 @@ lazy val root = project
 /* Common settings */
 lazy val noPublish = Seq(
   publishLocal    := {},
-  publish         := {},
-  publishArtifact := false
+  publish         := {}
 )
 
 inThisBuild(
