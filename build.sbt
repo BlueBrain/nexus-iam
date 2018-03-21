@@ -84,7 +84,6 @@ lazy val asm                 = "org.ow2.asm"           % "asm"                  
 lazy val docs = project
   .in(file("docs"))
   .enablePlugins(ParadoxPlugin)
-  .settings(noPublish)
   .settings(
     name                         := "iam-docs",
     moduleName                   := "iam-docs",
@@ -238,8 +237,9 @@ lazy val root = project
 
 /* Common settings */
 lazy val noPublish = Seq(
-  publishLocal := {},
-  publish      := {}
+  publishLocal    := {},
+  publish         := {},
+  publishArtifact := false
 )
 
 inThisBuild(
