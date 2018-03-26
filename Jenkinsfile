@@ -52,7 +52,7 @@ pipeline {
                             unstash name: "service"
                             sh "mv modules/service/target/universal/iam-service-*.tgz ./iam-service.tgz"
                             sh "oc start-build iam-build --from-file=iam-service.tgz --follow"
-                            openshiftTag srcStream: 'iam', srcTag: 'latest', destStream: 'iam', destTag: version.substring(1), verbose: 'false'
+                            openshiftTag srcStream: 'iam-v0', srcTag: 'latest', destStream: 'iam-v0', destTag: version.substring(1), verbose: 'false'
                         }
                     }
                 }
@@ -62,7 +62,7 @@ pipeline {
                             unstash name: "oidc-bbp"
                             sh "mv modules/oidc/bbp/target/universal/iam-bbp-*.tgz ./iam-bbp.tgz"
                             sh "oc start-build iam-bbp-build --from-file=iam-bbp.tgz --follow"
-                            openshiftTag srcStream: 'iam-bbp', srcTag: 'latest', destStream: 'iam-bbp', destTag: version.substring(1), verbose: 'false'
+                            openshiftTag srcStream: 'iam-bbp-v0', srcTag: 'latest', destStream: 'iam-bbp-v0', destTag: version.substring(1), verbose: 'false'
                         }
                     }
                 }
@@ -72,7 +72,7 @@ pipeline {
                             unstash name: "oidc-hbp"
                             sh "mv modules/oidc/hbp/target/universal/iam-hbp-*.tgz ./iam-hbp.tgz"
                             sh "oc start-build iam-hbp-build --from-file=iam-hbp.tgz --follow"
-                            openshiftTag srcStream: 'iam-hbp', srcTag: 'latest', destStream: 'iam-hbp', destTag: version.substring(1), verbose: 'false'
+                            openshiftTag srcStream: 'iam-hbp-v0', srcTag: 'latest', destStream: 'iam-hbp-v0', destTag: version.substring(1), verbose: 'false'
                         }
                     }
                 }
