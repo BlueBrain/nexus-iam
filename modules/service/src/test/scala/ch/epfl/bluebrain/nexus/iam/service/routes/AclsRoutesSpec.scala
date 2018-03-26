@@ -212,7 +212,7 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
         s"/acls${path.repr}",
         HttpEntity(
           `application/json`,
-          """{"acl": [{"identity": {"realm": "realm", "group": "some", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "group": "other-group", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] }, {"identity": {"@type": "Anonymous"}, "permissions": ["read"] } ] }"""
+          """{"acl": [{"identity": {"realm": "realm", "group": "some", "@type": "GroupRef"}, "permissions": ["own", "read", "write", "projects/read"] }, {"identity": {"realm": "realm", "group": "other-group", "@type": "GroupRef"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] }, {"identity": {"@type": "Anonymous"}, "permissions": ["read"] } ] }"""
         )
       ) ~> addCredentials(credentials) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
