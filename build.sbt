@@ -1,26 +1,27 @@
 /* Project definitions */
 
 val commonsVersion  = "0.10.8"
-val serviceVersion  = "0.10.4"
+val serviceVersion  = "0.10.6"
 val sourcingVersion = "0.10.3"
 
-val akkaVersion            = "2.5.9"
-val akkaHttpVersion        = "10.0.11"
-val akkaPersCassVersion    = "0.55"
+val akkaVersion            = "2.5.11"
+val akkaHttpVersion        = "10.0.13"
+val akkaPersCassVersion    = "0.83"
 val akkaStreamKafkaVersion = "0.18"
 val akkaPersMemVersion     = "2.5.1.1"
-val akkaHttpCorsVersion    = "0.2.2"
-val akkaHttpCirceVersion   = "1.19.0"
+val akkaHttpCorsVersion    = "0.3.0"
+val akkaHttpCirceVersion   = "1.20.0"
+val asmVersion             = "6.1.1"
 val shapelessVersion       = "2.3.3"
-val circeVersion           = "0.9.0"
+val circeVersion           = "0.9.2"
 val journalVersion         = "3.0.19"
-val scalaTestVersion       = "3.0.4"
-val pureconfigVersion      = "0.8.0"
-val mockitoVersion         = "2.10.0"
+val scalaTestVersion       = "3.0.5"
+val pureconfigVersion      = "0.9.1"
+val mockitoVersion         = "2.17.0"
 
-val aspectJVersion     = "1.8.11"
-val sigarLoaderVersion = "1.6.6-rev002"
-val jwtVersion         = "0.14.1"
+val aspectJVersion     = "1.8.13"
+val sigarLoaderVersion = "1.6.6"
+val jwtVersion         = "0.16.0"
 
 lazy val serviceHttp          = "ch.epfl.bluebrain.nexus" %% "service-http"          % serviceVersion
 lazy val serviceKamon         = "ch.epfl.bluebrain.nexus" %% "service-kamon"         % serviceVersion
@@ -60,7 +61,7 @@ lazy val pureconfigAkka      = "com.github.pureconfig" %% "pureconfig-akka"     
 lazy val scalaTest           = "org.scalatest"         %% "scalatest"                  % scalaTestVersion
 lazy val mockitoCore         = "org.mockito"           % "mockito-core"                % mockitoVersion
 lazy val jwtCirce            = "com.pauldijou"         %% "jwt-circe"                  % jwtVersion
-lazy val asm                 = "org.ow2.asm"           % "asm"                         % "5.1"
+lazy val asm                 = "org.ow2.asm"           % "asm"                         % asmVersion
 
 lazy val docs = project
   .in(file("docs"))
