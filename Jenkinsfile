@@ -20,8 +20,7 @@ pipeline {
                     steps {
                         node("slave-sbt") {
                             checkout scm
-                            sh 'export CODACY_PROJECT_TOKEN=$(oc get secrets codacy-secret-iam --template='{{.data.token}}' | base64 -D)'
-                            sh 'sbt clean coverage test coverageReport coverageAggregate codacyCoverage'
+                            sh "CODACY_PROJECT_TOKEN=`oc get secrets codacy-secret --template='{{.data.admin}}' | base64 -d` sbt clean coverage test coverageReport coverageAggregate codacyCoverage"
                         }
                     }
                 }
