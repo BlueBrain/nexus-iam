@@ -67,7 +67,6 @@ lazy val asm                 = "org.ow2.asm"           % "asm"                  
 lazy val docs = project
   .in(file("docs"))
   .enablePlugins(ParadoxPlugin)
-  .settings(common, noPublish)
   .settings(
     name                         := "iam-docs",
     moduleName                   := "iam-docs",
@@ -83,7 +82,6 @@ lazy val docs = project
 lazy val core = project
   .in(file("modules/core"))
   .settings(
-    common,
     name       := "iam-core",
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
@@ -112,7 +110,6 @@ lazy val oidcCore = project
   .dependsOn(core)
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    common,
     name             := "iam-oidc-core",
     moduleName       := "iam-oidc-core",
     buildInfoKeys    := Seq[BuildInfoKey](version),
@@ -143,7 +140,6 @@ lazy val oidcBbp = project
   .dependsOn(oidcCore)
   .enablePlugins(ServicePackagingPlugin)
   .settings(
-    common,
     name                  := "iam-bbp",
     moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
@@ -163,7 +159,6 @@ lazy val oidcHbp = project
   .dependsOn(oidcCore)
   .enablePlugins(ServicePackagingPlugin)
   .settings(
-    common,
     name                  := "iam-hbp",
     moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
@@ -181,7 +176,6 @@ lazy val oidcHbp = project
 lazy val elastic = project
   .in(file("modules/elastic"))
   .dependsOn(core)
-  .settings(common)
   .settings(
     name       := "iam-elastic",
     moduleName := "iam-elastic",
@@ -201,7 +195,6 @@ lazy val service = project
   .dependsOn(core, docs, elastic)
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
   .settings(
-    common,
     name                  := "iam-service",
     moduleName            := "iam-service",
     packageName in Docker := "iam",
@@ -237,21 +230,35 @@ lazy val service = project
 
 lazy val root = project
   .in(file("."))
-  .settings(common, noPublish)
+  .settings(noPublish)
   .settings(name := "iam", moduleName := "iam", description := "Nexus Identity & Access Management")
   .aggregate(docs, core, elastic, service, oidcCore, oidcBbp, oidcHbp)
 
 /* Common settings */
 
-lazy val noPublish = Seq(publishLocal := {}, publish := {})
+lazy val noPublish = Seq(
+  publishLocal    := {},
+  publish         := {},
+  publishArtifact := false
+)
 
-lazy val common = Seq(
-  scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-  homepage := Some(url("https://github.com/BlueBrain/nexus-iam")),
-  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  scmInfo := Some(
-    ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git"))
+inThisBuild(
+  Seq(
+    homepage := Some(url("https://github.com/BlueBrain/nexus-iam")),
+    licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+    scmInfo := Some(
+      ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git")),
+    developers := List(
+      Developer("bogdanromanx", "Bogdan Roman", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/")),
+      Developer("hygt", "Henry Genet", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/")),
+      Developer("umbreak", "Didac Montero Mendez", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/")),
+      Developer("wwajerowicz", "Wojtek Wajerowicz", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/"))
+    ),
+    // These are the sbt-release-early settings to configure
+    releaseEarlyWith              := BintrayPublisher,
+    releaseEarlyNoGpg             := true,
+    releaseEarlyEnableSyncToMaven := false
+  )
 )
 
 addCommandAlias("review", ";clean;scalafmtSbtCheck;coverage;scapegoat;test;coverageReport;coverageAggregate")
-addCommandAlias("rel", ";release with-defaults skip-tests")
