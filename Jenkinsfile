@@ -22,7 +22,7 @@ pipeline {
                             checkout scm
                             sh "sbt clean coverage test coverageReport coverageAggregate"
                             sh "curl -s https://codecov.io/bash >> ./coverage.sh"
-                            sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.iam}}' | base64 -d`"
+                            sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus-iam}}' | base64 -d`"
                         }
                     }
                 }
@@ -80,7 +80,7 @@ pipeline {
             }
         }
 
-        stage("Report coverage") {
+        stage("Report Coverage") {
             when {
                 expression { env.CHANGE_ID == null }
             }
@@ -89,7 +89,7 @@ pipeline {
                     checkout scm
                     sh "sbt clean coverage test coverageReport coverageAggregate"
                     sh "curl -s https://codecov.io/bash >> ./coverage.sh"
-                    sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.iam}}' | base64 -d`"
+                    sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus-iam}}' | base64 -d`"
                 }
             }
         }
