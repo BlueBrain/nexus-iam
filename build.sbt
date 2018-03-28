@@ -45,6 +45,7 @@ lazy val akkaClusterSharding = "com.typesafe.akka"     %% "akka-cluster-sharding
 lazy val akkaDData           = "com.typesafe.akka"     %% "akka-distributed-data"      % akkaVersion
 lazy val akkaHttpTestkit     = "com.typesafe.akka"     %% "akka-http-testkit"          % akkaHttpVersion
 lazy val akkaPersCass        = "com.typesafe.akka"     %% "akka-persistence-cassandra" % akkaPersCassVersion
+lazy val akkaSlf4j           = "com.typesafe.akka"     %% "akka-slf4j"                 % akkaVersion
 lazy val akkaStream          = "com.typesafe.akka"     %% "akka-stream"                % akkaVersion
 lazy val akkaStreamKafka     = "com.typesafe.akka"     %% "akka-stream-kafka"          % akkaStreamKafkaVersion
 lazy val akkaPersMem         = "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersMemVersion
@@ -92,16 +93,17 @@ lazy val core = project
       sourcingCore,
       akkaHttp,
       akkaPersCass,
+      akkaSlf4j,
       akkaStreamKafka,
       journal,
       shapeless,
       circeCore,
       circeGenericExtras,
-      sourcingMem % Test,
+      akkaTestkit % Test,
       circeParser % Test,
-      scalaTest   % Test,
       mockitoCore % Test,
-      akkaTestkit % Test
+      scalaTest   % Test,
+      sourcingMem % Test
     )
   )
 
