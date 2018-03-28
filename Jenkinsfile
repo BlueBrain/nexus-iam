@@ -20,7 +20,7 @@ pipeline {
                     steps {
                         node("slave-sbt") {
                             checkout scm
-                            sh "sbt clean coverage test coverageReport coverageAggregate codacyCoverage"
+                            sh "sbt clean coverage test coverageReport coverageAggregate"
                             sh "bash <(curl -s https://codecov.io/bash) -t `oc get secrets codacy-secret --template='{{.data.iam}}' | base64 -d`"
                         }
                     }
