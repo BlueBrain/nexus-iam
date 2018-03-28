@@ -72,7 +72,8 @@ object Main {
     val logger                                 = Logging(as, getClass)
     val sourcingSettings                       = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
     val corsSettings = CorsSettings.defaultSettings
-      .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
+      .withAllowedMethods(List(GET, PUT, POST, DELETE, OPTIONS, HEAD))
+      .withExposedHeaders(List(Location.name))
 
     val baseUri = appConfig.http.publicUri
     val apiUri  = baseUri.copy(path = baseUri.path / appConfig.http.prefix)
