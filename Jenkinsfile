@@ -22,7 +22,7 @@ pipeline {
                             checkout scm
                             sh "sbt clean coverage test coverageReport coverageAggregate"
                             sh "curl -s https://codecov.io/bash >> ./coverage.sh"
-                            sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus-iam}}' | base64 -d`"
+                            sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus_iam}}' | base64 -d`"
                         }
                     }
                 }
@@ -89,7 +89,7 @@ pipeline {
                     checkout scm
                     sh "sbt clean coverage test coverageReport coverageAggregate"
                     sh "curl -s https://codecov.io/bash >> ./coverage.sh"
-                    sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus-iam}}' | base64 -d`"
+                    sh "bash ./coverage.sh -t `oc get secrets codecov-secret --template='{{.data.nexus_iam}}' | base64 -d`"
                 }
             }
         }
