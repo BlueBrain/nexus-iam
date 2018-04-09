@@ -1,23 +1,47 @@
-/* Project definitions */
+/*
+scalafmt: {
+  style = defaultWithAlign
+  maxColumn = 150
+  align.tokens = [
+    { code = "=>", owner = "Case" }
+    { code = "?", owner = "Case" }
+    { code = "extends", owner = "Defn.(Class|Trait|Object)" }
+    { code = "//", owner = ".*" }
+    { code = "{", owner = "Template" }
+    { code = "}", owner = "Template" }
+    { code = ":=", owner = "Term.ApplyInfix" }
+    { code = "++=", owner = "Term.ApplyInfix" }
+    { code = "+=", owner = "Term.ApplyInfix" }
+    { code = "%", owner = "Term.ApplyInfix" }
+    { code = "%%", owner = "Term.ApplyInfix" }
+    { code = "%%%", owner = "Term.ApplyInfix" }
+    { code = "->", owner = "Term.ApplyInfix" }
+    { code = "?", owner = "Term.ApplyInfix" }
+    { code = "<-", owner = "Enumerator.Generator" }
+    { code = "?", owner = "Enumerator.Generator" }
+    { code = "=", owner = "(Enumerator.Val|Defn.(Va(l|r)|Def|Type))" }
+  ]
+}
+ */
 
-val commonsVersion  = "0.10.8"
-val serviceVersion  = "0.10.6"
-val sourcingVersion = "0.10.3"
+val commonsVersion  = "0.10.9"
+val serviceVersion  = "0.10.8"
+val sourcingVersion = "0.10.4"
 
 val akkaVersion            = "2.5.11"
 val akkaHttpVersion        = "10.0.13"
 val akkaPersCassVersion    = "0.83"
-val akkaStreamKafkaVersion = "0.18"
+val akkaStreamKafkaVersion = "0.20"
 val akkaPersMemVersion     = "2.5.1.1"
 val akkaHttpCorsVersion    = "0.3.0"
-val akkaHttpCirceVersion   = "1.20.0"
+val akkaHttpCirceVersion   = "1.20.1"
 val asmVersion             = "6.1.1"
 val shapelessVersion       = "2.3.3"
-val circeVersion           = "0.9.2"
+val circeVersion           = "0.9.3"
 val journalVersion         = "3.0.19"
 val scalaTestVersion       = "3.0.5"
 val pureconfigVersion      = "0.9.1"
-val mockitoVersion         = "2.17.0"
+val mockitoVersion         = "2.18.0"
 
 val aspectJVersion     = "1.8.13"
 val sigarLoaderVersion = "1.6.6"
@@ -144,14 +168,7 @@ lazy val oidcBbp = project
     moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
     description           := "Nexus IAM BBP Integration Service",
-    libraryDependencies ++= Seq(akkaHttp,
-                                circeCore,
-                                circeParser,
-                                circeGenericExtras,
-                                serviceHttp,
-                                serviceKamon,
-                                journal,
-                                scalaTest % Test)
+    libraryDependencies   ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val oidcHbp = project
@@ -163,14 +180,7 @@ lazy val oidcHbp = project
     moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
     description           := "Nexus IAM HBP Integration Service",
-    libraryDependencies ++= Seq(akkaHttp,
-                                circeCore,
-                                circeParser,
-                                circeGenericExtras,
-                                serviceHttp,
-                                serviceKamon,
-                                journal,
-                                scalaTest % Test)
+    libraryDependencies   ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val elastic = project
@@ -246,8 +256,7 @@ inThisBuild(
   Seq(
     homepage := Some(url("https://github.com/BlueBrain/nexus-iam")),
     licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-    scmInfo := Some(
-      ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git")),
+    scmInfo  := Some(ScmInfo(url("https://github.com/BlueBrain/nexus-iam"), "scm:git:git@github.com:BlueBrain/nexus-iam.git")),
     developers := List(
       Developer("bogdanromanx", "Bogdan Roman", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/")),
       Developer("hygt", "Henry Genet", "noreply@epfl.ch", url("https://bluebrain.epfl.ch/")),

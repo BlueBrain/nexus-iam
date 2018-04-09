@@ -14,6 +14,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth._
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
 import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization.identityDecoder
+import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
@@ -33,7 +34,6 @@ import ch.epfl.bluebrain.nexus.iam.service.types.Subtract
 import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
-import kamon.akka.http.KamonTraceDirectives.operationName
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,7 +48,8 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
     ce: ClaimExtractor,
     api: ApiUri,
     contexts: ContextConfig,
-    orderedKeys: OrderedKeys)
+    orderedKeys: OrderedKeys,
+    tracing: TracingDirectives)
     extends DefaultRoutes("acls", contexts.error) {
 
   private implicit val enc: Encoder[Identity] = identityEncoder(api.base)
@@ -61,7 +62,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {
-                operationName("addPermissions") {
+                tracing.trace("addPermissions") {
                   onSuccess(acl.add(path, list)) {
                     complete(StatusCodes.OK -> HttpEntity.Empty)
                   }
@@ -72,7 +73,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
             patch {
               (entity(as[PartialUpdate]) & authorizeAsync(check(path, user, Permission.Own))) {
                 case Subtract(identity, permissions) =>
-                  operationName("subtractPermissions") {
+                  tracing.trace("subtractPermissions") {
                     onSuccess(acl.subtract(path, identity, permissions)) { result =>
                       complete(StatusCodes.OK -> AccessControl(identity, result))
                     }
@@ -81,7 +82,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
             } ~
             delete {
               authorizeAsync(check(path, user, Permission.Own)) {
-                operationName("deletePermissions") {
+                tracing.trace("deletePermissions") {
                   onSuccess(acl.clear(path)) {
                     complete(StatusCodes.NoContent)
                   }
@@ -90,7 +91,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
             } ~
             get {
               parameters(('self.as[Boolean] ? false, 'parents.as[Boolean] ? false)) { (self, parents) =>
-                operationName("getPermissions") {
+                tracing.trace("getPermissions") {
                   onSuccess(aclsFilter(path, parents, self)) { result =>
                     complete(StatusCodes.OK -> result)
                   }
@@ -143,7 +144,8 @@ object AclsRoutes {
       ce: ClaimExtractor,
       api: ApiUri,
       contexts: ContextConfig,
-      orderedKeys: OrderedKeys): AclsRoutes =
+      orderedKeys: OrderedKeys,
+      tracing: TracingDirectives): AclsRoutes =
     new AclsRoutes(acl, aclsFilter, usedGroups)
 
   implicit val decoder: Decoder[AccessControl] = Decoder.instance { cursor =>

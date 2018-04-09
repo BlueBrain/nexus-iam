@@ -46,9 +46,10 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.system.SystemMetrics
 import org.apache.kafka.common.serialization.StringSerializer
+import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 // $COVERAGE-OFF$
@@ -64,7 +65,7 @@ object Main {
     val appConfig = new Settings(config).appConfig
 
     implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
-    implicit val ec: ExecutionContextExecutor  = as.dispatcher
+    implicit val ec: ExecutionContext          = as.dispatcher
     implicit val mt: ActorMaterializer         = ActorMaterializer()
     implicit val cl: UntypedHttpClient[Future] = HttpClient.akkaHttpClient
     implicit val tm: Timeout                   = Timeout(appConfig.runtime.defaultTimeout)
@@ -88,6 +89,7 @@ object Main {
       implicit val contexts    = appConfig.context
       implicit val clock       = Clock.systemUTC
       implicit val orderedKeys = iamOrderedKeys
+      implicit val tracing     = TracingDirectives()
       val aclAggregate         = ShardingAggregate("permission", sourcingSettings)(Initial, Acls.next, Acls.eval)
       val acl                  = Acls[Future](aclAggregate)
       val usedGroupsAgg =
