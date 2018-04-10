@@ -38,7 +38,9 @@ class FilterAclsSpec
     with Resources
     with Inspectors
     with BeforeAndAfterAll
-    with Eventually {
+    with Eventually
+    with CancelAfterFailure
+    with Assertions {
 
   override protected def afterAll(): Unit = {
     TestKit.shutdownActorSystem(system)
@@ -94,7 +96,7 @@ class FilterAclsSpec
           indexer(PermissionsAdded(path, acls, meta)).futureValue
       }
       eventually {
-        getAll.futureValue.total shouldEqual 12L
+        getAll.futureValue.total shouldEqual 15L
       }
     }
 
@@ -120,11 +122,11 @@ class FilterAclsSpec
       filter("*" / "*" / "*" / "*" / "*" / "*", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (authUser, "first" / "second" / "third" / "ab", Permissions(Own)),
-        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)),
+        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "first" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "firstother" / "second", Permissions(laPerm))
       )
@@ -132,8 +134,8 @@ class FilterAclsSpec
 
     "search on path /*/*/*/*/*" in {
       filter("*" / "*" / "*" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
-        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
-        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)))
+        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)),
+        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)))
 
       filter("*" / "*" / "*" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)))
@@ -150,11 +152,11 @@ class FilterAclsSpec
       filter("*" / "*" / "*" / "*" / "*", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (authUser, "first" / "second" / "third" / "ab", Permissions(Own)),
-        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)),
+        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "first" / "third" / "bc" / "cd", Permissions(instPerm)),
         (userIdentity, "firstother" / "second", Permissions(laPerm))
       )
@@ -162,8 +164,8 @@ class FilterAclsSpec
 
     "search on path /*/*/*" in {
       filter("*" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
-        (userIdentity, "first" / "second" / "third", Permissions(Write, Own))
+        (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
 
       filter("*" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
@@ -179,8 +181,8 @@ class FilterAclsSpec
       filter("*" / "*" / "*", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "firstother" / "second", Permissions(laPerm))
       )
     }
@@ -188,8 +190,8 @@ class FilterAclsSpec
     "search on path first/*/*" in {
 
       filter("first" / "*" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
-        (userIdentity, "first" / "second" / "third", Permissions(Write, Own))
+        (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
 
       filter("first" / "*" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
@@ -205,8 +207,8 @@ class FilterAclsSpec
       filter("first" / "*" / "*", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
-        (userIdentity, "first" / "second" / "third", Permissions(Write, Own))
+        (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
     }
 
@@ -226,8 +228,8 @@ class FilterAclsSpec
       filter("first" / "second" / "third" / "ab", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (authUser, "first" / "second" / "third" / "ab", Permissions(Own))
       )
 
@@ -235,8 +237,8 @@ class FilterAclsSpec
 
     "search on path /first/second/third/bc/*" in {
       filter("first" / "second" / "third" / "bc" / "*", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
-        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
-        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)))
+        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)),
+        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)))
 
       filter("first" / "second" / "third" / "bc" / "*", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)))
@@ -251,10 +253,10 @@ class FilterAclsSpec
       filter("first" / "second" / "third" / "bc" / "*", parents = true, self = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
-        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm)),
-        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm))
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
+        (userIdentity, "first" / "second" / "third" / "bc" / "cd", Permissions(pubTerm)),
+        (authUser, "first" / "second" / "third" / "bc" / "cd", Permissions(instPerm))
       )
     }
 
@@ -267,8 +269,8 @@ class FilterAclsSpec
     "search on path /*/second/third" in {
 
       filter("*" / "second" / "third", self = false, parents = false).futureValue shouldEqual FullAccessControlList(
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
-        (userIdentity, "first" / "second" / "third", Permissions(Write, Own))
+        (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm))
       )
       filter("*" / "second" / "third", self = true, parents = false).futureValue shouldEqual FullAccessControlList(
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)))
@@ -283,8 +285,8 @@ class FilterAclsSpec
       filter("*" / "second" / "third", self = false, parents = true).futureValue shouldEqual FullAccessControlList(
         (userIdentity, /, Permissions(Read)),
         (userIdentity, "first" / "second", Permissions(Write)),
-        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "first" / "second" / "third", Permissions(Write, Own)),
+        (authUser, "first" / "second" / "third", Permissions(laPerm)),
         (userIdentity, "firstother" / "second", Permissions(laPerm))
       )
     }

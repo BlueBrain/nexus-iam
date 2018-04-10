@@ -47,11 +47,18 @@ class FilterAcls[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
     client
       .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
       .map { qr =>
-        val aclList = qr.results.map { res =>
-          FullAccessControl(res.source.identity, res.source.path, res.source.permissions)
-        }
-        if (self)
-          FullAccessControlList(aclList)
+        val aclList = qr.results
+          .foldLeft(ListMap.empty[(Path, Identity), Vector[QueryResult[AclDocument]]]) { (acc, c) =>
+            val existing = acc.getOrElse(c.source.path -> c.source.identity, Vector.empty)
+            acc + ((c.source.path, c.source.identity) -> (existing :+ c))
+          }
+          .map {
+            case ((p, identity), res) =>
+              val permissions = res.foldLeft(Permissions.empty)((perms, current) => perms + current.source.permission)
+              FullAccessControl(identity, p, permissions)
+          }
+          .toList
+        if (self) FullAccessControlList(aclList)
         else {
           val filtered = ComputeParents(aclList, identities)
           if (parents)
@@ -149,8 +156,8 @@ private class ComputeParents(acl: List[FullAccessControl], identities: Set[Ident
 
   final def apply(): List[FullAccessControl] =
     groupByPath().foldLeft(List.empty[FullAccessControl]) {
-      case (acc, (path, c)) if (ownInParent(path)) => acc ++ c
-      case (acc, (_, c))                           => acc ++ c.filter { case FullAccessControl(identity, _, _) => identities(identity) }
+      case (acc, (path, c)) if ownInParent(path) => acc ++ c
+      case (acc, (_, c))                         => acc ++ c.filter { case FullAccessControl(identity, _, _) => identities(identity) }
     }
 
   @tailrec

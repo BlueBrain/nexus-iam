@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.elastic
 import java.net.URLEncoder
 
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Path
+import ch.epfl.bluebrain.nexus.commons.iam.acls.{Path, Permission}
 import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
 
 object ElasticIds {
@@ -19,10 +19,11 @@ object ElasticIds {
     URLEncoder.encode(s"${config.indexPrefix}_${identity.id.show}", "UTF-8").toLowerCase
 
   /**
-    * Generates the ElasticSearch Document id from the provided ''path''.
+    * Generates the ElasticSearch Document id from the provided ''path'' and ''permission''.
     *
     * @param path the path from where to generate the id
+    * @param permission the permission from where to generate the id
     */
-  private[elastic] def id(path: Path): String =
-    URLEncoder.encode(path.show, "UTF-8").toLowerCase
+  private[elastic] def id(path: Path, permission: Permission): String =
+    URLEncoder.encode(s"${path.show}_${permission.show}", "UTF-8").toLowerCase
 }
