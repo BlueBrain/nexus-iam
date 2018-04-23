@@ -17,12 +17,7 @@ import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResult.ScoredQueryResult
 import ch.epfl.bluebrain.nexus.commons.types.search.{Pagination, QueryResults}
-import ch.epfl.bluebrain.nexus.iam.core.acls.Event.{
-  PermissionsAdded,
-  PermissionsCleared,
-  PermissionsRemoved,
-  PermissionsSubtracted
-}
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permission, Permissions}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
