@@ -237,9 +237,21 @@ lazy val service = project
 lazy val client = project
   .in(file("modules/client"))
   .settings(
-    name                := "iam-client",
-    moduleName          := "iam-client",
-    libraryDependencies ++= Seq(akkaHttp, akkaHttpCirce, circeGenericExtras, circeParser, circeJava8, akkaTestkit % Test, scalaTest % Test)
+    name       := "iam-client",
+    moduleName := "iam-client",
+    libraryDependencies ++= Seq(
+      akkaHttp,
+      akkaHttpCirce,
+      circeGenericExtras,
+      circeParser,
+      circeJava8,
+      commonsTypes,
+      serviceHttp,
+      akkaTestkit % Test,
+      commonsTest % Test,
+      mockitoCore % Test,
+      scalaTest   % Test
+    )
   )
 
 lazy val root = project
