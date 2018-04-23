@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.groups
 
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, User}
 
 object UserGroupsOps {
 

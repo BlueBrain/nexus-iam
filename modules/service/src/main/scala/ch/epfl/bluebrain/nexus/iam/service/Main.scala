@@ -19,14 +19,15 @@ import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder,
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AnonymousUser, AuthenticatedUser, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.eventEncoder
+import ch.epfl.bluebrain.nexus.commons.types.identity.{AnonymousUser, AuthenticatedUser}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResults
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.elastic.{AclDocument, ElasticConfig}
@@ -37,6 +38,7 @@ import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
@@ -98,9 +100,9 @@ object Main {
       val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
       implicit val ce: ClaimExtractor =
         ClaimExtractor(CredentialsStore("credentialsStore"), downStreamAuthClients)
-      val ownRead = Permissions(Permission.Own, Permission.Read)
+      val ownRead = Permissions(Own, Read)
       if (appConfig.auth.testMode) {
-        val anonymousCaller = CallerCtx(clock, AnonymousUser)
+        val anonymousCaller = CallerCtx(clock, AnonymousUser())
         logger.warning("""/!\ Test mode is enabled - this is potentially DANGEROUS /!\""")
         logger.warning("Granting full rights to every user...")
         acl.fetch(Path./).onComplete {
@@ -208,7 +210,7 @@ object Main {
                                                mt: ActorMaterializer,
                                                cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
     import _root_.io.circe.generic.auto._
-    import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization._
+    import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
     implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
     implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
       withAkkaUnmarshaller[QueryResults[AclDocument]]

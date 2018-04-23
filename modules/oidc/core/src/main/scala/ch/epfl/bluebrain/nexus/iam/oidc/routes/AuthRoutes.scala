@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.Credentials
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault.{Rejected, Unauthorized}
 import ch.epfl.bluebrain.nexus.iam.oidc.api.OidcOps
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.IllegalRedirectUri

@@ -6,13 +6,20 @@ import java.util.UUID
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.serialization.{SerializationExtension, SerializerWithStringManifest}
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity._
+import ch.epfl.bluebrain.nexus.commons.types.Meta
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event.{
+  PermissionsAdded,
+  PermissionsCleared,
+  PermissionsRemoved,
+  PermissionsSubtracted
+}
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 import shapeless.Typeable
 

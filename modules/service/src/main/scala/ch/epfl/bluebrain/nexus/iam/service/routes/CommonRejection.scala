@@ -7,7 +7,7 @@ sealed trait CommonRejection extends Rejection
 object CommonRejection {
 
   /**
-    * Signals the inability to parse a json structure into a [[ch.epfl.bluebrain.nexus.commons.iam.identity.Identity]]
+    * Signals the inability to parse a json structure into a [[ch.epfl.bluebrain.nexus.commons.types.identity.Identity]]
     * instance.
     *
     * @param message a human readable description of the cause
@@ -19,7 +19,7 @@ object CommonRejection {
       with CommonRejection
 
   /**
-    * Signals the inability to convert a permissions string into a [[ch.epfl.bluebrain.nexus.commons.iam.acls.Permission]]
+    * Signals the inability to convert a permissions string into a [[ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission]]
     *
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))

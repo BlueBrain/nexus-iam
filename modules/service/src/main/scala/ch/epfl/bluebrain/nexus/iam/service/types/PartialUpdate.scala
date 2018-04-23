@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.types
 
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permissions
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
 import io.circe.Decoder
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveDecoder

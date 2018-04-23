@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import io.circe.parser.decode
 import org.scalatest.{Matchers, WordSpecLike}
 

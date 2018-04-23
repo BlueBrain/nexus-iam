@@ -9,15 +9,14 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.Credentials
 import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.auth._
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization.identityEncoder
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization.identityDecoder
+import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization.identityDecoder
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.identityEncoder
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
+import ch.epfl.bluebrain.nexus.commons.types.identity.{AnonymousUser, Identity, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControlList, Permission, Permissions}
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.UnauthorizedCaller
@@ -32,6 +31,7 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.types.Subtract
 import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
+import ch.epfl.bluebrain.nexus.service.http.Path
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 
@@ -58,7 +58,7 @@ class AclsRoutes(acl: Acls[Future], aclsFilter: FilterAcls[Future], usedGroups: 
   override def apiRoutes: Route =
     extractExecutionContext { implicit ec =>
       extractResourcePath { path =>
-        authenticateOAuth2Async("*", authenticator).withAnonymousUser(AnonymousUser) { implicit user =>
+        authenticateOAuth2Async("*", authenticator).withAnonymousUser(AnonymousUser()) { implicit user =>
           put {
             entity(as[AccessControlList]) { list =>
               authorizeAsync(check(path, user, Permission.Own)) {

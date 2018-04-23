@@ -2,10 +2,9 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import java.time.Clock
 
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Meta
-import ch.epfl.bluebrain.nexus.commons.iam.auth.User
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{AuthenticatedRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.Meta
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{AuthenticatedRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.{Identity, User}
 
 /**
   * Context information for any operation bundle call

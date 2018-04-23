@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import java.util.regex.Pattern
 
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import io.circe.Decoder
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveDecoder

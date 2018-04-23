@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.io
 
 import akka.persistence.journal.{Tagged, WriteEventAdapter}
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 
 /**
   * A tagging event adapter that adds tags to discriminate between event hierarchies.
