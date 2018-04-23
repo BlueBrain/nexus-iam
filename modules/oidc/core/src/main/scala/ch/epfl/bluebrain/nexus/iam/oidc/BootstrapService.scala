@@ -9,7 +9,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.config.{OidcProviderConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.{ShardedOidcOps, StateActor, UserInfoActor}
 import ch.epfl.bluebrain.nexus.iam.oidc.routes.{AuthRoutes, ExceptionHandling, RejectionHandling, StaticRoutes}

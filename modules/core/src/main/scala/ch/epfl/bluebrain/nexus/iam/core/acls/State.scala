@@ -1,7 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
-import ch.epfl.bluebrain.nexus.commons.iam.acls.{Path, Permissions}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
+import ch.epfl.bluebrain.nexus.service.http.Path
 
 /**
   * Enumeration type for possible states of a resource on the ACL.

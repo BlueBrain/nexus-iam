@@ -8,7 +8,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import akka.util.Timeout
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault._
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.IllegalRedirectUri
 import ch.epfl.bluebrain.nexus.iam.oidc.api.{IdAccessToken, OidcOps}

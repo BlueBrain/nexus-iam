@@ -1,0 +1,5 @@
+{
+  "realm": "realm",
+  "group": "some-group",
+  "@type": "GroupRef"
+}

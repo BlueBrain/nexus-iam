@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.oidc.api
 
 import akka.http.scaladsl.model.Uri
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 
 /**
   * Contract for OIDC interactions between IAM and an IAM Integration Service.

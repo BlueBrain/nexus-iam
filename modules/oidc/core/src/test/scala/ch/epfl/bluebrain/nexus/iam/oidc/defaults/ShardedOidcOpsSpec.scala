@@ -11,7 +11,7 @@ import akka.stream.ActorMaterializer
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Fault.{Rejected, UnsuccessfulDownstreamCall}
 import ch.epfl.bluebrain.nexus.iam.oidc.api.Rejection.AuthorizationAttemptWithInvalidState
 import ch.epfl.bluebrain.nexus.iam.oidc.api.{Fault, IdAccessToken}

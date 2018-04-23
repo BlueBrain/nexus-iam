@@ -7,15 +7,16 @@ import cats.syntax.functor._
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Path.{Empty, _}
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.auth.User
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.{Identity, User}
 import ch.epfl.bluebrain.nexus.commons.types.search._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._
 import ch.epfl.bluebrain.nexus.iam.elastic._
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls._
+import ch.epfl.bluebrain.nexus.iam.elastic.types.{FullAccessControl, FullAccessControlList}
+import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import io.circe.Json
 
 import scala.annotation.tailrec

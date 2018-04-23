@@ -9,21 +9,21 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.stream.ActorMaterializer
 import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
+import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.{jsonUnmarshaller, unmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.GroupRef
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
 import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
+import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig
-import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.unmarshaller
-import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.jsonUnmarshaller
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
+import ch.epfl.bluebrain.nexus.iam.service.io.CirceSupport.config
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._

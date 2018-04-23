@@ -16,35 +16,36 @@ import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.{OrderedKeys, unmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.auth.{AuthenticatedUser, User, UserInfo}
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.{JsonLdSerialization, SimpleIdentitySerialization}
-import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types._
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
+import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
+import ch.epfl.bluebrain.nexus.iam.elastic.types.FullAccessControlList
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
 import ch.epfl.bluebrain.nexus.iam.service.config.{AppConfig, Settings}
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
+import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import io.circe._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.auto._
-import org.mockito.ArgumentMatchers.isA
-import org.mockito.ArgumentMatchers.{eq => mEq}
+import org.mockito.ArgumentMatchers.{isA, eq => mEq}
 import org.mockito.Mockito.when
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
@@ -53,7 +54,6 @@ import org.scalatest.mockito.MockitoSugar
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.Random
-
 class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
 
   "The ACL service" should {

@@ -6,8 +6,8 @@ import akka.kafka.scaladsl.Producer
 import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.persistence.query.Offset
 import akka.stream.scaladsl.Flow
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.JsonLdSerialization._
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization._
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
 import io.circe.Encoder

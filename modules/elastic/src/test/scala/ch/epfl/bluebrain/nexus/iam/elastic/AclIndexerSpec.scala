@@ -11,20 +11,22 @@ import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder,
 import ch.epfl.bluebrain.nexus.commons.es.server.embed.ElasticServer
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Path._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Permission._
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.iam.identity.Identity.{Anonymous, GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization._
 import ch.epfl.bluebrain.nexus.commons.test.{Randomness, Resources}
+import ch.epfl.bluebrain.nexus.commons.types.Meta
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResult.ScoredQueryResult
 import ch.epfl.bluebrain.nexus.commons.types.search.{Pagination, QueryResults}
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permission, Permissions}
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
+import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
-import io.circe.java8.time._
 import io.circe.{Decoder, Json}
+import io.circe.java8.time._
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 

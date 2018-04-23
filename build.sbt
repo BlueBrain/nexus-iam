@@ -24,11 +24,11 @@ scalafmt: {
 }
  */
 
-val commonsVersion  = "0.10.9"
-val serviceVersion  = "0.10.8"
-val sourcingVersion = "0.10.4"
+val commonsVersion  = "0.10.10"
+val serviceVersion  = "0.10.9"
+val sourcingVersion = "0.10.5"
 
-val akkaVersion            = "2.5.11"
+val akkaVersion            = "2.5.12"
 val akkaHttpVersion        = "10.0.13"
 val akkaPersCassVersion    = "0.83"
 val akkaStreamKafkaVersion = "0.20"
@@ -56,7 +56,6 @@ lazy val commonsTest   = "ch.epfl.bluebrain.nexus" %% "commons-test"         % c
 lazy val commonsTypes  = "ch.epfl.bluebrain.nexus" %% "commons-types"        % commonsVersion
 lazy val elasticClient = "ch.epfl.bluebrain.nexus" %% "elastic-client"       % commonsVersion
 lazy val elasticEmbed  = "ch.epfl.bluebrain.nexus" %% "elastic-server-embed" % commonsVersion
-lazy val iamTypes      = "ch.epfl.bluebrain.nexus" %% "iam"                  % commonsVersion
 
 lazy val sourcingMem  = "ch.epfl.bluebrain.nexus" %% "sourcing-mem"  % sourcingVersion
 lazy val sourcingCore = "ch.epfl.bluebrain.nexus" %% "sourcing-core" % sourcingVersion
@@ -109,18 +108,18 @@ lazy val core = project
     name       := "iam-core",
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
-      commonsTypes,
-      iamTypes,
-      serviceKamon,
-      sourcingCore,
       akkaHttp,
       akkaPersCass,
       akkaSlf4j,
       akkaStreamKafka,
-      journal,
-      shapeless,
       circeCore,
       circeGenericExtras,
+      commonsTypes,
+      journal,
+      serviceKamon,
+      serviceHttp,
+      shapeless,
+      sourcingCore,
       akkaTestkit % Test,
       circeParser % Test,
       mockitoCore % Test,
@@ -141,12 +140,10 @@ lazy val oidcCore = project
     libraryDependencies ++=
       Seq(
         commonsTypes,
-        akkaHttp,
         akkaCluster,
         akkaClusterSharding,
         akkaDData,
         akkaHttpCirce,
-        iamTypes,
         pureconfig,
         pureconfigAkka,
         circeCore,
@@ -168,7 +165,7 @@ lazy val oidcBbp = project
     moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
     description           := "Nexus IAM BBP Integration Service",
-    libraryDependencies   ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
+    libraryDependencies   ++= Seq(circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val oidcHbp = project
@@ -180,7 +177,7 @@ lazy val oidcHbp = project
     moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
     description           := "Nexus IAM HBP Integration Service",
-    libraryDependencies   ++= Seq(akkaHttp, circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
+    libraryDependencies   ++= Seq(circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val elastic = project
@@ -190,8 +187,9 @@ lazy val elastic = project
     name       := "iam-elastic",
     moduleName := "iam-elastic",
     libraryDependencies ++= Seq(
-      elasticClient,
       commonsTest,
+      circeJava8,
+      elasticClient,
       asm          % Test,
       akkaTestkit  % Test,
       elasticEmbed % Test,
@@ -217,7 +215,6 @@ lazy val service = project
       serviceIndexing,
       serviceSerialization,
       sourcingAkka,
-      akkaHttp,
       akkaHttpCors,
       akkaHttpCirce,
       pureconfig,
@@ -225,7 +222,6 @@ lazy val service = project
       akkaPersCass,
       shapeless,
       circeParser,
-      circeJava8,
       circeGenericExtras,
       jwtCirce,
       akkaTestkit     % Test,
@@ -238,11 +234,19 @@ lazy val service = project
     )
   )
 
+lazy val client = project
+  .in(file("modules/client"))
+  .settings(
+    name                := "iam-client",
+    moduleName          := "iam-client",
+    libraryDependencies ++= Seq(akkaHttp, akkaHttpCirce, circeGenericExtras, circeParser, circeJava8, akkaTestkit % Test, scalaTest % Test)
+  )
+
 lazy val root = project
   .in(file("."))
   .settings(noPublish)
   .settings(name := "iam", moduleName := "iam", description := "Nexus Identity & Access Management")
-  .aggregate(docs, core, elastic, service, oidcCore, oidcBbp, oidcHbp)
+  .aggregate(docs, core, elastic, client, service, oidcCore, oidcBbp, oidcHbp)
 
 /* Common settings */
 

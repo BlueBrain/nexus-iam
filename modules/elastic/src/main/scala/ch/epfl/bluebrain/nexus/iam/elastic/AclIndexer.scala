@@ -7,13 +7,15 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.show._
 import cats.{MonadError, Traverse}
+import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
-import ch.epfl.bluebrain.nexus.commons.iam.acls._
-import ch.epfl.bluebrain.nexus.commons.iam.acls.Event._
-import ch.epfl.bluebrain.nexus.commons.iam.io.serialization.SimpleIdentitySerialization._
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.ConcurrentSetBuilder
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event
+import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
+import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._
+import ch.epfl.bluebrain.nexus.service.http.Path
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.java8.time._
 import io.circe.parser._
