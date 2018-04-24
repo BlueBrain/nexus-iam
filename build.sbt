@@ -121,6 +121,7 @@ lazy val core = project
       shapeless,
       sourcingCore,
       akkaTestkit % Test,
+      commonsTest % Test,
       circeParser % Test,
       mockitoCore % Test,
       scalaTest   % Test,
