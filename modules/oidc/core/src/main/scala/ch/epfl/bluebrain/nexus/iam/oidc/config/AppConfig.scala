@@ -28,7 +28,7 @@ object AppConfig {
 
   final case class DescriptionConfig(name: String, environment: String) {
     val version: String = BuildInfo.version
-    val ActorSystemName = s"$name-${version.replaceAll("\\.", "-")}-$environment"
+    val actorSystemName = s"$name-${version.replaceAll("\\W", "-")}-$environment"
   }
 
   final case class InstanceConfig(interface: String)
