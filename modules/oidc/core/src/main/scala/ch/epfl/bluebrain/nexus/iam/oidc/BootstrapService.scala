@@ -37,7 +37,7 @@ class BootstrapService[A](preStart: Option[() => A] = None, postStop: Option[() 
   val config    = ConfigFactory.load()
   val appConfig = new Settings(config).appConfig
 
-  implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
+  implicit val as: ActorSystem               = ActorSystem(appConfig.description.actorSystemName, config)
   implicit val ec: ExecutionContextExecutor  = as.dispatcher
   implicit val mt: ActorMaterializer         = ActorMaterializer()
   implicit val tm: Timeout                   = Timeout(appConfig.runtime.defaultTimeout)
@@ -78,7 +78,7 @@ class BootstrapService[A](preStart: Option[() => A] = None, postStop: Option[() 
   }
 
   val provided = appConfig.cluster.seedAddresses
-    .map(addr => AddressFromURIString(s"akka.tcp://${appConfig.description.ActorSystemName}@$addr"))
+    .map(addr => AddressFromURIString(s"akka.tcp://${appConfig.description.actorSystemName}@$addr"))
   val seeds = if (provided.isEmpty) Set(cluster.selfAddress) else provided
 
   cluster.joinSeedNodes(seeds.toList)
