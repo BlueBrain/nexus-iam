@@ -105,6 +105,7 @@ lazy val docs = project
 lazy val core = project
   .in(file("modules/core"))
   .settings(
+    commonTestSettings,
     name       := "iam-core",
     moduleName := "iam-core",
     libraryDependencies ++= Seq(
@@ -134,6 +135,7 @@ lazy val oidcCore = project
   .dependsOn(core)
   .enablePlugins(BuildInfoPlugin)
   .settings(
+    commonTestSettings,
     name             := "iam-oidc-core",
     moduleName       := "iam-oidc-core",
     buildInfoKeys    := Seq[BuildInfoKey](version),
@@ -185,8 +187,10 @@ lazy val elastic = project
   .in(file("modules/elastic"))
   .dependsOn(core)
   .settings(
-    name       := "iam-elastic",
-    moduleName := "iam-elastic",
+    commonTestSettings,
+    parallelExecution in Test := false,
+    name                      := "iam-elastic",
+    moduleName                := "iam-elastic",
     libraryDependencies ++= Seq(
       commonsTest,
       circeJava8,
@@ -197,13 +201,13 @@ lazy val elastic = project
       scalaTest    % Test
     )
   )
-  .settings(parallelExecution in Test := false)
 
 lazy val service = project
   .in(file("modules/service"))
   .dependsOn(core, docs, elastic)
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
   .settings(
+    commonTestSettings,
     name                  := "iam-service",
     moduleName            := "iam-service",
     packageName in Docker := "iam",
@@ -238,6 +242,7 @@ lazy val service = project
 lazy val client = project
   .in(file("modules/client"))
   .settings(
+    commonTestSettings,
     name       := "iam-client",
     moduleName := "iam-client",
     libraryDependencies ++= Seq(
@@ -267,6 +272,10 @@ lazy val noPublish = Seq(
   publishLocal    := {},
   publish         := {},
   publishArtifact := false
+)
+
+lazy val commonTestSettings = Seq(
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-u", "target/test-reports")
 )
 
 inThisBuild(
