@@ -275,7 +275,7 @@ lazy val noPublish = Seq(
 )
 
 lazy val commonTestSettings = Seq(
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-u", "target/test-reports")
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports")
 )
 
 inThisBuild(
