@@ -99,8 +99,8 @@ object Main {
       val downStreamAuthClients = appConfig.oidc.providers.map(DownstreamAuthClient(cl, uicl, _))
       implicit val ce: ClaimExtractor =
         ClaimExtractor(CredentialsStore("credentialsStore"), downStreamAuthClients)
-      val ownRead      = Permissions(Permission.Own, Permission.Read)
-      val ownReadWrite = Permissions(Permission.Own, Permission.Read, Permission.Write)
+      val ownRead       = Permissions(Permission.Own, Permission.Read)
+      val kgPermissions = Permissions(Permission.Own, Permission.Read, Permission.Write, Permission("publish"))
       if (appConfig.auth.testMode) {
         val anonymousCaller = CallerCtx(clock, AnonymousUser)
         logger.warning("""/!\ Test mode is enabled - this is potentially DANGEROUS /!\""")
@@ -111,9 +111,10 @@ object Main {
               case Some(permissions) if permissions.containsAll(ownRead) =>
                 logger.info("Top-level permissions found for anonymous; nothing to do")
               case _ =>
-                logger.info("Adding 'own' & 'read' to top-level permissions for anonymous")
-                acl.add(Path./, AccessControlList(Anonymous()     -> ownRead))(anonymousCaller)
-                acl.add(Path("kg"), AccessControlList(Anonymous() -> ownReadWrite))(anonymousCaller)
+                logger.info(s"Adding $ownRead to top-level permissions for anonymous")
+                acl.add(Path./, AccessControlList(Anonymous() -> ownRead))(anonymousCaller)
+                logger.info(s"Adding $kgPermissions to /kg for anonymous")
+                acl.add(Path("kg"), AccessControlList(Anonymous() -> kgPermissions))(anonymousCaller)
             }
           case Failure(e) =>
             logger.error(e, "Unexpected failure while trying to fetch and set top-level permissions")
@@ -137,9 +138,10 @@ object Main {
                   case Some(permissions) if permissions.containsAll(ownRead) =>
                     logger.info(s"Top-level permissions found for $adminGroup; nothing to do")
                   case _ =>
-                    logger.info(s"Adding 'own' & 'read' to top-level permissions for $adminGroup")
-                    acl.add(Path./, AccessControlList(adminGroup     -> ownRead))(adminCaller)
-                    acl.add(Path("kg"), AccessControlList(adminGroup -> ownReadWrite))(adminCaller)
+                    logger.info(s"Adding $ownRead to top-level permissions for $adminGroup")
+                    acl.add(Path./, AccessControlList(adminGroup -> ownRead))(adminCaller)
+                    logger.info(s"Adding $kgPermissions to /kg for $adminGroup")
+                    acl.add(Path("kg"), AccessControlList(adminGroup -> kgPermissions))(adminCaller)
                 }
             }
           case Failure(e) =>
