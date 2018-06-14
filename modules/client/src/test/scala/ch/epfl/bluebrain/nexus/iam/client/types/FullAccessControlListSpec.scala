@@ -1,10 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
 import ch.epfl.bluebrain.nexus.commons.test.Resources
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.client.types.Identity._
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
 import ch.epfl.bluebrain.nexus.iam.client.types.Permission._
-import ch.epfl.bluebrain.nexus.iam.client.serialization.SimpleIdentitySerialization._
-import ch.epfl.bluebrain.nexus.service.http.Path._
 import io.circe.generic.auto._
 import io.circe.syntax._
 import org.scalatest.{Matchers, WordSpecLike}

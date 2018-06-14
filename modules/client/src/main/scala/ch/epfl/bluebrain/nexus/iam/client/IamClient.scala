@@ -1,18 +1,20 @@
 package ch.epfl.bluebrain.nexus.iam.client
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.stream.ActorMaterializer
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.types.Err
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
-import ch.epfl.bluebrain.nexus.commons.types.identity.User
-import ch.epfl.bluebrain.nexus.iam.client.Caller.{AnonymousCaller, AuthenticatedCaller}
-import ch.epfl.bluebrain.nexus.iam.client.types.FullAccessControlList
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.iam.client.Caller._
+import ch.epfl.bluebrain.nexus.iam.client.types.Identity.UserRef
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
+import ch.epfl.bluebrain.nexus.iam.client.types.{Address, AuthToken, FullAccessControlList, Identity}
 import journal.Logger
-import ch.epfl.bluebrain.nexus.service.http.UriOps._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -23,12 +25,12 @@ import scala.concurrent.{ExecutionContext, Future}
 trait IamClient[F[_]] {
 
   /**
-    * Retrieve the ''caller'' from the implicitly optional [[OAuth2BearerToken]]
+    * Retrieve the ''caller'' from the implicitly optional [[AuthToken]]
     *
     * @param filterGroups   if true, will only return groups currently in use in IAM
     *
     */
-  def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[OAuth2BearerToken]): F[Caller]
+  def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]): F[Caller]
 
   /**
     * Retrieve the current ''acls'' for some particular ''resource''
@@ -39,37 +41,65 @@ trait IamClient[F[_]] {
     * @param self     decides whether it should match only the provided ''identities'' (true)
     *                 or any identity which has the right own access (true)    * @param credentials    a possibly available token
     */
-  def getAcls(resource: Path, parents: Boolean = false, self: Boolean = false)(
-      implicit credentials: Option[OAuth2BearerToken]): F[FullAccessControlList]
+  def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
+      implicit credentials: Option[AuthToken]): F[FullAccessControlList]
 }
 
 object IamClient {
-  private val log               = Logger[this.type]
-  private val Acls              = Path("acls")
-  private val User              = "oauth2" / "user"
-  private val filterGroupsParam = "filterGroups"
 
-  final def apply()(implicit ec: ExecutionContext,
-                    aclClient: HttpClient[Future, FullAccessControlList],
-                    userClient: HttpClient[Future, User],
-                    iamUri: IamUri): IamClient[Future] = new IamClient[Future] {
+  private[client] final case class User(identities: Set[Identity])
 
-    override def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[OAuth2BearerToken]) =
+  private val log             = Logger[this.type]
+  private val filterGroupsKey = "filterGroups"
+
+  final case object UserRefNotFound extends Err("Missing UserRef")
+
+  /**
+    * Constructs an ''IamClient[Future]''
+    *
+    * @param iamUri the iam base uri
+    * @return a new [[IamClient]] of [[Future]] context
+    */
+  final def apply()(implicit iamUri: IamUri, as: ActorSystem): IamClient[Future] = {
+    import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
+    import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+    import io.circe.generic.auto._
+    implicit val mt                             = ActorMaterializer()
+    implicit val ec                             = as.dispatcher
+    implicit val ucl: UntypedHttpClient[Future] = akkaHttpClient
+    implicit val aclsClient                     = withAkkaUnmarshaller[FullAccessControlList]
+    implicit val userClient                     = withAkkaUnmarshaller[User]
+    fromFuture
+  }
+
+  private[client] final def fromFuture(implicit ec: ExecutionContext,
+                                       aclClient: HttpClient[Future, FullAccessControlList],
+                                       identitiesClient: HttpClient[Future, User],
+                                       iamUri: IamUri): IamClient[Future] = new IamClient[Future] {
+
+    def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]) =
       credentials
         .map { cred =>
-          userClient(requestFrom(User, Query(filterGroupsParam -> filterGroups.toString)))
-            .map[Caller](AuthenticatedCaller(cred, _))
-            .recoverWith[Caller] { case e => recover(e, User) }
+          identitiesClient(requestFrom("oauth2" / "user", Query(filterGroupsKey -> filterGroups.toString)))
+            .flatMap { user =>
+              user.identities.collectFirst {
+                case id: UserRef => AuthenticatedCaller(cred, id, user.identities)
+              } match {
+                case Some(caller) => Future.successful(caller)
+                case _            => Future.failed(UserRefNotFound)
+              }
+            }
+            .recoverWith[Caller] { case e => recover(e, "oauth2" / "user") }
         }
-        .getOrElse(Future.successful(AnonymousCaller()))
+        .getOrElse(Future.successful(AnonymousCaller))
 
-    override def getAcls(resource: Path, parents: Boolean = false, self: Boolean = false)(
-        implicit credentials: Option[OAuth2BearerToken]) = {
-      aclClient(requestFrom(Acls ++ resource, Query("parents" -> parents.toString, "self" -> self.toString)))
+    def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
+        implicit credentials: Option[AuthToken]) = {
+      aclClient(requestFrom(Address("acls") ++ resource, Query("parents" -> parents.toString, "self" -> self.toString)))
         .recoverWith[FullAccessControlList] { case e => recover(e, resource) }
     }
 
-    def recover(th: Throwable, resource: Path) = th match {
+    def recover(th: Throwable, resource: Address) = th match {
       case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
         Future.failed(UnauthorizedAccess)
       case ur: UnexpectedUnsuccessfulHttpResponse =>
@@ -83,9 +113,12 @@ object IamClient {
         Future.failed(err)
     }
 
-    private def requestFrom(path: Path, query: Query)(implicit credentials: Option[OAuth2BearerToken]) = {
+    private def requestFrom(path: Address, query: Query)(implicit credentials: Option[AuthToken]) = {
       val request = Get(iamUri.value.append(path).withQuery(query))
-      credentials.map(request.addCredentials).getOrElse(request)
+      credentials.map(request.addCredentials(_)).getOrElse(request)
     }
   }
+
+  private implicit def toAkka(token: AuthToken): OAuth2BearerToken = OAuth2BearerToken(token.value)
+
 }

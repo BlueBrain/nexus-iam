@@ -1,8 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.service.http.Path
-
 /**
   * Type definition that contains the definition of an access control
   *
@@ -10,4 +7,4 @@ import ch.epfl.bluebrain.nexus.service.http.Path
   * @param path        the path where the ACLs apply
   * @param permissions the permissions that are contained on the ACLs
   */
-final case class FullAccessControl(identity: Identity, path: Path, permissions: Permissions)
+final case class FullAccessControl(identity: Identity, path: Address, permissions: Permissions)
