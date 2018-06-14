@@ -24,24 +24,24 @@ scalafmt: {
 }
  */
 
-val commonsVersion  = "0.10.10"
-val serviceVersion  = "0.10.9"
+val commonsVersion  = "0.10.11"
+val serviceVersion  = "0.10.12"
 val sourcingVersion = "0.10.5"
 
-val akkaVersion            = "2.5.12"
+val akkaVersion            = "2.5.13"
 val akkaHttpVersion        = "10.0.13"
-val akkaPersCassVersion    = "0.83"
-val akkaStreamKafkaVersion = "0.20"
+val akkaPersCassVersion    = "0.85"
+val akkaStreamKafkaVersion = "0.21"
 val akkaPersMemVersion     = "2.5.1.1"
 val akkaHttpCorsVersion    = "0.3.0"
-val akkaHttpCirceVersion   = "1.20.1"
-val asmVersion             = "6.1.1"
+val akkaHttpCirceVersion   = "1.21.0"
+val asmVersion             = "6.2"
 val shapelessVersion       = "2.3.3"
 val circeVersion           = "0.9.3"
 val journalVersion         = "3.0.19"
 val scalaTestVersion       = "3.0.5"
 val pureconfigVersion      = "0.9.1"
-val mockitoVersion         = "2.18.0"
+val mockitoVersion         = "2.18.3"
 
 val aspectJVersion     = "1.8.13"
 val sigarLoaderVersion = "1.6.6"
@@ -54,7 +54,7 @@ lazy val serviceSerialization = "ch.epfl.bluebrain.nexus" %% "service-serializat
 
 lazy val commonsTest   = "ch.epfl.bluebrain.nexus" %% "commons-test"         % commonsVersion
 lazy val commonsTypes  = "ch.epfl.bluebrain.nexus" %% "commons-types"        % commonsVersion
-lazy val commonsHttp   = "ch.epfl.bluebrain.nexus" %% "commons-http"        % commonsVersion
+lazy val commonsHttp   = "ch.epfl.bluebrain.nexus" %% "commons-http"         % commonsVersion
 lazy val elasticClient = "ch.epfl.bluebrain.nexus" %% "elastic-client"       % commonsVersion
 lazy val elasticEmbed  = "ch.epfl.bluebrain.nexus" %% "elastic-server-embed" % commonsVersion
 
@@ -169,7 +169,7 @@ lazy val oidcBbp = project
     moduleName            := "iam-bbp",
     packageName in Docker := "iam-bbp",
     description           := "Nexus IAM BBP Integration Service",
-    libraryDependencies   ++= Seq(circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
+    libraryDependencies   ++= Seq(circeCore, circeParser, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val oidcHbp = project
@@ -181,7 +181,7 @@ lazy val oidcHbp = project
     moduleName            := "iam-hbp",
     packageName in Docker := "iam-hbp",
     description           := "Nexus IAM HBP Integration Service",
-    libraryDependencies   ++= Seq(circeCore, circeParser, circeGenericExtras, serviceHttp, serviceKamon, journal, scalaTest % Test)
+    libraryDependencies   ++= Seq(circeCore, circeParser, serviceHttp, serviceKamon, journal, scalaTest % Test)
   )
 
 lazy val elastic = project
@@ -216,7 +216,6 @@ lazy val service = project
     buildInfoKeys         := Seq[BuildInfoKey](version),
     buildInfoPackage      := "ch.epfl.bluebrain.nexus.iam.service.config",
     libraryDependencies ++= Seq(
-      serviceHttp,
       serviceKamon,
       serviceIndexing,
       serviceSerialization,
@@ -225,10 +224,7 @@ lazy val service = project
       akkaHttpCirce,
       pureconfig,
       pureconfigAkka,
-      akkaPersCass,
-      shapeless,
       circeParser,
-      circeGenericExtras,
       jwtCirce,
       akkaTestkit     % Test,
       akkaHttpTestkit % Test,

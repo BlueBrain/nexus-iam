@@ -46,7 +46,7 @@ trait IamClient[F[_]] {
 
 object IamClient {
 
-  private[client] case class User(identities: Set[Identity])
+  private[client] final case class User(identities: Set[Identity])
 
   private val log             = Logger[this.type]
   private val filterGroupsKey = "filterGroups"

@@ -28,8 +28,8 @@ object KafkaPublisher {
         case (off, _, event) =>
           ProducerMessage.Message(new ProducerRecord[String, String](topic, event.path.toString, m(event)), off)
       }
-      .via(Producer.flow(producerSettings))
-      .map(m => m.message.passThrough)
+      .via(Producer.flexiFlow(producerSettings))
+      .map(_.passThrough)
 
   }
   // $COVERAGE-OFF$
