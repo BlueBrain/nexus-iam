@@ -1,8 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.service.http.Path
-
 import scala.collection.immutable.ListMap
 
 /**

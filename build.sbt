@@ -54,6 +54,7 @@ lazy val serviceSerialization = "ch.epfl.bluebrain.nexus" %% "service-serializat
 
 lazy val commonsTest   = "ch.epfl.bluebrain.nexus" %% "commons-test"         % commonsVersion
 lazy val commonsTypes  = "ch.epfl.bluebrain.nexus" %% "commons-types"        % commonsVersion
+lazy val commonsHttp   = "ch.epfl.bluebrain.nexus" %% "commons-http"        % commonsVersion
 lazy val elasticClient = "ch.epfl.bluebrain.nexus" %% "elastic-client"       % commonsVersion
 lazy val elasticEmbed  = "ch.epfl.bluebrain.nexus" %% "elastic-server-embed" % commonsVersion
 
@@ -251,8 +252,8 @@ lazy val client = project
       circeGenericExtras,
       circeParser,
       circeJava8,
+      commonsHttp,
       commonsTypes,
-      serviceHttp,
       akkaTestkit % Test,
       commonsTest % Test,
       mockitoCore % Test,
