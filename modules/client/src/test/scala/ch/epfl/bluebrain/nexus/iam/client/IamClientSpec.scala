@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.client
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
 import akka.testkit.TestKit
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
@@ -10,7 +11,7 @@ import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
 import ch.epfl.bluebrain.nexus.iam.client.Caller._
 import ch.epfl.bluebrain.nexus.iam.client.IamClient.User
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity._
-import ch.epfl.bluebrain.nexus.iam.client.types.Path._
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
 import ch.epfl.bluebrain.nexus.iam.client.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.client.types._
 import org.mockito.Mockito
@@ -95,7 +96,7 @@ class IamClientSpec
       implicit val caller: Caller =
         AuthenticatedCaller(credentials, UserRef("realm", "f:someUUID:username"), identities)
       val expected = FullAccessControlList(
-        (GroupRef("BBP", "group1"), Path("/acls/prefix/some/resource/one"), Permissions(Own, Read, Write)))
+        (GroupRef("BBP", "group1"), Address("/acls/prefix/some/resource/one"), Permissions(Own, Read, Write)))
       val path = "acls" / "prefix" / "some" / "resource" / "one"
       val request =
         requestFrom(path, Query("parents" -> "false", "self" -> "true"))
@@ -106,7 +107,7 @@ class IamClientSpec
     "return expected acls whenever the caller is anonymous" in {
       implicit val anonCaller = AnonymousCaller
       val expected =
-        FullAccessControlList((AuthenticatedRef(None), Path("/acls/prefix/some/resource/two"), Permissions(Read)))
+        FullAccessControlList((AuthenticatedRef(None), Address("/acls/prefix/some/resource/two"), Permissions(Read)))
       val path    = "acls" / "prefix" / "some" / "resource" / "two"
       val request = requestFrom(path, Query("parents" -> "false", "self" -> "false"))
       when(aclsClient(request)).thenReturn(Future.successful(expected))
@@ -114,10 +115,12 @@ class IamClientSpec
     }
   }
 
-  private def requestFrom(path: Path, query: Query)(implicit credentials: Option[AuthToken]): HttpRequest = {
+  private def requestFrom(path: Address, query: Query)(implicit credentials: Option[AuthToken]): HttpRequest = {
     val request =
       Get(iamUri.value.append(path).withQuery(query)).withEntity(HttpEntity.empty(ContentTypes.NoContentType))
     credentials.map(request.addCredentials(_)).getOrElse(request)
   }
+
+  private implicit def toAkka(token: AuthToken): OAuth2BearerToken = OAuth2BearerToken(token.value)
 
 }

@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.client.types
 
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity._
-import ch.epfl.bluebrain.nexus.iam.client.types.Path._
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
 import ch.epfl.bluebrain.nexus.iam.client.types.Permission._
 import io.circe.generic.auto._
 import io.circe.syntax._

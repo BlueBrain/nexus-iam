@@ -7,10 +7,10 @@ import io.circe.{Decoder, Encoder}
 import scala.annotation.tailrec
 
 /**
-  * Represents an absolute resource path as an optionally empty ordered collection of segments.  The canonical form of
-  * a path would be ''/a/b/c/d''.
+  * Represents an absolute resource address as an optionally empty ordered collection of segments.  The canonical form of
+  * an address would be ''/a/b/c/d''.
   */
-sealed abstract class Path extends Serializable {
+sealed abstract class Address extends Serializable {
 
   /**
     * The type of the Head element of this path
@@ -30,7 +30,7 @@ sealed abstract class Path extends Serializable {
   /**
     * @return the remainder of this __Path__ after subtracting its head.
     */
-  def tail: Path
+  def tail: Address
 
   /**
     * @return the number of segments in this __Path__
@@ -45,7 +45,7 @@ sealed abstract class Path extends Serializable {
     * @return a new __Path__ instance constructed from the argument __segment__ as its head and __this__ path as its
     *         tail
     */
-  def /(segment: String): Path
+  def /(segment: String): Address
 
   /**
     * Joins __this__ Path with the argument __path__.
@@ -53,17 +53,17 @@ sealed abstract class Path extends Serializable {
     * @param path the path to join with __this__
     * @return a new __Path__ instance constructed by joining __this__ and the argument __path__
     */
-  def ++(path: Path): Path
+  def ++(path: Address): Address
 
   /**
     * @return a new __Path__ instance constructed by reversing the order of segments of __this__ path
     */
-  def reverse: Path
+  def reverse: Address
 
   /**
     * @return this __Path__ and all its parents
     */
-  def expand: Set[Path]
+  def expand: Set[Address]
 
   /**
     * @return a human readable representation of this path in its canonical form.  I.e.: __/a/b/c/d__
@@ -73,7 +73,7 @@ sealed abstract class Path extends Serializable {
   /**
     * @return true if the current __Path__ starts with the provided ''path'' and false otherwise
     */
-  def startsWith(path: Path): Boolean
+  def startsWith(path: Address): Boolean
 
   /**
     * @return the list of segments present in the current ''path''
@@ -86,23 +86,23 @@ sealed abstract class Path extends Serializable {
   override def toString: String = repr
 }
 
-object Path {
+object Address {
 
-  implicit val pathEncoder: Encoder[Path] = Encoder.encodeString.contramap(_.repr)
+  implicit val pathEncoder: Encoder[Address] = Encoder.encodeString.contramap(_.repr)
 
-  implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.emap(string => Right(Path(string)))
+  implicit val pathDecoder: Decoder[Address] = Decoder.decodeString.emap(string => Right(Address(string)))
 
-  implicit val pathShow: Show[Path] = Show.show(_.repr)
+  implicit val pathShow: Show[Address] = Show.show(_.repr)
 
   /**
     * Constructs a path instance from the argument ''string'' using ''/'' as segment separator.
     *
-    * @param string the source string to convert to a [[Path]]
-    * @return a new [[Path]] instance built from the argument ''string''
+    * @param string the source string to convert to a [[Address]]
+    * @return a new [[Address]] instance built from the argument ''string''
     */
-  def apply(string: String): Path = {
+  def apply(string: String): Address = {
     @tailrec
-    def inner(acc: Path, remaining: String): Path =
+    def inner(acc: Address, remaining: String): Address =
       if (remaining.length == 0) acc
       else {
         remaining.indexOf("/") match {
@@ -117,7 +117,7 @@ object Path {
   /**
     * The constant empty path; it contains no segments.
     */
-  val / : Path = Empty
+  val / : Address = Empty
 
   /**
     * Construct a new __Path__ containing a single segment provided as the argument of this application.
@@ -125,31 +125,31 @@ object Path {
     * @param segment the singleton segment of the path
     * @return a new __Path__ containing a single segment provided as the argument of this application
     */
-  def /(segment: String): Path = Segment(segment, Empty)
+  def /(segment: String): Address = Segment(segment, Empty)
 
   /**
     * The empty __Path__ implementation.  It contains no segments, but facilitates path construction.
     */
-  case object Empty extends Path {
+  case object Empty extends Address {
     override type Head = this.type
 
     override val isEmpty: Boolean = true
 
     override def head: Head = this
 
-    override def tail: Path = this
+    override def tail: Address = this
 
     override val length: Int = 0
 
-    override def /(segment: String): Path = Segment(segment, Empty)
+    override def /(segment: String): Address = Segment(segment, Empty)
 
-    override def ++(path: Path): Path = path
+    override def ++(path: Address): Address = path
 
     override val reverse: this.type = Empty
 
-    override val expand: Set[Path] = Set(this)
+    override val expand: Set[Address] = Set(this)
 
-    override def startsWith(path: Path): Boolean = path.isEmpty
+    override def startsWith(path: Address): Boolean = path.isEmpty
 
     override val repr: String = "/"
 
@@ -165,7 +165,7 @@ object Path {
     * @param head the head of this __Path__
     * @param tail the tail of this __Path__
     */
-  final case class Segment(head: String, tail: Path) extends Path {
+  final case class Segment(head: String, tail: Address) extends Address {
 
     override type Head = String
 
@@ -175,26 +175,26 @@ object Path {
 
     override def /(segment: String): Segment = Segment(segment, this)
 
-    override def ++(path: Path): Path = {
-      def inner(acc: Path, remaining: Path): Path = remaining match {
+    override def ++(path: Address): Address = {
+      def inner(acc: Address, remaining: Address): Address = remaining match {
         case Empty         => acc
         case Segment(h, t) => inner(Segment(h, acc), t)
       }
       inner(this, path.reverse)
     }
 
-    override def reverse: Path = {
+    override def reverse: Address = {
       @tailrec
-      def inner(acc: Path, remaining: Path): Path = remaining match {
+      def inner(acc: Address, remaining: Address): Address = remaining match {
         case Empty         => acc
         case Segment(h, t) => inner(Segment(h, acc), t)
       }
       inner(Empty, this)
     }
 
-    override def expand: Set[Path] = tail.expand + this
+    override def expand: Set[Address] = tail.expand + this
 
-    override def startsWith(path: Path): Boolean =
+    override def startsWith(path: Address): Boolean =
       expand(path)
 
     override def repr: String = tail match {
@@ -204,7 +204,7 @@ object Path {
 
     override def segments: List[String] = {
       @tailrec
-      def inner(acc: List[String], remaining: Path): List[String] = remaining match {
+      def inner(acc: List[String], remaining: Address): List[String] = remaining match {
         case Empty         => acc
         case Segment(h, t) => inner(h :: acc, t)
       }
@@ -230,33 +230,33 @@ object Path {
       * @return a new __Path__ instance constructed from the argument __segment__ as its head and __this__ string as its
       *         tail
       */
-    def /(segment: String): Path = Empty / string / segment
+    def /(segment: String): Address = Empty / string / segment
   }
 
-  implicit def toInternal(from: Uri.Path): Path = {
+  implicit def toInternal(from: Uri.Path): Address = {
     @tailrec
-    def inner(acc: Path, remaining: Uri.Path): Path = remaining match {
+    def inner(acc: Address, remaining: Uri.Path): Address = remaining match {
       case Uri.Path.SingleSlash         => acc
       case Uri.Path.Empty               => acc
       case Uri.Path.Slash(tail)         => inner(acc, tail)
       case Uri.Path.Segment(head, tail) => inner(acc / head, tail)
     }
 
-    inner(Path./, from)
+    inner(Address./, from)
   }
 
-  implicit def toAkka(from: Path): Uri.Path = {
+  implicit def toAkka(from: Address): Uri.Path = {
     Uri.Path(from.toString)
   }
 
   /**
-    * Syntax sugar that allows appending a [[Path]] to a [[Uri]] without duplicating trailing slashes.
+    * Syntax sugar that allows appending a [[Address]] to a [[Uri]] without duplicating trailing slashes.
     * Example:
-    * Uri("http://localhost/a/b/").append(Path("/c"))
+    * Uri("http://localhost/a/b/").append(Address("/c"))
     * res: Uri("http://localhost/a/b/c")
     */
   implicit class UriSyntax(uri: Uri) {
-    def append(path: Path): Uri =
-      uri.copy(path = (uri.path: Path) ++ path)
+    def append(path: Address): Uri =
+      uri.copy(path = (uri.path: Address) ++ path)
   }
 }

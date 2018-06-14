@@ -12,8 +12,8 @@ final case class FullAccessControlList(acl: List[FullAccessControl]) {
   /**
     * @return a ''Map'' projection of the underlying pairs of paths and their permissions
     */
-  def toPathMap: Map[Path, Permissions] =
-    acl.foldLeft(ListMap.empty[Path, Permissions]) {
+  def toPathMap: Map[Address, Permissions] =
+    acl.foldLeft(ListMap.empty[Address, Permissions]) {
       case (acc, FullAccessControl(_, path, perms)) => acc + (path -> (acc.getOrElse(path, Permissions.empty) ++ perms))
     }
 
@@ -62,7 +62,7 @@ object FullAccessControlList {
   /**
     * Convenience factory method to build an ACL from var args of ''Identity'' to ''Permissions'' tuples.
     */
-  def apply(acl: (Identity, Path, Permissions)*): FullAccessControlList =
+  def apply(acl: (Identity, Address, Permissions)*): FullAccessControlList =
     new FullAccessControlList(acl.map { case (id, path, ps) => FullAccessControl(id, path, ps) }.toList)
 
   // $COVERAGE-ON$

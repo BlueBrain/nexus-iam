@@ -1,16 +1,16 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
 import akka.http.scaladsl.model.Uri
-import ch.epfl.bluebrain.nexus.iam.client.types.Path._
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
 import io.circe.parser._
 import io.circe.syntax._
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 
-class PathSpec extends WordSpecLike with Matchers with Inspectors {
+class AddressSpec extends WordSpecLike with Matchers with Inspectors {
 
-  val path: Path = "a" / "b" / "c"
-  val slash      = Path./
-  val pathString = s""""${path.repr}""""
+  val path: Address = "a" / "b" / "c"
+  val slash         = Address./
+  val pathString    = s""""${path.repr}""""
 
   "A Path" should {
     "be constructed correctly by parsing a string" in {
@@ -23,7 +23,7 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors {
                          "/a/\\/b/c" -> "a" / "\\" / "b" / "c")
       forAll(mapping) {
         case (tested, expected) =>
-          Path(tested) should equal(expected)
+          Address(tested) should equal(expected)
       }
     }
     "be constructed correctly from a lifted string" in {
@@ -86,16 +86,16 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors {
       }
     }
     "allow single segment construction" in {
-      Path./("a").repr should equal("/a")
+      Address./("a").repr should equal("/a")
     }
     "be encoded properly" in {
       path.asJson.noSpaces shouldEqual pathString
     }
     "be decoded properly" in {
-      decode[Path](pathString) shouldEqual Right(path)
+      decode[Address](pathString) shouldEqual Right(path)
     }
     "convert from Uri.Path to Path correctly" in {
-      (Uri.Path("/a/b/c"): Path) shouldEqual path
+      (Uri.Path("/a/b/c"): Address) shouldEqual path
     }
     "convert from Path to Uri.Path correctly" in {
       (path: Uri.Path) shouldEqual Uri.Path("/a/b/c")
@@ -103,7 +103,7 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors {
 
     "check if startsWith another Path" in {
       path startsWith / shouldEqual true
-      path startsWith Path("a") shouldEqual true
+      path startsWith Address("a") shouldEqual true
       path startsWith "a" / "b" shouldEqual true
       path startsWith "a" / "b" / "c" shouldEqual true
       path startsWith "c" / "b" / "a" shouldEqual false
@@ -120,8 +120,8 @@ class PathSpec extends WordSpecLike with Matchers with Inspectors {
 
     "Append a path without adding double slash" in {
       val list = List(
-        (Uri("http://localhost/a"), Path("/b"), Uri("http://localhost/a/b")),
-        (Uri("http://localhost/a/"), Path("b"), Uri("http://localhost/a/b")),
+        (Uri("http://localhost/a"), Address("/b"), Uri("http://localhost/a/b")),
+        (Uri("http://localhost/a/"), Address("b"), Uri("http://localhost/a/b")),
         (Uri("http://localhost/"), "b" / "c", Uri("http://localhost/b/c")),
         (Uri("http://localhost"), "b" / "c", Uri("http://localhost/b/c"))
       )

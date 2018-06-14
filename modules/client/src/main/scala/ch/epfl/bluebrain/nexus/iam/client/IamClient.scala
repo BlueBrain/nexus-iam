@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.client
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.stream.ActorMaterializer
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
@@ -10,8 +11,8 @@ import ch.epfl.bluebrain.nexus.commons.types.Err
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
 import ch.epfl.bluebrain.nexus.iam.client.Caller._
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity.UserRef
-import ch.epfl.bluebrain.nexus.iam.client.types.Path._
-import ch.epfl.bluebrain.nexus.iam.client.types.{AuthToken, FullAccessControlList, Identity, Path}
+import ch.epfl.bluebrain.nexus.iam.client.types.Address._
+import ch.epfl.bluebrain.nexus.iam.client.types.{Address, AuthToken, FullAccessControlList, Identity}
 import journal.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,7 +41,7 @@ trait IamClient[F[_]] {
     * @param self     decides whether it should match only the provided ''identities'' (true)
     *                 or any identity which has the right own access (true)    * @param credentials    a possibly available token
     */
-  def getAcls(resource: Path, parents: Boolean = false, self: Boolean = false)(
+  def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
       implicit credentials: Option[AuthToken]): F[FullAccessControlList]
 }
 
@@ -92,13 +93,13 @@ object IamClient {
         }
         .getOrElse(Future.successful(AnonymousCaller))
 
-    def getAcls(resource: Path, parents: Boolean = false, self: Boolean = false)(
+    def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
         implicit credentials: Option[AuthToken]) = {
-      aclClient(requestFrom(Path("acls") ++ resource, Query("parents" -> parents.toString, "self" -> self.toString)))
+      aclClient(requestFrom(Address("acls") ++ resource, Query("parents" -> parents.toString, "self" -> self.toString)))
         .recoverWith[FullAccessControlList] { case e => recover(e, resource) }
     }
 
-    def recover(th: Throwable, resource: Path) = th match {
+    def recover(th: Throwable, resource: Address) = th match {
       case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
         Future.failed(UnauthorizedAccess)
       case ur: UnexpectedUnsuccessfulHttpResponse =>
@@ -112,9 +113,12 @@ object IamClient {
         Future.failed(err)
     }
 
-    private def requestFrom(path: Path, query: Query)(implicit credentials: Option[AuthToken]) = {
+    private def requestFrom(path: Address, query: Query)(implicit credentials: Option[AuthToken]) = {
       val request = Get(iamUri.value.append(path).withQuery(query))
       credentials.map(request.addCredentials(_)).getOrElse(request)
     }
   }
+
+  private implicit def toAkka(token: AuthToken): OAuth2BearerToken = OAuth2BearerToken(token.value)
+
 }

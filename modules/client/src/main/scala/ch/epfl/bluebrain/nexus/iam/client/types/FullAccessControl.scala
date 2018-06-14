@@ -7,4 +7,4 @@ package ch.epfl.bluebrain.nexus.iam.client.types
   * @param path        the path where the ACLs apply
   * @param permissions the permissions that are contained on the ACLs
   */
-final case class FullAccessControl(identity: Identity, path: Path, permissions: Permissions)
+final case class FullAccessControl(identity: Identity, path: Address, permissions: Permissions)

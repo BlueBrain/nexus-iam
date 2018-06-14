@@ -32,7 +32,7 @@ object Caller {
   /**
     * An authenticated caller.
     *
-    * @param token the identities this ''caller'' belongs to
+    * @param token the token of this caller
     * @param self the [[UserRef]] of the caller
     * @param identities the ''credentials'' used by the caller to authenticate
     */
