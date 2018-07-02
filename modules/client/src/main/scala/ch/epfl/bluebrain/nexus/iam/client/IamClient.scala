@@ -61,6 +61,7 @@ object IamClient {
     * @param iamUri the iam base uri
     * @return a new [[IamClient]] of [[Future]] context
     */
+  // $COVERAGE-OFF$
   final def apply()(implicit iamUri: IamUri, as: ActorSystem): IamClient[Future] = {
     import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
     import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
@@ -72,6 +73,7 @@ object IamClient {
     implicit val userClient                     = withAkkaUnmarshaller[User]
     fromFuture
   }
+  // $COVERAGE-ON$
 
   private[client] final def fromFuture(implicit ec: ExecutionContext,
                                        aclClient: HttpClient[Future, FullAccessControlList],
@@ -126,6 +128,7 @@ object IamClient {
     * @param iamUri the iam base uri
     * @return a new [[IamClient]] of [[Task]] context
     */
+  // $COVERAGE-OFF$
   final def task()(implicit iamUri: IamUri, as: ActorSystem): IamClient[Task] = {
     import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
     import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
@@ -145,8 +148,8 @@ object IamClient {
           implicit credentials: Option[AuthToken]): Task[FullAccessControlList] =
         Task.deferFuture(underlying.getAcls(resource, parents, self))
     }
-
   }
+  // $COVERAGE-ON$
 
   private implicit def toAkka(token: AuthToken): OAuth2BearerToken = OAuth2BearerToken(token.value)
 
