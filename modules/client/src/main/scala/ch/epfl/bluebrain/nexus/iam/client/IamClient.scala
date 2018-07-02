@@ -14,6 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.client.types.Identity.UserRef
 import ch.epfl.bluebrain.nexus.iam.client.types.Address._
 import ch.epfl.bluebrain.nexus.iam.client.types.{Address, AuthToken, FullAccessControlList, Identity}
 import journal.Logger
+import monix.eval.Task
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,6 +61,7 @@ object IamClient {
     * @param iamUri the iam base uri
     * @return a new [[IamClient]] of [[Future]] context
     */
+  // $COVERAGE-OFF$
   final def apply()(implicit iamUri: IamUri, as: ActorSystem): IamClient[Future] = {
     import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
     import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
@@ -71,13 +73,14 @@ object IamClient {
     implicit val userClient                     = withAkkaUnmarshaller[User]
     fromFuture
   }
+  // $COVERAGE-ON$
 
   private[client] final def fromFuture(implicit ec: ExecutionContext,
                                        aclClient: HttpClient[Future, FullAccessControlList],
                                        identitiesClient: HttpClient[Future, User],
                                        iamUri: IamUri): IamClient[Future] = new IamClient[Future] {
 
-    def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]) =
+    def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]): Future[Caller] =
       credentials
         .map { cred =>
           identitiesClient(requestFrom("oauth2" / "user", Query(filterGroupsKey -> filterGroups.toString)))
@@ -94,7 +97,7 @@ object IamClient {
         .getOrElse(Future.successful(AnonymousCaller))
 
     def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
-        implicit credentials: Option[AuthToken]) = {
+        implicit credentials: Option[AuthToken]): Future[FullAccessControlList] = {
       aclClient(requestFrom(Address("acls") ++ resource, Query("parents" -> parents.toString, "self" -> self.toString)))
         .recoverWith[FullAccessControlList] { case e => recover(e, resource) }
     }
@@ -118,6 +121,35 @@ object IamClient {
       credentials.map(request.addCredentials(_)).getOrElse(request)
     }
   }
+
+  /**
+    * Constructs an ''IamClient[Task]''
+    *
+    * @param iamUri the iam base uri
+    * @return a new [[IamClient]] of [[Task]] context
+    */
+  // $COVERAGE-OFF$
+  final def task()(implicit iamUri: IamUri, as: ActorSystem): IamClient[Task] = {
+    import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
+    import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+    import io.circe.generic.auto._
+    implicit val mt                             = ActorMaterializer()
+    implicit val ec                             = as.dispatcher
+    implicit val ucl: UntypedHttpClient[Future] = akkaHttpClient
+    implicit val aclsClient                     = withAkkaUnmarshaller[FullAccessControlList]
+    implicit val userClient                     = withAkkaUnmarshaller[User]
+    val underlying                              = fromFuture
+    new IamClient[Task] {
+
+      override def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]): Task[Caller] =
+        Task.deferFuture(underlying.getCaller(filterGroups))
+
+      override def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
+          implicit credentials: Option[AuthToken]): Task[FullAccessControlList] =
+        Task.deferFuture(underlying.getAcls(resource, parents, self))
+    }
+  }
+  // $COVERAGE-ON$
 
   private implicit def toAkka(token: AuthToken): OAuth2BearerToken = OAuth2BearerToken(token.value)
 

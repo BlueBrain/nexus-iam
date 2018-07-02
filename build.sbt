@@ -36,6 +36,7 @@ val akkaPersMemVersion     = "2.5.1.1"
 val akkaHttpCorsVersion    = "0.3.0"
 val akkaHttpCirceVersion   = "1.21.0"
 val asmVersion             = "6.2"
+val monixVersion           = "3.0.0-RC1"
 val shapelessVersion       = "2.3.3"
 val circeVersion           = "0.9.3"
 val journalVersion         = "3.0.19"
@@ -81,6 +82,7 @@ lazy val circeParser         = "io.circe"              %% "circe-parser"        
 lazy val circeJava8          = "io.circe"              %% "circe-java8"                % circeVersion
 lazy val circeGenericExtras  = "io.circe"              %% "circe-generic-extras"       % circeVersion
 lazy val journal             = "io.verizon.journal"    %% "core"                       % journalVersion
+lazy val monixTail           = "io.monix"              %% "monix-tail"                 % monixVersion
 lazy val pureconfig          = "com.github.pureconfig" %% "pureconfig"                 % pureconfigVersion
 lazy val pureconfigAkka      = "com.github.pureconfig" %% "pureconfig-akka"            % pureconfigVersion
 lazy val scalaTest           = "org.scalatest"         %% "scalatest"                  % scalaTestVersion
@@ -250,6 +252,7 @@ lazy val client = project
       circeJava8,
       commonsHttp,
       commonsTypes,
+      monixTail,
       akkaTestkit % Test,
       commonsTest % Test,
       mockitoCore % Test,
