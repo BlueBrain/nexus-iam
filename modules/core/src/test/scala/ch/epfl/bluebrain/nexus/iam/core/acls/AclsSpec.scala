@@ -4,8 +4,9 @@ import java.time.Clock
 import java.util.UUID
 
 import cats.instances.try_._
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, UserRef}
-import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity, User}
+import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State._

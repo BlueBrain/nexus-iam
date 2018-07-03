@@ -10,12 +10,9 @@ import cats.syntax.applicativeError._
 import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.types.identity.User
+import ch.epfl.bluebrain.nexus.iam.core.User
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
-import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure.{
-  UnauthorizedCaller,
-  UnexpectedAuthenticationFailure
-}
+import ch.epfl.bluebrain.nexus.iam.service.auth.AuthenticationFailure._
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.OidcProviderConfig
 import io.circe.DecodingFailure
 import journal.Logger

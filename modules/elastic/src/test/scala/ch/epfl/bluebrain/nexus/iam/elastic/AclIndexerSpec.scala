@@ -7,7 +7,7 @@ import akka.testkit.TestKit
 import cats.instances.future._
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticFailure.ElasticClientError
-import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder, ElasticQueryClient}
+import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder}
 import ch.epfl.bluebrain.nexus.commons.es.server.embed.ElasticServer
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
@@ -58,7 +58,7 @@ class AclIndexerSpec
   private implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
   private implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
     withAkkaUnmarshaller[QueryResults[AclDocument]]
-  private val client = ElasticClient[Future](esUri, ElasticQueryClient[Future](esUri))
+  private val client = ElasticClient[Future](esUri)
 
   private val base     = s"http://127.0.0.1/v0"
   private val settings = ElasticConfig(base, genString(length = 6), genString(length = 6))

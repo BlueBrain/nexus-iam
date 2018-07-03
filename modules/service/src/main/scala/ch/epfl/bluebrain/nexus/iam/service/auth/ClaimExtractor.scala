@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.auth
 
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import ch.epfl.bluebrain.nexus.commons.types.identity.User
+import ch.epfl.bluebrain.nexus.iam.core.User
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import ch.epfl.bluebrain.nexus.iam.service.auth.TokenId._

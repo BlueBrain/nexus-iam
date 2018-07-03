@@ -4,15 +4,16 @@ import java.time.Clock
 
 import akka.testkit.TestKit
 import cats.instances.future._
-import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder, ElasticQueryClient}
+import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder}
 import ch.epfl.bluebrain.nexus.commons.es.server.embed.ElasticServer
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.test.{Randomness, Resources}
 import ch.epfl.bluebrain.nexus.commons.types.Meta
-import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.{Pagination, QueryResults}
+import ch.epfl.bluebrain.nexus.iam.core.AuthenticatedUser
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event.PermissionsAdded
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControlList, Permission, Permissions}
@@ -56,7 +57,7 @@ class FilterAclsSpec
   private implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
   private implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
     withAkkaUnmarshaller[QueryResults[AclDocument]]
-  private val client = ElasticClient[Future](esUri, ElasticQueryClient[Future](esUri))
+  private val client = ElasticClient[Future](esUri)
 
   private val settings = ElasticConfig(esUri, genString(length = 6), genString(length = 6))
 

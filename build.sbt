@@ -24,14 +24,14 @@ scalafmt: {
 }
  */
 
-val commonsVersion  = "0.10.11"
-val serviceVersion  = "0.10.12"
-val sourcingVersion = "0.10.5"
+val commonsVersion  = "0.10.15"
+val serviceVersion  = "0.10.13"
+val sourcingVersion = "0.10.7"
 
 val akkaVersion            = "2.5.13"
 val akkaHttpVersion        = "10.0.13"
 val akkaPersCassVersion    = "0.85"
-val akkaStreamKafkaVersion = "0.21"
+val akkaStreamKafkaVersion = "0.22"
 val akkaPersMemVersion     = "2.5.1.1"
 val akkaHttpCorsVersion    = "0.3.0"
 val akkaHttpCirceVersion   = "1.21.0"
@@ -42,7 +42,7 @@ val circeVersion           = "0.9.3"
 val journalVersion         = "3.0.19"
 val scalaTestVersion       = "3.0.5"
 val pureconfigVersion      = "0.9.1"
-val mockitoVersion         = "2.18.3"
+val mockitoVersion         = "2.19.0"
 
 val aspectJVersion     = "1.8.13"
 val sigarLoaderVersion = "1.6.6"
