@@ -7,8 +7,9 @@ import cats.syntax.functor._
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
-import ch.epfl.bluebrain.nexus.commons.types.identity.{Identity, User}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.search._
+import ch.epfl.bluebrain.nexus.iam.core.User
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._

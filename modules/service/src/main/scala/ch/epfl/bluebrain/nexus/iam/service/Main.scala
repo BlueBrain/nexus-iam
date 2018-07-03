@@ -15,13 +15,11 @@ import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import cats.instances.future._
-import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder, ElasticQueryClient}
+import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.types.identity.{AnonymousUser, AuthenticatedUser}
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
-import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResults
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
@@ -29,11 +27,13 @@ import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions, UserInfo}
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
+import ch.epfl.bluebrain.nexus.iam.core.{AnonymousUser, AuthenticatedUser}
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.elastic.{AclDocument, ElasticConfig}
 import ch.epfl.bluebrain.nexus.iam.service.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.groups.UsedGroupsAggregator
+import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
@@ -41,6 +41,7 @@ import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
+import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -48,7 +49,6 @@ import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.system.SystemMetrics
 import org.apache.kafka.common.serialization.StringSerializer
-import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -183,8 +183,7 @@ object Main {
         "used-group-aggregator"
       )
 
-      val elasticQueryClient = ElasticQueryClient[Future](appConfig.elastic.baseUri)
-      val elasticClient      = ElasticClient[Future](appConfig.elastic.baseUri, elasticQueryClient)
+      val elasticClient = ElasticClient[Future](appConfig.elastic.baseUri)
       StartElasticIndexer(appConfig, elasticClient)
 
     })
@@ -210,11 +209,10 @@ object Main {
                                                mt: ActorMaterializer,
                                                cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
     import _root_.io.circe.generic.auto._
-    import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
     implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
     implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
       withAkkaUnmarshaller[QueryResults[AclDocument]]
-    val client = ElasticClient[Future](elasticConfig.baseUri, ElasticQueryClient[Future](elasticConfig.baseUri))
+    val client = ElasticClient[Future](elasticConfig.baseUri)
     FilterAcls(client, elasticConfig)
   }
 

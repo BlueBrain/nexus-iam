@@ -1,7 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.core.types
 
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{AuthenticatedRef, GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity}
+import ch.epfl.bluebrain.nexus.iam.core.AuthenticatedUser
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo
 import io.circe.syntax._
 import org.scalatest._

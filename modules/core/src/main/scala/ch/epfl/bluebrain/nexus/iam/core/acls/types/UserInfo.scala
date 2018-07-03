@@ -1,7 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls.types
 
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.types.identity.{AuthenticatedUser, Identity, User}
+import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, User}
 import io.circe.Encoder
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto._
