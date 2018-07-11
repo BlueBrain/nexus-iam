@@ -209,6 +209,7 @@ object Main {
                                                mt: ActorMaterializer,
                                                cl: UntypedHttpClient[Future]): FilterAcls[Future] = {
     import _root_.io.circe.generic.auto._
+    import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
     implicit val D: Decoder[QueryResults[AclDocument]] = ElasticDecoder[AclDocument]
     implicit val rsSearch: HttpClient[Future, QueryResults[AclDocument]] =
       withAkkaUnmarshaller[QueryResults[AclDocument]]
