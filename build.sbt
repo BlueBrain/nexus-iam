@@ -28,21 +28,20 @@ val commonsVersion  = "0.10.16"
 val serviceVersion  = "0.10.14"
 val sourcingVersion = "0.10.7"
 
-val akkaVersion            = "2.5.13"
-val akkaHttpVersion        = "10.0.13"
-val akkaPersCassVersion    = "0.85"
-val akkaStreamKafkaVersion = "0.22"
-val akkaPersMemVersion     = "2.5.1.1"
-val akkaHttpCorsVersion    = "0.3.0"
-val akkaHttpCirceVersion   = "1.21.0"
-val asmVersion             = "6.2"
-val monixVersion           = "3.0.0-RC1"
-val shapelessVersion       = "2.3.3"
-val circeVersion           = "0.9.3"
-val journalVersion         = "3.0.19"
-val scalaTestVersion       = "3.0.5"
-val pureconfigVersion      = "0.9.1"
-val mockitoVersion         = "2.19.0"
+val akkaVersion          = "2.5.13"
+val akkaHttpVersion      = "10.0.13"
+val akkaPersCassVersion  = "0.85"
+val akkaPersMemVersion   = "2.5.1.1"
+val akkaHttpCorsVersion  = "0.3.0"
+val akkaHttpCirceVersion = "1.21.0"
+val asmVersion           = "6.2"
+val monixVersion         = "3.0.0-RC1"
+val shapelessVersion     = "2.3.3"
+val circeVersion         = "0.9.3"
+val journalVersion       = "3.0.19"
+val scalaTestVersion     = "3.0.5"
+val pureconfigVersion    = "0.9.1"
+val mockitoVersion       = "2.19.0"
 
 val aspectJVersion     = "1.8.13"
 val sigarLoaderVersion = "1.6.6"
@@ -72,7 +71,6 @@ lazy val akkaHttpTestkit     = "com.typesafe.akka"     %% "akka-http-testkit"   
 lazy val akkaPersCass        = "com.typesafe.akka"     %% "akka-persistence-cassandra" % akkaPersCassVersion
 lazy val akkaSlf4j           = "com.typesafe.akka"     %% "akka-slf4j"                 % akkaVersion
 lazy val akkaStream          = "com.typesafe.akka"     %% "akka-stream"                % akkaVersion
-lazy val akkaStreamKafka     = "com.typesafe.akka"     %% "akka-stream-kafka"          % akkaStreamKafkaVersion
 lazy val akkaPersMem         = "com.github.dnvriend"   %% "akka-persistence-inmemory"  % akkaPersMemVersion
 lazy val akkaHttpCirce       = "de.heikoseeberger"     %% "akka-http-circe"            % akkaHttpCirceVersion
 lazy val akkaHttpCors        = "ch.megard"             %% "akka-http-cors"             % akkaHttpCorsVersion
@@ -115,7 +113,6 @@ lazy val core = project
       akkaHttp,
       akkaPersCass,
       akkaSlf4j,
-      akkaStreamKafka,
       circeCore,
       circeGenericExtras,
       commonsTypes,
