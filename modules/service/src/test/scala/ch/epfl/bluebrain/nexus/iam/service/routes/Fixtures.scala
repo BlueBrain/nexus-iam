@@ -38,9 +38,18 @@ trait Fixtures extends MockitoSugar {
         "http://example.com/authorize2",
         "http://example.com/token2",
         "http://example.com/userinfo2"
+      ),
+      OidcProviderConfig(
+        "service-realm",
+        "http://example.com/sa-issuer",
+        "http://example.com/cert",
+        "http://example.com/authorize",
+        "http://example.com/token",
+        "http://example.com/userinfo"
       )
     ),
-    "realm"
+    "realm",
+    "service-realm"
   )
 
   val generatorRSA = KeyPairGenerator.getInstance(JwtUtils.RSA, JwtUtils.PROVIDER)
@@ -48,6 +57,7 @@ trait Fixtures extends MockitoSugar {
 
   val randomRSAKey  = generatorRSA.generateKeyPair()
   val randomRSAKey2 = generatorRSA.generateKeyPair()
+  val randomRSAKey3 = generatorRSA.generateKeyPair()
 
   def genCredentials(id: TokenId, privateKey: PrivateKey) = {
     val claim = parse(
@@ -74,6 +84,7 @@ trait Fixtures extends MockitoSugar {
     val token = JwtCirce.encode(claim, privateKey, JwtAlgorithm.RS256)
     OAuth2BearerToken(token)
   }
+
   val userInfo = UserInfo(
     "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero",
     "Didac Montero Montero Mendez",
@@ -84,6 +95,20 @@ trait Fixtures extends MockitoSugar {
     Set("some", "other")
   )
 
+  val serviceCredentials: OAuth2BearerToken = {
+    val id = TokenId("http://example.com/sa-issuer", "sa-kid")
+    val claim = parse(
+      JwtClaim(
+        expiration = Some(Instant.now.plusSeconds(157784760).getEpochSecond),
+        issuedAt = Some(Instant.now.getEpochSecond),
+        issuer = Some(id.iss.toString())
+      ).toJson).toOption.get
+      .deepMerge(parse(
+        s"""{ "kid":"${id.kid}", "sub": "f:863a1fe1-fff2-42da-bc5d-720b13e04443:iam-service-account", "email": "noreply@epfl.ch"}""").toOption.get)
+    val token = JwtCirce.encode(claim, randomRSAKey3.getPrivate, JwtAlgorithm.RS256)
+    OAuth2BearerToken(token)
+  }
+
   implicit def claim(clients: List[DownstreamAuthClient[Future]])(implicit as: ActorSystem): ClaimExtractor = {
     import as.dispatcher
     val store = mock[CredentialsStore]
@@ -91,8 +116,10 @@ trait Fixtures extends MockitoSugar {
       .thenReturn(Future.failed(KidOrIssuerNotFound: TokenValidationFailure))
     when(store.fetchKey(TokenId("http://example.com/issuer", "kid")))
       .thenReturn(Future.successful(randomRSAKey.getPublic))
-    when(store.fetchKey(TokenId("http://example.com/issuer", "kid2")))
+    when(store.fetchKey(TokenId("http://example.com/issuer2", "kid2")))
       .thenReturn(Future.successful(randomRSAKey2.getPublic))
+    when(store.fetchKey(TokenId("http://example.com/sa-issuer", "sa-kid")))
+      .thenReturn(Future.successful(randomRSAKey3.getPublic))
 
     ClaimExtractor(store, clients)
   }

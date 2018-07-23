@@ -57,7 +57,8 @@ class DownstreamAuthClientSpec
         "http://example.com/userinfo2"
       )
     ),
-    "realm"
+    "realm",
+    "service-realm"
   )
   implicit val as = ActorSystem("as")
   implicit val mt = ActorMaterializer()

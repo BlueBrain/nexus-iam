@@ -26,6 +26,13 @@ final case class AnonymousUser()(implicit prefix: IdentityIdPrefix = IdentityIdP
   override val identities = Set(Identity.Anonymous())
 }
 
+/**
+  * Singleton representing any service account, i.e. a user belonging to the Nexus internal realm.
+  */
+case object ServiceAccount extends User {
+  override val identities: Set[Identity] = Set.empty
+}
+
 object User {
 
   implicit def userDecoder(implicit D: Decoder[Identity], C: Configuration): Decoder[User] = deriveDecoder[User]

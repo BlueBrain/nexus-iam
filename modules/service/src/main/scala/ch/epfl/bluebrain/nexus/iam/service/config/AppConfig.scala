@@ -50,7 +50,7 @@ object AppConfig {
 
   final case class AuthConfig(testMode: Boolean, adminGroups: Set[String])
 
-  final case class OidcConfig(providers: List[OidcProviderConfig], defaultRealm: String)
+  final case class OidcConfig(providers: List[OidcProviderConfig], defaultRealm: String, serviceAccountRealm: String)
 
   final case class OidcProviderConfig(realm: String,
                                       issuer: Uri,

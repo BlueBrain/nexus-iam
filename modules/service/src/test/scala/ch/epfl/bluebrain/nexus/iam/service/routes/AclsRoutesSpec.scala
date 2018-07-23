@@ -26,14 +26,14 @@ import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types._
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
-import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, User}
+import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, ServiceAccount, User}
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.elastic.types.FullAccessControlList
 import ch.epfl.bluebrain.nexus.iam.service.Main
 import ch.epfl.bluebrain.nexus.iam.service.auth.{DownstreamAuthClient, TokenId}
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig.ContextConfig
-import ch.epfl.bluebrain.nexus.iam.service.config.{AppConfig, Settings}
+import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
@@ -55,6 +55,7 @@ import org.scalatest.mockito.MockitoSugar
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.Random
+
 class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
 
   "The ACL service" should {
@@ -276,6 +277,22 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       }
     }
 
+    "get permissions from a service account" in {
+      val path = Path(s"/some/*/$rand")
+      val acls =
+        FullAccessControlList((Anonymous(), path, read), (alice, path, readWrite), (alice, path / "two", ownReadWrite))
+      when(filter(mEq(path), parents = mEq(false), self = mEq(false))(mEq(ServiceAccount)))
+        .thenReturn(Future.successful(acls))
+
+      Get(s"/acls${path.repr}") ~> addCredentials(serviceCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        val expected = jsonContentOf("/identities-acls.json",
+                                     Map(Pattern.quote("{{path1}}") -> s"$path",
+                                         Pattern.quote("{{path2}}") -> (path / "two").toString))
+        responseAs[Json] shouldEqual expected
+      }
+    }
+
     "handle downstream error codes" in {
       when(ucl.apply(Get(provider.userinfoEndpoint).addCredentials(credentialsNoUser)))
         .thenReturn(Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized))))
@@ -321,20 +338,21 @@ abstract class AclsRoutesSpecInstances
   protected val own          = Permissions(Own)
   protected val read         = Permissions(Read)
   protected val realm        = "realm"
+  protected val serviceRealm = "service-realm"
   protected val alice        = UserRef(realm, "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero")
   protected val aliceCaller  = CallerCtx(clock, AuthenticatedUser(Set(alice)))
   protected val someGroup    = GroupRef(realm, "some")
   protected val otherGroup   = GroupRef(realm, "other-group")
 
-  implicit val ec: ExecutionContextExecutor  = system.dispatcher
-  implicit val ucl                           = mock[UntypedHttpClient[Future]]
-  implicit val mt: ActorMaterializer         = ActorMaterializer()
-  implicit val tracing: TracingDirectives    = TracingDirectives()
-  val uicl                                   = HttpClient.withAkkaUnmarshaller[UserInfo]
-  val provider: AppConfig.OidcProviderConfig = oidc.providers.head
-  val cl                                     = List[DownstreamAuthClient[Future]](DownstreamAuthClient(ucl, uicl, provider))
-  implicit val claimExtractor                = claim(cl)
-  implicit val apiUri: ApiUri                = ApiUri("localhost:8080/v0")
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
+  implicit val ucl                          = mock[UntypedHttpClient[Future]]
+  implicit val mt: ActorMaterializer        = ActorMaterializer()
+  implicit val tracing: TracingDirectives   = TracingDirectives()
+  val uicl                                  = HttpClient.withAkkaUnmarshaller[UserInfo]
+  val provider                              = oidc.providers.head
+  val cl                                    = oidc.providers.map(provider => DownstreamAuthClient[Future](ucl, uicl, provider))
+  implicit val claimExtractor               = claim(cl)
+  implicit val apiUri: ApiUri               = ApiUri("localhost:8080/v0")
   implicit val contexts = ContextConfig(ContextUri("http://localhost:8080/v0/contexts/nexus/core/error/v0.1.0"),
                                         ContextUri("http://localhost:8080/v0/contexts/nexus/core/iam/v0.1.0"))
   protected val credentials = genCredentials(TokenId("http://example.com/issuer", "kid"), randomRSAKey.getPrivate)
@@ -363,7 +381,7 @@ abstract class AclsRoutesSpecInstances
                                                                                                          Acls.eval)
       val acl = Acls[Future](aggregate)
       acl.add(Path./, AccessControlList(alice -> own))(aliceCaller)
-      routes = AclsRoutes(acl, filter, usedGroups).routes
+      routes = AclsRoutes(acl, filter, usedGroups, serviceRealm).routes
       p.success(())
     }
     cluster.join(cluster.selfAddress)

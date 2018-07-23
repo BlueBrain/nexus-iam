@@ -13,7 +13,7 @@ import ch.epfl.bluebrain.nexus.commons.types.Meta
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.{Pagination, QueryResults}
-import ch.epfl.bluebrain.nexus.iam.core.AuthenticatedUser
+import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, ServiceAccount}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event.PermissionsAdded
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControlList, Permission, Permissions}
@@ -104,6 +104,15 @@ class FilterAclsSpec
 
     "search for a user which is not indexed" in {
       filter("*" / "*", self = true, parents = true)(AuthenticatedUser(Set(UserRef("realm3", "someother")))).futureValue shouldEqual FullAccessControlList()
+    }
+
+    "search for all users when called by a service account" in {
+      filter("first" / "second", self = true, parents = true)(ServiceAccount).futureValue shouldEqual FullAccessControlList(
+        (authUser, /, Permissions(Read)),
+        (userIdentity, /, Permissions(Read)),
+        (authUser, "first" / "second", Permissions(Read)),
+        (userIdentity, "first" / "second", Permissions(Write))
+      )
     }
 
     "search on path /*/*/*/*/*/*" in {
