@@ -149,7 +149,8 @@ object Main {
                      appConfig.http.prefix).routes
       }
 
-      val aclsRoutes = uriPrefix(apiUri)(AclsRoutes(acl, aclsFilter(appConfig.elastic), usedGroups).routes)
+      val aclsRoutes = uriPrefix(apiUri)(
+        AclsRoutes(acl, aclsFilter(appConfig.elastic), usedGroups, appConfig.oidc.serviceAccountRealm).routes)
       val authRoutes = uriPrefix(apiUri)(AuthRoutes(downStreamAuthClients, usedGroups).routes)
       val route = handleRejections(corsRejectionHandler) {
         cors(corsSettings)(staticRoutes ~ aclsRoutes ~ authRoutes)

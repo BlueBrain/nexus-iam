@@ -39,7 +39,7 @@ class FilterAcls[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
     * @param path    the path to match. It can be '/a/b/c' or it can have the asterisk (*) character to denote a segment of the path with any match
     * @param parents decides whether it should match only the provided ''path'' (false) or the parents also (true)
     * @param self    decides whether it should match only the provided ''identities'' (true) or any identity which has the right own access (true)
-    * @param user the implicitly available user which provides the authenticated identities to match
+    * @param user    the implicitly available user which provides the authenticated identities to match
     */
   def apply(path: Path, parents: Boolean, self: Boolean)(implicit user: User): F[FullAccessControlList] =
     apply(user.identities, path, parents, self)

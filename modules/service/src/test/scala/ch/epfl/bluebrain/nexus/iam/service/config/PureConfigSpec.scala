@@ -58,7 +58,8 @@ class PureConfigSpec extends WordSpecLike with Matchers with ScalatestRouteTest 
             "http://localhost:8081/HBP/oauth2/userinfo"
           )
         ),
-        "BBP"
+        "BBP",
+        "service-realm"
       )
 
       appConfig.context shouldEqual ContextConfig(
