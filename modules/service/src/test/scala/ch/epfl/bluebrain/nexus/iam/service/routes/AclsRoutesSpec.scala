@@ -166,6 +166,35 @@ class AclsRoutesSpec extends AclsRoutesSpecInstances with Resources {
       }
     }
 
+    "reject write operations from a service account" in {
+      val path = Path(s"/some/$rand")
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
+        )
+      ) ~> addCredentials(serviceCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+      Put(
+        s"/acls${path.repr}",
+        HttpEntity(
+          `application/json`,
+          """{"acl": [{"identity": {"@type": "Anonymous"}, "permissions": ["own", "read", "write"] }, {"identity": {"realm": "realm", "sub": "f:9d46ddd6-134e-44d6-aa74-bdf00f48dfce:dmontero", "@type": "UserRef"}, "permissions": ["read", "write"] } ] }"""
+        )
+      ) ~> addCredentials(credentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+      Delete(s"/acls${path.repr}") ~> addCredentials(serviceCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+      Patch(s"/acls${path.repr}", HttpEntity(`application/json`, contentOf("/patch/subtract_1.json"))) ~> addCredentials(
+        serviceCredentials) ~> routes ~> check {
+        status shouldEqual StatusCodes.Forbidden
+      }
+    }
+
     "clear permissions" in {
       val path = Path(s"/some/$rand")
       Put(
