@@ -36,11 +36,10 @@ trait IamClient[F[_]] {
   /**
     * Retrieve the current ''acls'' for some particular ''resource''
     *
-    * @param resource the resource against which to check the acls
-    * @param parents  decides whether it should match only the provided ''path'' (false)
-    *                 or the parents also (true)
-    * @param self     decides whether it should match only the provided ''identities'' (true)
-    *                 or any identity which has the right own access (true)    * @param credentials    a possibly available token
+    * @param resource    the resource against which to check the acls
+    * @param parents     matches only the exact ''path'' (false) or its parents also (true)
+    * @param self        matches only the caller identities
+    * @param credentials an optionally available token
     */
   def getAcls(resource: Address, parents: Boolean = false, self: Boolean = false)(
       implicit credentials: Option[AuthToken]): F[FullAccessControlList]
@@ -102,7 +101,7 @@ object IamClient {
         .recoverWith[FullAccessControlList] { case e => recover(e, resource) }
     }
 
-    def recover(th: Throwable, resource: Address) = th match {
+    private def recover(th: Throwable, resource: Address) = th match {
       case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
         Future.failed(UnauthorizedAccess)
       case ur: UnexpectedUnsuccessfulHttpResponse =>
