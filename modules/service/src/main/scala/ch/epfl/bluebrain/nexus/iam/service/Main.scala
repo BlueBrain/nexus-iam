@@ -13,7 +13,6 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import ch.epfl.bluebrain.nexus.commons.es.client.ElasticDecoder
-import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import cats.instances.future._
@@ -39,7 +38,6 @@ import ch.epfl.bluebrain.nexus.iam.service.auth._
 import ch.epfl.bluebrain.nexus.iam.service.config.Settings
 import ch.epfl.bluebrain.nexus.iam.service.groups.UsedGroupsAggregator
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
-import ch.epfl.bluebrain.nexus.iam.service.queue.KafkaPublisher
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
@@ -48,7 +46,6 @@ import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.system.SystemMetrics
-import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -169,15 +166,6 @@ object Main {
           logger.info(s"Bound to '${binding.localAddress.getHostString}': '${binding.localAddress.getPort}'")
         case _ => Await.result(as.terminate(), 3.seconds)
       }
-
-      KafkaPublisher.start(
-        appConfig.kafka.permissionsProjectionId,
-        appConfig.persistence.queryJournalPlugin,
-        TaggingAdapter.tag,
-        "kafka-permissions-publisher",
-        ProducerSettings(as, new StringSerializer, new StringSerializer),
-        appConfig.kafka.permissionsTopic
-      )
 
       implicit val ee: Encoder[Event] = eventEncoder(apiUri)
       SequentialTagIndexer.start[Event](

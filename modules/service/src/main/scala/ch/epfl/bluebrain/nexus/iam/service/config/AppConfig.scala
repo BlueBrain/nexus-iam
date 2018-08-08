@@ -26,7 +26,6 @@ final case class AppConfig(description: DescriptionConfig,
                            auth: AuthConfig,
                            oidc: OidcConfig,
                            context: ContextConfig,
-                           kafka: KafkaConfig,
                            elastic: ElasticConfig)
 
 object AppConfig {
@@ -61,7 +60,5 @@ object AppConfig {
                                       userinfoEndpoint: Uri)
 
   final case class ContextConfig(error: ContextUri, iam: ContextUri)
-
-  final case class KafkaConfig(permissionsTopic: String, permissionsProjectionId: String)
 
 }

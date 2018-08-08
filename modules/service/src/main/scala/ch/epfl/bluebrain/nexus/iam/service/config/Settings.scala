@@ -34,7 +34,6 @@ class Settings(config: Config) extends Extension {
     loadConfigOrThrow[AuthConfig](config, "app.auth"),
     removeUnsetProviders(loadConfigOrThrow[OidcConfig](config, "app.oidc")),
     loadConfigOrThrow[ContextConfig](config, "app.context"),
-    loadConfigOrThrow[KafkaConfig](config, "app.kafka"),
     loadConfigOrThrow[ElasticConfig](config, "app.elastic")
   )
 
