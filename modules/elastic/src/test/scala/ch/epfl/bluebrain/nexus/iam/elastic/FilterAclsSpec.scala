@@ -106,8 +106,12 @@ class FilterAclsSpec
       filter("*" / "*", self = true, parents = true)(AuthenticatedUser(Set(UserRef("realm3", "someother")))).futureValue shouldEqual FullAccessControlList()
     }
 
-    "search for all users when called by a service account" in {
-      filter("first" / "second", self = true, parents = true)(ServiceAccount).futureValue shouldEqual FullAccessControlList(
+    "return empty when called by a service account with self true" in {
+      filter("first" / "second", self = true, parents = true)(ServiceAccount).futureValue shouldEqual FullAccessControlList()
+    }
+
+    "search for all users when called by a service account with self false" in {
+      filter("first" / "second", self = false, parents = true)(ServiceAccount).futureValue shouldEqual FullAccessControlList(
         (authUser, /, Permissions(Read)),
         (userIdentity, /, Permissions(Read)),
         (authUser, "first" / "second", Permissions(Read)),

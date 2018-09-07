@@ -9,7 +9,7 @@ import ch.epfl.bluebrain.nexus.commons.es.client.ElasticClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.search._
-import ch.epfl.bluebrain.nexus.iam.core.User
+import ch.epfl.bluebrain.nexus.iam.core.{ServiceAccount, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._
@@ -41,37 +41,52 @@ class FilterAcls[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
     * @param self    decides whether it should match only the provided ''identities'' (true) or any identity which has the right own access (true)
     * @param user    the implicitly available user which provides the authenticated identities to match
     */
-  def apply(path: Path, parents: Boolean, self: Boolean)(implicit user: User): F[FullAccessControlList] =
-    apply(user.identities, path, parents, self)
+  def apply(path: Path, parents: Boolean, self: Boolean)(implicit user: User): F[FullAccessControlList] = {
+    user match {
+      case ServiceAccount if self => F.pure(FullAccessControlList())
+      case ServiceAccount =>
+        val indices: Set[String] = if (self) user.identities.map(indexId) else Set.empty
+        client
+          .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
+          .map(queryResultsToAcls(_, path, user.identities, parents, self, true))
+      case _ =>
+        val indices: Set[String] = if (self) user.identities.map(indexId) else Set.empty
+        client
+          .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
+          .map(queryResultsToAcls(_, path, user.identities, parents, self, false))
+    }
 
-  def apply(identities: Set[Identity], path: Path, parents: Boolean, self: Boolean): F[FullAccessControlList] = {
-    val indices: Set[String] = if (self) identities.map(indexId) else Set.empty
-    client
-      .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
-      .map { qr =>
-        val aclList = qr.results
-          .foldLeft(ListMap.empty[(Path, Identity), Vector[QueryResult[AclDocument]]]) { (acc, c) =>
-            val existing = acc.getOrElse(c.source.path -> c.source.identity, Vector.empty)
-            acc + ((c.source.path, c.source.identity) -> (existing :+ c))
-          }
-          .map {
-            case ((p, identity), res) =>
-              val permissions = res.foldLeft(Permissions.empty)((perms, current) => perms + current.source.permission)
-              FullAccessControl(identity, p, permissions)
-          }
-          .toList
-        if (self) FullAccessControlList(aclList)
-        else {
-          val filtered = ComputeParents(aclList, identities)
-          if (parents)
-            FullAccessControlList(filtered)
-          else
-            FullAccessControlList(filtered.filter { case FullAccessControl(_, p, _) => p.length == path.length })
-        }
-      }
   }
 
   private def sortByPath: SortList = SortList(List(Sort("path")))
+
+  private def queryResultsToAcls(qr: QueryResults[AclDocument],
+                                 path: Path,
+                                 identities: Set[Identity],
+                                 parents: Boolean,
+                                 self: Boolean,
+                                 serviceAccount: Boolean): FullAccessControlList = {
+    val aclList = qr.results
+      .foldLeft(ListMap.empty[(Path, Identity), Vector[QueryResult[AclDocument]]]) { (acc, c) =>
+        val existing = acc.getOrElse(c.source.path -> c.source.identity, Vector.empty)
+        acc + ((c.source.path, c.source.identity) -> (existing :+ c))
+      }
+      .map {
+        case ((p, identity), res) =>
+          val permissions =
+            res.foldLeft(Permissions.empty)((perms, current) => perms + current.source.permission)
+          FullAccessControl(identity, p, permissions)
+      }
+      .toList
+    if (self || serviceAccount) FullAccessControlList(aclList)
+    else {
+      val filtered = ComputeParents(aclList, identities)
+      if (parents)
+        FullAccessControlList(filtered)
+      else
+        FullAccessControlList(filtered.filter { case FullAccessControl(_, p, _) => p.length == path.length })
+    }
+  }
 
 }
 
