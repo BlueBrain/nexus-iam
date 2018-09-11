@@ -5,7 +5,7 @@ import ch.epfl.bluebrain.nexus.commons.http.ContextUri
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticConfig
 import ch.epfl.bluebrain.nexus.iam.service.config.AppConfig._
 
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * Case class which aggregates the configuration parameters
@@ -41,7 +41,7 @@ object AppConfig {
 
   final case class RuntimeConfig(defaultTimeout: FiniteDuration)
 
-  final case class ClusterConfig(passivationTimeout: Duration, shards: Int, seeds: Option[String]) {
+  final case class ClusterConfig(passivationTimeout: FiniteDuration, shards: Int, seeds: Option[String]) {
     lazy val seedAddresses: Set[String] =
       seeds.map(_.split(",").toSet).getOrElse(Set.empty[String])
   }

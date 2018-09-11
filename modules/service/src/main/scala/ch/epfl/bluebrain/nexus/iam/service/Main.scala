@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
+import java.nio.file.Paths
 import java.time.Clock
 
 import _root_.io.circe.Encoder
@@ -43,7 +44,7 @@ import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.system.SystemMetrics
 
@@ -54,13 +55,23 @@ import scala.util.{Failure, Success}
 // $COVERAGE-OFF$
 object Main {
 
+  private def externalConfig: Config = {
+    sys.env.get("IAM_CONFIG_FILE") orElse sys.props.get("iam.config.file") map { str =>
+      val file = Paths.get(str).toAbsolutePath.toFile
+      ConfigFactory.parseFile(file)
+    } getOrElse ConfigFactory.empty()
+  }
+
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
+    val config = (externalConfig withFallback ConfigFactory.load()).resolve()
+
+    // reconfigure Kamon with the merged configuration
+    Kamon.reconfigure(config)
     SystemMetrics.startCollecting()
     Kamon.loadReportersFromConfig()
 
     // generic implicits
-    val config    = ConfigFactory.load()
     val appConfig = new Settings(config).appConfig
 
     implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
@@ -70,7 +81,8 @@ object Main {
     implicit val tm: Timeout                   = Timeout(appConfig.runtime.defaultTimeout)
     val uicl                                   = HttpClient.withAkkaUnmarshaller[UserInfo]
     val logger                                 = Logging(as, getClass)
-    val sourcingSettings                       = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin)
+    val sourcingSettings = SourcingAkkaSettings(journalPluginId = appConfig.persistence.queryJournalPlugin,
+                                                passivationTimeout = appConfig.cluster.passivationTimeout)
     val corsSettings = CorsSettings.defaultSettings
       .copy(allowedMethods = List(GET, PUT, POST, DELETE, OPTIONS, HEAD), exposedHeaders = List(Location.name))
 
