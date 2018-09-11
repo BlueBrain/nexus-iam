@@ -103,7 +103,7 @@ object BootstrapService {
     * @param D      the implicitly available ''UserInfo''
     */
   final def apply(config: Config)(implicit D: Decoder[UserInfo]): BootstrapService[None.type] =
-    new BootstrapService(None, None)
+    new BootstrapService(config, None, None)
 
   /**
     * Constructs a ''BootstrapService'' with prestart and poststop functions

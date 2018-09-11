@@ -14,7 +14,7 @@ object Main {
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
     import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.hbp._
-    val config = ExternalConfig("IAM_BBP_CONFIG_FILE", "iam-bbp.config.file")
+    val config = ExternalConfig("IAM_HBP_CONFIG_FILE", "iam-hbp.config.file")
     val _      = BootstrapService(config, startMonitoring(config), stopMonitoring)
   }
 
