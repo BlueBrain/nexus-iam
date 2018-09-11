@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.hbp
 
-import ch.epfl.bluebrain.nexus.iam.oidc.BootstrapService
+import ch.epfl.bluebrain.nexus.iam.oidc.{BootstrapService, ExternalConfig}
+import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.system.SystemMetrics
 
@@ -13,10 +14,12 @@ object Main {
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
     import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.hbp._
-    val _ = BootstrapService(startMonitoring, stopMonitoring)
+    val config = ExternalConfig("IAM_BBP_CONFIG_FILE", "iam-bbp.config.file")
+    val _      = BootstrapService(config, startMonitoring(config), stopMonitoring)
   }
 
-  private def startMonitoring = () => {
+  private def startMonitoring(config: Config) = () => {
+    Kamon.reconfigure(config)
     SystemMetrics.startCollecting()
     Kamon.loadReportersFromConfig()
   }

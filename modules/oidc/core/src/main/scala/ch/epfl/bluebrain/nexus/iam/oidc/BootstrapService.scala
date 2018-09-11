@@ -13,7 +13,7 @@ import ch.epfl.bluebrain.nexus.commons.iam.auth.UserInfo
 import ch.epfl.bluebrain.nexus.iam.oidc.config.{OidcProviderConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.oidc.defaults.{ShardedOidcOps, StateActor, UserInfoActor}
 import ch.epfl.bluebrain.nexus.iam.oidc.routes.{AuthRoutes, ExceptionHandling, RejectionHandling, StaticRoutes}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.Config
 import io.circe.Decoder
 
 import scala.concurrent.duration._
@@ -24,17 +24,17 @@ import scala.util.Success
 /**
   * Initializes the IAM Proxy service
   *
+  * @param config   the system configuration
   * @param preStart an optional function that gets called before starting the service
   * @param postStop an optional function that gets called after stopping the service
   * @param D        the implicitly available decoder for ''UserInfo''
   * @tparam A the generic type response of the ''preStart'' and ''postStop'' functions
   */
-class BootstrapService[A](preStart: Option[() => A] = None, postStop: Option[() => A])(
+class BootstrapService[A](config: Config, preStart: Option[() => A] = None, postStop: Option[() => A])(
     implicit val D: Decoder[UserInfo]) {
 
   preStart.map(_.apply())
   // generic implicits
-  val config    = ConfigFactory.load()
   val appConfig = new Settings(config).appConfig
 
   implicit val as: ActorSystem               = ActorSystem(appConfig.description.ActorSystemName, config)
@@ -99,20 +99,25 @@ object BootstrapService {
   /**
     * Constructs a ''BootstrapService'' without prestart or poststop functions
     *
-    * @param D the implicitly available ''UserInfo''
+    * @param config the system configuration
+    * @param D      the implicitly available ''UserInfo''
     */
-  final def apply(implicit D: Decoder[UserInfo]): BootstrapService[None.type] = new BootstrapService(None, None)
+  final def apply(config: Config)(implicit D: Decoder[UserInfo]): BootstrapService[None.type] =
+    new BootstrapService(None, None)
 
   /**
     * Constructs a ''BootstrapService'' with prestart and poststop functions
     *
+    * @param config   the system configuration
     * @param preStart the prestart function
     * @param postStop the poststop function
     * @param D        the implicitly available decoder for ''UserInfo''
     * @tparam A the generic type response of the prestart and poststop functions
     */
-  final def apply[A](preStart: () => A, postStop: () => A)(implicit D: Decoder[UserInfo]): BootstrapService[A] =
-    new BootstrapService(Some(preStart), Some(postStop))
+  final def apply[A](config: Config, preStart: () => A, postStop: () => A)(
+      implicit D: Decoder[UserInfo]): BootstrapService[A] =
+    new BootstrapService(config, Some(preStart), Some(postStop))
 
 }
+
 // $COVERAGE-ON$

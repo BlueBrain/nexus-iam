@@ -64,7 +64,7 @@ object Main {
 
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
-    val config = externalConfig withFallback ConfigFactory.load()
+    val config = (externalConfig withFallback ConfigFactory.load()).resolve()
 
     // reconfigure Kamon with the merged configuration
     Kamon.reconfigure(config)
