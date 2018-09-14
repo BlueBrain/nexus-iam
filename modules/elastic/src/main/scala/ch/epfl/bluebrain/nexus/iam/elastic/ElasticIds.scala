@@ -17,7 +17,7 @@ object ElasticIds {
     * @param config   the configuration from where to take the prefix for the id
     */
   private[elastic] implicit def indexId(identity: Identity)(implicit config: ElasticConfig): String =
-    URLEncoder.encode(s"${config.indexPrefix}_${identity.id.show}", "UTF-8").toLowerCase
+    s"${config.indexPrefix}_${identity.id.show}".toLowerCase
 
   /**
     * Generates the ElasticSearch Document id from the provided ''path'' and ''permission''.

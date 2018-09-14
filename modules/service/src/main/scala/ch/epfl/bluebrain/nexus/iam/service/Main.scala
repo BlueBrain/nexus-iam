@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.service
 
+import java.nio.file.Paths
 import java.time.Clock
 
 import _root_.io.circe.{Decoder, Encoder}
@@ -43,7 +44,7 @@ import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.system.SystemMetrics
 
@@ -54,13 +55,25 @@ import scala.util.{Failure, Success}
 // $COVERAGE-OFF$
 object Main {
 
-  @SuppressWarnings(Array("UnusedMethodParameter"))
-  def main(args: Array[String]): Unit = {
+  private def loadConfig(): Config = {
+    sys.env.get("IAM_CONFIG_FILE") orElse sys.props.get("iam.config.file") map { str =>
+      val file = Paths.get(str).toAbsolutePath.toFile
+      ConfigFactory.parseFile(file)
+    } getOrElse ConfigFactory.empty()
+  }
+
+  private def startMonitoring(config: Config): Unit = {
+    Kamon.reconfigure(config)
     SystemMetrics.startCollecting()
     Kamon.loadReportersFromConfig()
+  }
+
+  @SuppressWarnings(Array("UnusedMethodParameter"))
+  def main(args: Array[String]): Unit = {
+    val config = loadConfig()
+    startMonitoring(config)
 
     // generic implicits
-    val config    = ConfigFactory.load()
     val appConfig = new Settings(config).appConfig
 
     implicit val as: ActorSystem               = ActorSystem(appConfig.description.actorSystemName, config)
