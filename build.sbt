@@ -24,12 +24,12 @@ scalafmt: {
 }
  */
 
-val commonsVersion  = "0.10.16"
-val serviceVersion  = "0.10.14"
+val commonsVersion  = "0.10.28"
+val serviceVersion  = "0.10.16"
 val sourcingVersion = "0.10.7"
 
-val akkaVersion          = "2.5.13"
-val akkaHttpVersion      = "10.1.3"
+val akkaVersion          = "2.5.16"
+val akkaHttpVersion      = "10.1.5"
 val akkaPersCassVersion  = "0.85"
 val akkaPersMemVersion   = "2.5.1.1"
 val akkaHttpCorsVersion  = "0.3.0"

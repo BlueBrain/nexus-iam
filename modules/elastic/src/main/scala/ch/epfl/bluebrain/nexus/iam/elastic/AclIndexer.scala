@@ -89,7 +89,7 @@ class AclIndexer[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
 
   private def createIndexIfNotExist(index: String): F[Unit] =
     if (!indices(index))
-      client.createIndexIfNotExist(index, indexJson).map(_ => indices += index)
+      client.createIndex(index, indexJson).map(_ => indices += index)
     else
       F.pure(())
 

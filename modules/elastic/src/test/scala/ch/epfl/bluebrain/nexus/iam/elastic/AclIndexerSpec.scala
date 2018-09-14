@@ -1,12 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.elastic
 
-import java.net.URLEncoder
 import java.time.Clock
 
 import akka.testkit.TestKit
 import cats.instances.future._
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.commons.es.client.ElasticFailure.ElasticClientError
 import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder}
 import ch.epfl.bluebrain.nexus.commons.es.server.embed.ElasticServer
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
@@ -67,7 +65,7 @@ class AclIndexerSpec
     client.search[AclDocument](Json.obj("query" -> Json.obj("match_all" -> Json.obj())))(Pagination(0, 100))
 
   private def indexId(identity: Identity): String =
-    URLEncoder.encode(s"${settings.indexPrefix}_${identity.id.show}", "UTF-8").toLowerCase
+    s"${settings.indexPrefix}_${identity.id.show}".toLowerCase
 
   private def genPath = genString(length = 4) / genString(length = 4) / genString(length = 4)
 
@@ -93,15 +91,13 @@ class AclIndexerSpec
       val event = PermissionsAdded(path1, AccessControlList(anon -> Permissions(Read)), meta)
       val index = indexId(anon)
 
-      whenReady(client.existsIndex(index).failed) { e =>
-        e shouldBe a[ElasticClientError]
-      }
+      client.existsIndex(index).futureValue shouldEqual false
       indexer(event).futureValue
       eventually {
         val rs = getAll.futureValue
         rs.results.size shouldEqual 1
         rs.results.head.source shouldEqual AclDocument(path1, anon, Read, meta.instant, meta.instant)
-        client.existsIndex(index).futureValue shouldEqual (())
+        client.existsIndex(index).futureValue shouldEqual true
       }
     }
 
@@ -113,9 +109,7 @@ class AclIndexerSpec
                          meta1)
       val index = indexId(userIdentity)
 
-      whenReady(client.existsIndex(index).failed) { e =>
-        e shouldBe a[ElasticClientError]
-      }
+      client.existsIndex(index).futureValue shouldEqual false
       indexer(event).futureValue
       eventually {
         getAll.futureValue.results should contain theSameElementsAs (
@@ -123,7 +117,7 @@ class AclIndexerSpec
             permsResults(path1, anon, Permissions(Write, Own), meta1, meta1) ++
             permsResults(path1, userIdentity, Permissions(Read, Write), meta1, meta1)
         )
-        client.existsIndex(index).futureValue shouldEqual (())
+        client.existsIndex(index).futureValue shouldEqual true
       }
     }
 

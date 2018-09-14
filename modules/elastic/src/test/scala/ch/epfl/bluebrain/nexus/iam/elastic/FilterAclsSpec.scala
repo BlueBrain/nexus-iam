@@ -25,6 +25,7 @@ import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import io.circe.{Decoder, Json}
 import io.circe.java8.time._
+import org.scalactic.Equality
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 
@@ -64,6 +65,10 @@ class FilterAclsSpec
   private val filter = FilterAcls(client, settings)
   private def getAll: Future[QueryResults[AclDocument]] =
     client.search[AclDocument](Json.obj("query" -> Json.obj("match_all" -> Json.obj())))(Pagination(0, 10000))
+
+  private implicit val faclEquality: Equality[FullAccessControlList] =
+    (a: FullAccessControlList, b: Any) =>
+      b.isInstanceOf[FullAccessControlList] && b.asInstanceOf[FullAccessControlList].acl.toSet == a.acl.toSet
 
   "A FilterAcls" should {
     val indexer                = AclIndexer(client, settings)
