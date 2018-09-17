@@ -56,10 +56,11 @@ import scala.util.{Failure, Success}
 object Main {
 
   private def loadConfig(): Config = {
-    sys.env.get("IAM_CONFIG_FILE") orElse sys.props.get("iam.config.file") map { str =>
+    val cfg = sys.env.get("IAM_CONFIG_FILE") orElse sys.props.get("iam.config.file") map { str =>
       val file = Paths.get(str).toAbsolutePath.toFile
       ConfigFactory.parseFile(file)
     } getOrElse ConfigFactory.empty()
+    (cfg withFallback ConfigFactory.load()).resolve()
   }
 
   private def startMonitoring(config: Config): Unit = {
