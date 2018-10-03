@@ -42,20 +42,17 @@ class FilterAcls[F[_]](client: ElasticClient[F])(implicit config: ElasticConfig,
     * @param user    the implicitly available user which provides the authenticated identities to match
     */
   def apply(path: Path, parents: Boolean, self: Boolean)(implicit user: User): F[FullAccessControlList] = {
+    def search(serviceAccount: Boolean) = {
+      val indices: Set[String] = if (self) user.identities.map(indexId) else Set(config.indexPrefix + "_*")
+      client
+        .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
+        .map(queryResultsToAcls(_, path, user.identities, parents, self, serviceAccount))
+    }
     user match {
       case ServiceAccount if self => F.pure(FullAccessControlList())
-      case ServiceAccount =>
-        val indices: Set[String] = if (self) user.identities.map(indexId) else Set.empty
-        client
-          .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
-          .map(queryResultsToAcls(_, path, user.identities, parents, self, true))
-      case _ =>
-        val indices: Set[String] = if (self) user.identities.map(indexId) else Set.empty
-        client
-          .search[AclDocument](QueryBuilder(path, parents, self), indices)(pagination, sort = sortByPath)
-          .map(queryResultsToAcls(_, path, user.identities, parents, self, false))
+      case ServiceAccount         => search(serviceAccount = true)
+      case _                      => search(serviceAccount = false)
     }
-
   }
 
   private def sortByPath: SortList = SortList(List(Sort("path")))
