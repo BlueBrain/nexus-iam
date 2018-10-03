@@ -12,7 +12,7 @@ import io.circe.Decoder
 final case class TokenId(iss: Uri, kid: String)
 
 object TokenId {
-  final implicit val tokenIdDecoder: Decoder[TokenId] = Decoder.forProduct2[String, String, TokenId]("iss", "kid") {
+  final implicit val tokenIdDecoder: Decoder[TokenId] = Decoder.forProduct2[TokenId, String, String]("iss", "kid") {
     case (iss, kid) => TokenId(iss, kid)
   }
 }

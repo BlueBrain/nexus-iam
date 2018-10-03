@@ -25,7 +25,7 @@ object UserInfoDecoder {
       def toSet(value: String): Set[String] =
         value.split(",").filterNot(_.trim.isEmpty).toSet
 
-      Decoder.forProduct7[String, String, String, String, String, String, String, UserInfo]("sub",
+      Decoder.forProduct7[UserInfo, String, String, String, String, String, String, String]("sub",
                                                                                             "name",
                                                                                             "preferred_username",
                                                                                             "given_name",
