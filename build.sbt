@@ -24,7 +24,7 @@ scalafmt: {
 }
  */
 
-val commonsVersion  = "0.10.31"
+val commonsVersion  = "0.10.35"
 val serviceVersion  = "0.10.17"
 val sourcingVersion = "0.10.8"
 
@@ -41,7 +41,7 @@ val circeVersion         = "0.10.0"
 val journalVersion       = "3.0.19"
 val scalaTestVersion     = "3.0.5"
 val pureconfigVersion    = "0.9.2"
-val mockitoVersion       = "2.22.0"
+val mockitoVersion       = "2.23.0"
 
 val aspectJVersion     = "1.8.13"
 val sigarLoaderVersion = "1.6.6"
