@@ -30,7 +30,7 @@ val sourcingVersion = "0.10.8"
 
 val akkaVersion          = "2.5.17"
 val akkaHttpVersion      = "10.1.5"
-val akkaPersCassVersion  = "0.90"
+val akkaPersCassVersion  = "0.91"
 val akkaPersMemVersion   = "2.5.1.1"
 val akkaHttpCorsVersion  = "0.3.1"
 val akkaHttpCirceVersion = "1.22.0"
