@@ -1,2 +1,0 @@
-curl -H "Authorization: Bearer ***" -H "Content-Type: application/json" -XPUT "https://nexus.example.com/v0/acls/myorg" \
-  -d '{"acl":[{"permissions":["read","write"],"identity":{"@type":"GroupRef","realm":"realm","group":"students"}}]}'

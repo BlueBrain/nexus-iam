@@ -1,1 +1,0 @@
-curl -H "Authorization: Bearer ***" "https://nexus.example.com/v0/acls/myorg/mydom/myschema/*/*?self=true"
