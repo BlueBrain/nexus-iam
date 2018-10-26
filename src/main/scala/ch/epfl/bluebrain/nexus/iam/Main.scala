@@ -13,7 +13,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.Settings
-import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, ServiceDescriptionRoutes}
+import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -67,7 +67,7 @@ object Main {
 
     val aclRoutes   = new AclsRoutes(new Acls[Task]()).routes
     val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
-    val serviceDesc = ServiceDescriptionRoutes(appConfig.description).routes
+    val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")
