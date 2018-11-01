@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, Permissions}
+import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, AccessControlLists, Permission}
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 class Acls[F[_]] {
@@ -24,7 +24,8 @@ class Acls[F[_]] {
     * @param ctx         the implicit identity context calling this action
     * @return the resulting permissions in an ''F[_]'' context
     */
-  def subtract(path: Path, identity: Identity, permissions: Permissions)(implicit ctx: Identity): F[Permissions] = ???
+  def subtract(path: Path, identity: Identity, permissions: Set[Permission])(
+      implicit ctx: Identity): F[Set[Permission]] = ???
 
   /**
     * Overrides ''acl'' on a ''path''
@@ -42,4 +43,11 @@ class Acls[F[_]] {
     * @return Unit in an ''F[_]'' context if the action was successful
     */
   def clear(path: Path)(implicit ctx: Identity): F[Unit] = ???
+
+  /**
+    * Fetches the entire ACLs for a ''path''.
+    *
+    * @param path the path for where to fetch the ACls
+    */
+  def fetch(path: Path): F[AccessControlLists] = ???
 }
