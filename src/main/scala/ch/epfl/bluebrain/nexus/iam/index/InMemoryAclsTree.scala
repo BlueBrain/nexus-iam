@@ -1,6 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.index
-import cats.Applicative
-import cats.syntax.applicative._
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.BiFunction
+
+import cats.Id
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
@@ -9,39 +11,42 @@ import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path.Segment
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 
 /**
   * An in memory implementation of [[AclsIndex]]. It uses a tree structure, stored in the ''tree'' map.
   * Every key on the map is a [[Path]] and its values are a set of children [[Path]]s. In this way one can
   * navigate down the tree.
   *
-  * Note: This implementation is not Thread safe but can be used safely within an Actor.
-  *
   * @param tree the data structure used to build the tree with the parent paths and the children paths
   * @param acls a data structure used to store the ACLs for a path
-  * @tparam F the monadic type
   */
-class InMemoryAclsTree[F[_]: Applicative] private (tree: mutable.Map[Path, Set[Path]],
-                                                   acls: mutable.Map[Path, AccessControlList])
-    extends AclsIndex[F] {
+class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
+                                acls: ConcurrentHashMap[Path, RevAccessControlList])
+    extends AclsIndex[Id] {
 
   private val any = "*"
 
-  override def replace(path: Path, acl: AccessControlList): F[Unit] = {
+  override def replace(path: Path, rev: Long, acl: AccessControlList): Id[Boolean] = {
     @tailrec
-    def inner(p: Path, children: Set[Path], aclOpt: Option[AccessControlList]): Unit = {
-      tree.merge(p, children, _ ++ children)
-      aclOpt.map(a => acls += (p -> a))
-      if (!p.isEmpty) inner(p.tail, Set(p), None)
+    def inner(p: Path, children: Set[Path]): Unit = {
+      tree.merge(p, children, (current, _) => current ++ children)
+      if (!p.isEmpty) inner(p.tail, Set(p))
     }
 
-    inner(path, Set.empty, Some(acl))
-    ().pure
+    val f: BiFunction[RevAccessControlList, RevAccessControlList, RevAccessControlList] = (curr, _) =>
+      curr match {
+        case (currRev, _) if rev > currRev => rev -> acl
+        case other                         => other
+    }
+    val (updatedRev, updatedAcl) = acls.merge(path, rev -> acl, f)
+
+    val update = updatedRev == rev && updatedAcl == acl
+    if (update) inner(path, Set.empty)
+    update
   }
 
   override def get(path: Path, ancestors: Boolean, self: Boolean)(
-      implicit identities: Set[Identity]): F[AccessControlLists] = {
+      implicit identities: Set[Identity]): Id[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
       def containsOwn(acl: AccessControlList): Boolean =
@@ -58,13 +63,13 @@ class InMemoryAclsTree[F[_]: Applicative] private (tree: mutable.Map[Path, Set[P
 
     if (self) {
       val result = if (ancestors) getWithAncestors(path) else get(path)
-      result.filter(identities).removeEmpty.pure
+      result.filter(identities).removeEmpty
     } else {
       val result = removeNotOwn(getWithAncestors(path))
       if (ancestors)
-        result.removeEmpty.pure
+        result.removeEmpty
       else
-        AccessControlLists(result.value.filterKeys(_.length == path.length)).removeEmpty.pure
+        AccessControlLists(result.value.filterKeys(_.length == path.length)).removeEmpty
     }
   }
 
@@ -82,9 +87,11 @@ class InMemoryAclsTree[F[_]: Applicative] private (tree: mutable.Map[Path, Set[P
     def inner(toConsume: Vector[String]): AccessControlLists = {
       if (toConsume.contains(any)) {
         val consumed = toConsume.takeWhile(_ != any)
-        tree.get(pathOf(consumed)) match {
+        tree.getSafe(pathOf(consumed)) match {
           case Some(children) if consumed.size + 1 == segments.size =>
-            AccessControlLists(acls.filterKeys(children.contains).toMap)
+            AccessControlLists(children.foldLeft(Map.empty[Path, AccessControlList]) { (acc, p) =>
+              acls.getSafe(p).map { case (_, acl) => acc + (p -> acl) }.getOrElse(acc)
+            })
           case Some(children) =>
             children.foldLeft(AccessControlLists.empty) {
               case (acc, (Segment(head, _))) =>
@@ -96,7 +103,7 @@ class InMemoryAclsTree[F[_]: Applicative] private (tree: mutable.Map[Path, Set[P
         }
       } else {
         val p = pathOf(toConsume)
-        acls.get(p).map(acl => AccessControlLists(p -> acl)).getOrElse(AccessControlLists.empty)
+        acls.getSafe(p).map { case (_, acl) => AccessControlLists(p -> acl) }.getOrElse(AccessControlLists.empty)
       }
     }
     inner(segments)
@@ -106,28 +113,16 @@ class InMemoryAclsTree[F[_]: Applicative] private (tree: mutable.Map[Path, Set[P
 
 object InMemoryAclsTree {
 
+  private[index] type RevAccessControlList = (Long, AccessControlList)
+
+  private[index] implicit class ConcurrentHashMapSyntax[K, V](private val map: ConcurrentHashMap[K, V]) extends AnyVal {
+    def getSafe(key: K): Option[V] = Option(map.get(key))
+  }
+
   /**
     * Constructs an in memory implementation of [[AclsIndex]]
     *
-    * @tparam F the monadic type
     */
-  final def apply[F[_]: Applicative](): InMemoryAclsTree[F] =
-    new InMemoryAclsTree[F](mutable.Map.empty[Path, Set[Path]], mutable.Map.empty[Path, AccessControlList])
-
-  implicit class MapMergeSyntax[K, V](private val map: mutable.Map[K, V]) extends AnyVal {
-
-    /**
-      * If the provided ''key'' is not already associated with a value, associates it with the given value.
-      * Otherwise, replaces the value with the results of the given ''f'' function. This operation is not atomic.
-      *
-      * @param key   the key with which the specified value is to be associated
-      * @param value the value to use if absent
-      * @param f     the function to recompute a value if present
-      */
-    def merge(key: K, value: V, f: V => V): Unit =
-      map.get(key) match {
-        case Some(c) => map += (key -> f(c))
-        case None    => map += (key -> value)
-      }
-  }
+  final def apply(): InMemoryAclsTree =
+    new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, RevAccessControlList]())
 }

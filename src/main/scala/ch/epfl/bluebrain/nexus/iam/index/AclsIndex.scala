@@ -10,9 +10,11 @@ trait AclsIndex[F[_]] {
     * Replaces the current index entry for id ''path'' with the value ''acl''.
     *
     * @param path the id of the index entry to be replaced
+    * @param rev  the revision of the [[AccessControlList]]
     * @param acl  the value of the index entry to be replaced
+    * @return F(true) if the update was successfully performed, F(false) otherwise
     */
-  def replace(path: Path, acl: AccessControlList): F[Unit]
+  def replace(path: Path, rev: Long, acl: AccessControlList): F[Boolean]
 
   /**
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.

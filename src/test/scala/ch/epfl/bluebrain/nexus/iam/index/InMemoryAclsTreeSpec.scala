@@ -1,6 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
-import cats.Id
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
@@ -12,7 +11,7 @@ import org.scalatest.{Inspectors, Matchers, OptionValues, WordSpecLike}
 class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues with Inspectors {
 
   "A in memory Acls index" should {
-    val index = InMemoryAclsTree[Id]()
+    val index = InMemoryAclsTree()
 
     val user: Identity  = UserRef("realm", "uuid")
     val user2: Identity = UserRef("realm", "uuid2")
@@ -33,7 +32,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     val options = List((true -> true), (false, false), (true, false), (false, true))
 
     "create ACLs on /org1/proj1" in {
-      index.replace("org1" / "proj1", aclProject) shouldEqual (())
+      index.replace("org1" / "proj1", 1L, aclProject) shouldEqual true
     }
 
     "fetch ACLs on /org1/proj1" in {
@@ -52,7 +51,12 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "add ACLs on /org1" in {
-      index.replace(Path("org1"), aclOrg) shouldEqual (())
+      index.replace(Path("org1"), 2L, aclOrg) shouldEqual true
+    }
+
+    "failed to add ACLs on /org1 with same revision" in {
+      val acl = AccessControlList(user2 -> Set(Permission("new").value))
+      index.replace(Path("org1"), 2L, acl) shouldEqual false
     }
 
     "fetch ACLs on /org1" in {
@@ -71,7 +75,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "replace ACLs on /org1/proj1" in {
-      index.replace("org1" / "proj1", aclProject1_org1) shouldEqual (())
+      index.replace("org1" / "proj1", 3L, aclProject1_org1) shouldEqual true
     }
 
     "fetch ACLs on /org1/proj1 after replace" in {
@@ -93,7 +97,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "add ACLs on /" in {
-      index.replace(/, aclRoot) shouldEqual (())
+      index.replace(/, 4L, aclRoot) shouldEqual true
     }
 
     "fetch ACLs on /" in {
@@ -109,7 +113,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "add acls on /org2" in {
-      index.replace(Path("org2"), aclOrg2) shouldEqual (())
+      index.replace(Path("org2"), 5L, aclOrg2) shouldEqual true
     }
 
     "fetch ACLs on /org2" in {
@@ -150,7 +154,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "add acls on /org2/proj1" in {
-      index.replace("org2" / "proj1", aclProject1_org2) shouldEqual (())
+      index.replace("org2" / "proj1", 6L, aclProject1_org2) shouldEqual true
     }
 
     "fetch ACLs on /org2/proj1" in {
@@ -188,7 +192,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     }
 
     "add acls on /org1/proj2" in {
-      index.replace("org1" / "proj2", aclProject2_org1) shouldEqual (())
+      index.replace("org1" / "proj2", 7L, aclProject2_org1) shouldEqual true
     }
 
     "fetch ACLs on /org1/proj2" in {

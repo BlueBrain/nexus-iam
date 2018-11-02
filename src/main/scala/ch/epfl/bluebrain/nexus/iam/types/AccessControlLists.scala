@@ -44,7 +44,7 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
   /**
     * @return a new [[AccessControlLists]] containing the ACLs with non empty [[AccessControlList]]
     */
-  def removeEmpty: AccessControlLists = AccessControlLists(value.filterNot { case (_, v) => v.hasVoidPermissions })
+  def removeEmpty: AccessControlLists = AccessControlLists(value.filterNot { case (_, v) => v.isEmpty })
 }
 
 object AccessControlLists {
