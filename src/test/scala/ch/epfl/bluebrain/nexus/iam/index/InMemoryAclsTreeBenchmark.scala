@@ -4,11 +4,11 @@ import cats.Id
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.UserRef
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, Permission}
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
-import org.openjdk.jmh.annotations._
+import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, Permission}
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
+import org.openjdk.jmh.annotations._
 
 import scala.util.Random
 

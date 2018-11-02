@@ -12,7 +12,7 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
   /**
     * @return a collapsed Set of [[Permission]] from all the identities
     */
-  def permissions: Set[Permission] = value.foldLeft(Set.empty[Permission])(_ ++ _._2)
+  def permissions: Set[Permission] = value.foldLeft(Set.empty[Permission]) { case (acc, (_, perms)) => acc ++ perms }
 
   /**
     * @return ''true'' if the underlying list is empty or if any pair is found with an empty permissions set

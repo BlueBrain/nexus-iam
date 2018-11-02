@@ -29,7 +29,7 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
   /**
     * @return new [[AccessControlLists]] with the same elements as the current one but sorted by [[Path]] (alphabetically)
     */
-  def sorted: AccessControlLists = AccessControlLists(ListMap(value.toSeq.sortBy(_._1.repr): _*))
+  def sorted: AccessControlLists = AccessControlLists(ListMap(value.toSeq.sortBy { case (path, _) => path.repr }: _*))
 
   /**
     * Generates a new [[AccessControlLists]] only containing the provided ''identities''.
