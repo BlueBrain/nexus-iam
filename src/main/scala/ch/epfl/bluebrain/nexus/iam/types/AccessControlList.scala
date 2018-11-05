@@ -17,7 +17,7 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
   /**
     * @return ''true'' if the underlying list is empty or if any pair is found with an empty permissions set
     */
-  def isEmpty: Boolean = value.isEmpty || value.exists { case (_, perms) => perms.isEmpty }
+  def hasVoidPermissions: Boolean = value.isEmpty || value.exists { case (_, perms) => perms.isEmpty }
 
   /**
     * Generates a new [[AccessControlList]] only containing the provided ''identities''.
