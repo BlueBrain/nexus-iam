@@ -5,39 +5,54 @@ import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 /**
   * Type definition representing a mapping of identities to permissions for a specific resource.
   *
-  * @param acl a set of [[AccessControl]] pairs.
+  * @param value a map of identity and Set of Permission
   */
-final case class AccessControlList(acl: Set[AccessControl]) {
+final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
 
   /**
-    * @return a ''Map'' projection of the underlying pairs of identities and their permissions
+    * Adds the provided ''acl'' to the current ''value'' and returns a new [[AccessControlList]] with the added ACL.
+    *
+    * @param acl the acl to be added
     */
-  def toMap: Map[Identity, Permissions] = acl.map { case AccessControl(id, ps) => id -> ps }.toMap
+  def ++(acl: AccessControlList): AccessControlList = {
+    val toAddKeys   = acl.value.keySet -- value.keySet
+    val toMergeKeys = acl.value.keySet -- toAddKeys
+    val added       = value ++ acl.value.filterKeys(toAddKeys.contains)
+    val merged = value.filterKeys(toMergeKeys.contains).map {
+      case (ident, perms) => ident -> (perms ++ acl.value.getOrElse(ident, Set.empty))
+    }
+    AccessControlList(added ++ merged)
+  }
 
   /**
-    * @return a collapsed [[Permissions]] from all the identities
+    * @return a collapsed Set of [[Permission]] from all the identities
     */
-  def permissions: Permissions = acl.foldLeft(Permissions.empty)(_ ++ _.permissions)
+  def permissions: Set[Permission] = value.foldLeft(Set.empty[Permission]) { case (acc, (_, perms)) => acc ++ perms }
 
   /**
     * @return ''true'' if the underlying list is empty or if any pair is found with an empty permissions set
     */
-  def hasVoidPermissions: Boolean = acl.isEmpty || acl.exists(_.permissions.isEmpty)
+  def hasVoidPermissions: Boolean = value.isEmpty || value.exists { case (_, perms) => perms.isEmpty }
+
+  /**
+    * Generates a new [[AccessControlList]] only containing the provided ''identities''.
+    *
+    * @param identities the identities to be filtered
+    */
+  def filter(identities: Set[Identity]): AccessControlList =
+    AccessControlList(value.filterKeys(identities.contains))
 }
 
 object AccessControlList {
-  // $COVERAGE-OFF$
+
+  /**
+    * An empty [[AccessControlList]].
+    */
+  val empty: AccessControlList = AccessControlList(Map.empty[Identity, Set[Permission]])
 
   /**
     * Convenience factory method to build an ACL from var args of ''Identity'' to ''Permissions'' tuples.
     */
-  def apply(acl: (Identity, Permissions)*): AccessControlList =
-    new AccessControlList(acl.map { case (id, ps) => AccessControl(id, ps) }.toSet)
-
-  /**
-    * Convenience factory method to build an ACL from a ''mapping'' instance of Map[Identity, Permissions]
-    */
-  def fromMap(mapping: Map[Identity, Permissions]): AccessControlList = apply(mapping.toList: _*)
-
-  // $COVERAGE-ON$
+  def apply(acl: (Identity, Set[Permission])*): AccessControlList =
+    AccessControlList(acl.toMap)
 }

@@ -26,6 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val rdfVersion                 = "0.2.23"
+val commonsVersion             = "0.10.36"
 val serviceVersion             = "0.10.18"
 val sourcingVersion            = "0.10.8"
 val akkaVersion                = "2.5.17"
@@ -49,6 +50,7 @@ lazy val serviceIndexing     = "ch.epfl.bluebrain.nexus" %% "service-indexing"  
 lazy val serviceKamon        = "ch.epfl.bluebrain.nexus" %% "service-kamon"              % serviceVersion
 lazy val serviceHttp         = "ch.epfl.bluebrain.nexus" %% "service-http"               % serviceVersion
 lazy val sourcingAkka        = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"              % sourcingVersion
+lazy val commonTest          = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
 lazy val akkaCluster         = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
 lazy val akkaHttp            = "com.typesafe.akka"       %% "akka-http"                  % akkaHttpVersion
 lazy val akkaHttpCors        = "ch.megard"               %% "akka-http-cors"             % akkaCorsVersion
@@ -68,7 +70,7 @@ lazy val kryo                = "com.github.romix.akka"   %% "akka-kryo-serializa
 lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
-  .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin)
+  .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin, JmhPlugin)
   .settings(
     name       := "iam",
     moduleName := "iam",
@@ -93,15 +95,22 @@ lazy val iam = project
       serviceKamon,
       serviceHttp,
       akkaHttpTestKit % Test,
+      commonTest      % Test,
       mockitoCore     % Test,
       scalaTest       % Test,
     )
   )
 
 lazy val testSettings = Seq(
-  Test / testOptions       += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
-  Test / parallelExecution := false,
-  coverageFailOnMinimum    := false
+  Test / testOptions         += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
+  Test / parallelExecution   := false,
+  coverageFailOnMinimum      := false,
+  sourceDirectory in Jmh     := (sourceDirectory in Test).value,
+  classDirectory in Jmh      := (classDirectory in Test).value,
+  dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
+  // rewire tasks, so that 'jmh:run' automatically invokes 'jmh:compile' (otherwise a clean 'jmh:run' would fail)
+  compile in Jmh := (compile in Jmh).dependsOn(compile in Test).value,
+  run in Jmh     := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated,
 )
 
 lazy val buildInfoSettings = Seq(
