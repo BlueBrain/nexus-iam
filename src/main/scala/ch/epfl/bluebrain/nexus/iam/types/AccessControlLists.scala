@@ -22,7 +22,7 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
     val toMergeKeys = acls.value.keySet -- toAddKeys
     val added       = value ++ acls.value.filterKeys(toAddKeys.contains)
     val merged = value.filterKeys(toMergeKeys.contains).map {
-      case (p, currAcl) => p -> (currAcl ++ acls.value.get(p).getOrElse(AccessControlList.empty))
+      case (p, currAcl) => p -> (currAcl ++ acls.value.getOrElse(p, AccessControlList.empty))
     }
     AccessControlLists(added ++ merged)
   }
@@ -34,7 +34,7 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
     */
   def +(entry: (Path, AccessControlList)): AccessControlLists = {
     val (path, acl) = entry
-    val toAdd = value.get(path).map(_ ++ acl).getOrElse(acl)
+    val toAdd       = value.get(path).map(_ ++ acl).getOrElse(acl)
     AccessControlLists(value + (path -> toAdd))
   }
 
