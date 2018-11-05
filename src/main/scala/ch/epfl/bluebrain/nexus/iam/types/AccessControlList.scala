@@ -10,6 +10,21 @@ import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
 
   /**
+    * Adds the provided ''acl'' to the current ''value'' and returns a new [[AccessControlList]] with the added ACL.
+    *
+    * @param acl the acl to be added
+    */
+  def ++(acl: AccessControlList): AccessControlList = {
+    val toAddKeys   = acl.value.keySet -- value.keySet
+    val toMergeKeys = acl.value.keySet -- toAddKeys
+    val added       = value ++ acl.value.filterKeys(toAddKeys.contains)
+    val merged = value.filterKeys(toMergeKeys.contains).map {
+      case (ident, perms) => ident -> (perms ++ acl.value.get(ident).getOrElse(Set.empty))
+    }
+    AccessControlList(added ++ merged)
+  }
+
+  /**
     * @return a collapsed Set of [[Permission]] from all the identities
     */
   def permissions: Set[Permission] = value.foldLeft(Set.empty[Permission]) { case (acc, (_, perms)) => acc ++ perms }
