@@ -59,6 +59,12 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with OptionValue
       ).removeEmpty shouldEqual
         AccessControlLists("a" / "b" -> acl, "a" / "c" -> AccessControlList(user -> Set(read, write)))
     }
+
+    "remove ACL" in {
+      acl -- acl2 shouldEqual acl
+      acl -- AccessControlList(user -> Set(read), group                              -> Set(other)) shouldEqual AccessControlList(user -> Set(write))
+      acl -- AccessControlList(user -> Set(read)) shouldEqual AccessControlList(user -> Set(write), group                              -> Set(other))
+    }
   }
 
 }

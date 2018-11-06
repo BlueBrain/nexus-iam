@@ -35,27 +35,15 @@ sealed trait AclEvent extends Product with Serializable {
 object AclEvent {
 
   /**
-    * A witness to ACL creation.
+    * A witness to ACL replace.
     *
     * @param path     the target path for the ACL
-    * @param acl      the ACL created, represented as a mapping of identities to permissions
+    * @param acl      the ACL replaced, represented as a mapping of identities to permissions
     * @param rev      the revision that this event generated
     * @param instant  the instant when this event was recorded
     * @param identity the identity which generated this event
     */
-  final case class AclCreated(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
-      extends AclEvent
-
-  /**
-    * A witness to ACL update.
-    *
-    * @param path     the target path for the ACL
-    * @param acl      the ACL updated, represented as a mapping of identities to permissions
-    * @param rev      the revision that this event generated
-    * @param instant  the instant when this event was recorded
-    * @param identity the identity which generated this event
-    */
-  final case class AclUpdated(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
+  final case class AclReplaced(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
       extends AclEvent
 
   /**
