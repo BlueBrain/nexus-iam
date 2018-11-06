@@ -1,10 +1,12 @@
-package ch.epfl.bluebrain.nexus.iam.types
+package ch.epfl.bluebrain.nexus.iam.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+
 class AccessControlListsSpec extends WordSpecLike with Matchers with OptionValues {
 
   "AccessControlLists" should {

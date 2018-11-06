@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, AccessControlLists, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 class Acls[F[_]] {

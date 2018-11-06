@@ -3,8 +3,9 @@ package ch.epfl.bluebrain.nexus.iam.index
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.UserRef
+import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, Permission}
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.openjdk.jmh.annotations._

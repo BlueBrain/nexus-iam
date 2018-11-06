@@ -4,9 +4,9 @@ import java.util.function.BiFunction
 
 import cats.Id
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path.Segment
 
