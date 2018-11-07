@@ -18,9 +18,11 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.InitialAcl
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.syntax._
-import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMeta}
+import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, AkkaSourcingConfig, PassivationStrategy, RetryStrategy}
@@ -28,6 +30,8 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, AkkaSourcingConfig,
 class Acls[F[_]: Functor](agg: Agg[F])(implicit clock: Clock, initAcl: InitialAcl) {
 
   private val types: Set[AbsoluteIri] = Set(nxv.AccessControlList)
+
+  private val base: Iri.AbsoluteIri = url"https://bluebrain.github.io/nexus/acls/".value
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -72,8 +76,8 @@ class Acls[F[_]: Functor](agg: Agg[F])(implicit clock: Clock, initAcl: InitialAc
       .map(_.flatMap {
         case Initial =>
           Left(AclUnexpected(path, "Unexpected initial state"))
-        case Current(path, _, rev, created, updated, createdBy, updatedBy) =>
-          Right(ResourceMeta(path, rev, types, createdBy, updatedBy, created, updated))
+        case Current(_, _, rev, created, updated, createdBy, updatedBy) =>
+          Right(ResourceMetadata(base + path.repr, rev, types, createdBy, updatedBy, created, updated))
       })
 
   /**
@@ -178,7 +182,7 @@ object Acls {
   private[acls] val writePermission = Permission("acls/write").get
 
   private type EventOrRejection   = Either[AclRejection, AclEvent]
-  private type AclMetaOrRejection = Either[AclRejection, ResourceMeta[Path]]
+  private type AclMetaOrRejection = Either[AclRejection, ResourceMetadata]
 
   def next(state: AclState, ev: AclEvent): AclState = (state, ev) match {
 

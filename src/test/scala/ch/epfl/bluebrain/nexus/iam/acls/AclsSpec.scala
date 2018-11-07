@@ -13,7 +13,9 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMeta}
+import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.rdf.Iri
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
@@ -52,6 +54,7 @@ class AclsSpec
     val createdBy: Identity = UserRef("realm", "sub")
     implicit val tokenIds   = Set(GroupRef("realm", "admin"), createdBy)
     val path: Path          = genString(length = 4) / genString(length = 4)
+    val id: AbsoluteIri     = Iri.absolute(s"https://bluebrain.github.io/nexus/acls/").right.value + path.repr
     val user1               = identities(genInt(max = 1))
     val user2               = identities.filterNot(_ == user1).head
     val permsUser1          = Random.shuffle(permissions).take(1 + genInt(max = 299))
@@ -89,25 +92,25 @@ class AclsSpec
 
       "successfully be created" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMeta(path, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
         acls.fetchUnsafe(path).ioValue shouldEqual acl
       }
 
       "successfully be updated" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMeta(path, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
         val replaced                = AccessControlList(user1 -> permsUser1)
         val updatedBy               = UserRef(genString(), genString())
         val otherIds: Set[Identity] = Set(GroupRef("realm", "admin"), updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
-          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, updatedBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, updatedBy, instant, instant))
         acls.fetchUnsafe(path).ioValue shouldEqual replaced
 
       }
 
       "reject when wrong revision after updated" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMeta(path, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
@@ -163,7 +166,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.append(path, 1L, aclAppend).ioValue shouldEqual
-          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
 
         acls.fetchUnsafe(path).ioValue shouldEqual (aclAppend ++ acl)
 
@@ -212,7 +215,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.subtract(path, 1L, acl).ioValue shouldEqual
-          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
 
         acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
       }
@@ -252,7 +255,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.delete(path, 1L).ioValue shouldEqual
-          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
 
         acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
       }

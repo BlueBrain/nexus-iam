@@ -15,9 +15,8 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
   * @param updatedBy the identity that performed the last update to the resource
   * @param createdAt the creation date of the resource
   * @param updatedAt the last update date of the resource
-  * @tparam Id the type for the id
   */
-final case class ResourceMeta[Id](id: Id,
+final case class ResourceMetadata(id: AbsoluteIri,
                                   rev: Long,
                                   types: Set[AbsoluteIri],
                                   createdBy: Identity,
