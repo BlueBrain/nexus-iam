@@ -11,9 +11,8 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.Settings
-import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
+import ch.epfl.bluebrain.nexus.iam.routes.{AppInfoRoutes, CassandraHeath}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -21,7 +20,6 @@ import com.github.jsonldjava.core.DocumentLoader
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.system.SystemMetrics
-import monix.eval.Task
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -64,9 +62,8 @@ object Main {
       case Nil      => List(cluster.selfAddress)
       case nonEmpty => nonEmpty
     }
-
-    val aclRoutes   = new AclsRoutes(new Acls[Task]()).routes
-    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
+//    val aclRoutes   = new AclsRoutes(new Acls[Task]()).routes
+    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(reject)
     val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
