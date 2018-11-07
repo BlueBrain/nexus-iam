@@ -9,11 +9,12 @@ sealed abstract class AclRejection(val msg: String) extends Product with Seriali
 object AclRejection {
 
   /**
-    * Signals an attempt to create ACLs that already exists.
+    * Signals an attempt to append/subtract ACLs that won't change the current state.
     *
     * @param path the target path for the ACL
     */
-  final case class AclAlreadyExists(path: Path) extends AclRejection(s"ACL already exists on path '$path'")
+  final case class NothingToBeUpdated(path: Path)
+      extends AclRejection(s"ACL on path '$path' will not change after applying the provided update.")
 
   /**
     * Signals an attempt to modify ACLs that do not exists.
@@ -53,5 +54,12 @@ object AclRejection {
     */
   final case class AclInvalidEmptyPermissions(path: Path)
       extends AclRejection(s"ACL on path '$path' cannot contain void permissions.")
+
+  /**
+    * Signals an attempt to interact with an ACL collection without having a subject identity.
+    *
+    */
+  final case object AclMissingSubject
+      extends AclRejection("You don't have a valid subject to interact with the ACL API.")
 
 }

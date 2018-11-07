@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam
 
 import java.nio.file.Paths
+import java.time.Clock
 
 import akka.actor.{ActorSystem, Address, AddressFromURIString}
 import akka.cluster.Cluster
@@ -9,17 +10,23 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{Route, RouteResult}
 import akka.stream.ActorMaterializer
+import akka.util.Timeout
+import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.Settings
-import ch.epfl.bluebrain.nexus.iam.routes.{AppInfoRoutes, CassandraHeath}
+import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
+import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaSourcingConfig
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.github.jsonldjava.core.DocumentLoader
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
 import kamon.system.SystemMetrics
+import monix.eval.Task
+import monix.execution.Scheduler
+import monix.execution.schedulers.CanBlock
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -53,7 +60,8 @@ object Main {
     implicit val as = ActorSystem(appConfig.description.fullName, config)
     implicit val ec = as.dispatcher
     implicit val mt = ActorMaterializer()
-    //implicit val tm = Timeout(appConfig.cluster.replicationTimeout)
+    implicit val pm = CanBlock.permit
+    implicit val cl = Clock.systemUTC()
 
     val cluster = Cluster(as)
     val seeds: List[Address] = appConfig.cluster.seeds.toList
@@ -62,8 +70,22 @@ object Main {
       case Nil      => List(cluster.selfAddress)
       case nonEmpty => nonEmpty
     }
-//    val aclRoutes   = new AclsRoutes(new Acls[Task]()).routes
-    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(reject)
+
+    //TODO: Take this from the AppConfig
+    implicit val aclsSourcingConfig: AkkaSourcingConfig = AkkaSourcingConfig(
+      Timeout(3 seconds),
+      appConfig.persistence.queryJournalPlugin,
+      3 seconds,
+      as.dispatcher
+    )
+
+    val acls: Acls[Task] = {
+      implicit val sc = Scheduler.global
+      Acls[Task].runSyncUnsafe()
+    }
+
+    val aclRoutes   = new AclsRoutes(acls).routes
+    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
     val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
@@ -80,7 +102,7 @@ object Main {
         handleRejections(corsRejectionHandler)(cors(corsSettings)(apiRoutes ~ serviceDesc))
 
       val httpBinding = {
-        Http().bindAndHandle(routes, appConfig.http.interface, appConfig.http.port)
+        Http().bindAndHandle(RouteResult.route2HandlerFlow(routes), appConfig.http.interface, appConfig.http.port)
       }
       httpBinding onComplete {
         case Success(binding) =>
@@ -100,7 +122,7 @@ object Main {
     }
     // attempt to leave the cluster before shutting down
     val _ = sys.addShutdownHook {
-      Await.result(as.terminate().map(_ => ()), 10 seconds)
+      Await.result(as.terminate().map(_ => ())(as.dispatcher), 10 seconds)
     }
   }
 }
