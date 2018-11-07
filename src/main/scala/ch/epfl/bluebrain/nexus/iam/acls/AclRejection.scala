@@ -21,7 +21,7 @@ object AclRejection {
     *
     * @param path the target path for the ACL
     */
-  final case class AclNotFound(path: Path) extends AclRejection(s"ACL on path '$path' do not exists.")
+  final case class AclNotFound(path: Path) extends AclRejection(s"ACL on path '$path' does not exists.")
 
   /**
     * Signals an attempt to delete ACLs that are already empty.
