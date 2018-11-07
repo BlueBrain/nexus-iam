@@ -96,9 +96,11 @@ class AclsSpec
       "successfully be updated" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
           Right(ResourceMeta(path, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
-        val replaced = AccessControlList(user1 -> permsUser1)
-        acls.replace(path, 1L, replaced).ioValue shouldEqual
-          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+        val replaced                = AccessControlList(user1 -> permsUser1)
+        val updatedBy               = UserRef(genString(), genString())
+        val otherIds: Set[Identity] = Set(GroupRef("realm", "admin"), updatedBy)
+        acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
+          Right(ResourceMeta(path, 2L, Set(nxv.AccessControlList), createdBy, updatedBy, instant, instant))
         acls.fetchUnsafe(path).ioValue shouldEqual replaced
 
       }

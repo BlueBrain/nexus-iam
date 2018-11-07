@@ -66,11 +66,15 @@ class Acls[F[_]: Functor](agg: Agg[F])(implicit clock: Clock, initAcl: InitialAc
   def delete(path: Path, rev: Long)(implicit identities: Set[Identity]): F[AclMetaOrRejection] =
     evaluate(path, DeleteAcl(path, rev, clock.instant(), identities))
 
-  //TODO: When the evaluate method will return the state, use it to fetch the current updatedBy and updatedAt
   private def evaluate(path: Path, cmd: AclCommand): F[AclMetaOrRejection] =
     agg
-      .evaluate(path.repr, cmd)
-      .map(_.right.map(ev => ResourceMeta(ev.path, ev.rev, types, ev.identity, ev.identity, ev.instant, ev.instant)))
+      .evaluateS(path.repr, cmd)
+      .map(_.flatMap {
+        case Initial =>
+          Left(AclUnexpected(path, "Unexpected initial state"))
+        case Current(path, _, rev, created, updated, createdBy, updatedBy) =>
+          Right(ResourceMeta(path, rev, types, createdBy, updatedBy, created, updated))
+      })
 
   /**
     * Fetches the entire ACL for a ''path'' for all the identities on the latest revision
