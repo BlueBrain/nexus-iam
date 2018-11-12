@@ -1,6 +1,7 @@
-package ch.epfl.bluebrain.nexus.iam.types
+package ch.epfl.bluebrain.nexus.iam.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 
 /**
   * Type definition representing a mapping of identities to permissions for a specific resource.
@@ -23,6 +24,21 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
     }
     AccessControlList(added ++ merged)
   }
+
+  /**
+    * removes the provided ''acl'' from the current ''value'' and returns a new [[AccessControlList]] with the subtracted ACL.
+    *
+    * @param acl the acl to be subtracted
+    */
+  def --(acl: AccessControlList): AccessControlList =
+    AccessControlList(acl.value.foldLeft(value) {
+      case (acc, (p, aclToSubtract)) =>
+        acc.get(p).map(_ -- aclToSubtract) match {
+          case Some(remaining) if remaining.isEmpty => acc - p
+          case Some(remaining)                      => acc + (p -> remaining)
+          case None                                 => acc
+        }
+    })
 
   /**
     * @return a collapsed Set of [[Permission]] from all the identities

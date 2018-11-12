@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.iam.types.{AccessControlList, AccessControlLists}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 trait AclsIndex[F[_]] {

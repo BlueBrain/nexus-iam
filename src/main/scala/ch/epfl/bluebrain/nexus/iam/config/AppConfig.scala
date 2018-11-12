@@ -2,8 +2,13 @@ package ch.epfl.bluebrain.nexus.iam.config
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
+import ch.epfl.bluebrain.nexus.iam.types.Permission
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
@@ -23,7 +28,8 @@ final case class AppConfig(description: Description,
                            http: HttpConfig,
                            cluster: ClusterConfig,
                            persistence: PersistenceConfig,
-                           indexing: IndexingConfig)
+                           indexing: IndexingConfig,
+                           initAcl: InitialAcl)
 
 object AppConfig {
 
@@ -98,6 +104,14 @@ object AppConfig {
     */
   final case class IndexingConfig(batch: Int, batchTimeout: FiniteDuration, retry: Retry)
 
+  final case class InitialAcl(path: Path, identities: InitialIdentities, permissions: Set[Permission]) {
+    private val map: Map[Identity, Set[Permission]] =
+      identities.groups.map(GroupRef(identities.realm, _) -> permissions).toMap
+    val acl: AccessControlList = AccessControlList(map)
+  }
+
+  final case class InitialIdentities(realm: String, groups: Set[String])
+
 //  val iriResolution = Map(
 //    tagCtxUri         -> tagCtx,
 //    resourceCtxUri    -> resourceCtx,
@@ -137,5 +151,6 @@ object AppConfig {
   implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig = appConfig.persistence
   implicit def toHttp(implicit appConfig: AppConfig): HttpConfig               = appConfig.http
   implicit def toIndexing(implicit appConfig: AppConfig): IndexingConfig       = appConfig.indexing
+  implicit def inInitialAcl(implicit appConfig: AppConfig): InitialAcl         = appConfig.initAcl
 
 }

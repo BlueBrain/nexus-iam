@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.service.http.Path

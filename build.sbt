@@ -25,10 +25,10 @@ scalafmt: {
  */
 
 // Dependency versions
-val rdfVersion                 = "0.2.23"
+val rdfVersion                 = "0.2.25"
 val commonsVersion             = "0.10.36"
 val serviceVersion             = "0.10.18"
-val sourcingVersion            = "0.10.8"
+val sourcingVersion            = "0.12.0"
 val akkaVersion                = "2.5.17"
 val akkaCorsVersion            = "0.3.1"
 val akkaHttpVersion            = "10.1.5"
@@ -38,6 +38,7 @@ val circeVersion               = "0.10.0"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
 val mockitoVersion             = "2.23.0"
+val monixVersion               = "3.0.0-RC2"
 val pureconfigVersion          = "0.9.2"
 val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
@@ -62,6 +63,7 @@ lazy val catsCore            = "org.typelevel"           %% "cats-core"         
 lazy val circeCore           = "io.circe"                %% "circe-core"                 % circeVersion
 lazy val journalCore         = "io.verizon.journal"      %% "core"                       % journalVersion
 lazy val mockitoCore         = "org.mockito"             % "mockito-core"                % mockitoVersion
+lazy val monixEval           = "io.monix"                %% "monix-eval"                 % monixVersion
 lazy val logbackClassic      = "ch.qos.logback"          % "logback-classic"             % logbackVersion
 lazy val pureconfig          = "com.github.pureconfig"   %% "pureconfig"                 % pureconfigVersion
 lazy val scalaTest           = "org.scalatest"           %% "scalatest"                  % scalaTestVersion
@@ -90,6 +92,7 @@ lazy val iam = project
       circeCore,
       journalCore,
       kryo,
+      monixEval,
       logbackClassic,
       pureconfig,
       serviceKamon,

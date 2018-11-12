@@ -1,10 +1,12 @@
-package ch.epfl.bluebrain.nexus.iam.types
+package ch.epfl.bluebrain.nexus.iam.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+
 class AccessControlListsSpec extends WordSpecLike with Matchers with OptionValues {
 
   "AccessControlLists" should {
@@ -56,6 +58,12 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with OptionValue
         "a" / "d" -> AccessControlList(user -> Set.empty, group -> Set.empty)
       ).removeEmpty shouldEqual
         AccessControlLists("a" / "b" -> acl, "a" / "c" -> AccessControlList(user -> Set(read, write)))
+    }
+
+    "remove ACL" in {
+      acl -- acl2 shouldEqual acl
+      acl -- AccessControlList(user -> Set(read), group                              -> Set(other)) shouldEqual AccessControlList(user -> Set(write))
+      acl -- AccessControlList(user -> Set(read)) shouldEqual AccessControlList(user -> Set(write), group                              -> Set(other))
     }
   }
 
