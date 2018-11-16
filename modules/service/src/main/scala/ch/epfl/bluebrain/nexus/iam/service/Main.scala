@@ -19,7 +19,7 @@ import ch.epfl.bluebrain.nexus.commons.es.client.{ElasticClient, ElasticDecoder}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, GroupRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.QueryResults
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
@@ -37,7 +37,7 @@ import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives

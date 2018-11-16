@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.service.types
 
 import ch.epfl.bluebrain.nexus.commons.test.Resources
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{Permission, Permissions}
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._

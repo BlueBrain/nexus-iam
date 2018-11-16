@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.types
 
-import ch.epfl.bluebrain.nexus.iam.types.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControlList, Permission, Permissions}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import io.circe.Printer

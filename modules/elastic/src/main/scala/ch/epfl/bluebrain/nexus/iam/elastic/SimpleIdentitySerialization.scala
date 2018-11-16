@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.elastic
 
-import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization.SimpleIdentity._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.{deriveDecoder, deriveEncoder}

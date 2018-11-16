@@ -12,8 +12,8 @@ import ch.epfl.bluebrain.nexus.commons.http.HttpClient.UntypedHttpClient
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.{jsonUnmarshaller, unmarshaller}
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.test.Resources
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls.UserInfoDecoder.bbp.userInfoDecoder
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo

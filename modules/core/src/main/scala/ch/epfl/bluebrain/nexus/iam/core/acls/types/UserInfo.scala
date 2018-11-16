@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls.types
 
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, User}
 import io.circe.Encoder
 import io.circe.generic.extras.Configuration
@@ -28,7 +28,7 @@ final case class UserInfo(sub: String,
 
   /**
     * @param realm the authentication provider realm
-    * @return the set of all [[ch.epfl.bluebrain.nexus.iam.types.Identity]] references that this user belongs to
+    * @return the set of all [[ch.epfl.bluebrain.nexus.commons.types.identity.Identity]] references that this user belongs to
     */
   def identities(realm: String): Set[Identity] =
     Set(Anonymous(), AuthenticatedRef(Some(realm)), UserRef(realm, sub)) ++ groups.map(g => GroupRef(realm, g))

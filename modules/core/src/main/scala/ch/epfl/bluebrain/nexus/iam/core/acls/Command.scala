@@ -1,9 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import ch.epfl.bluebrain.nexus.commons.types.Meta
-import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 /**
   * Base enumeration type for __command__ definitions.  Commands are attempts to change the system internal state, not

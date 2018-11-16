@@ -7,7 +7,7 @@ sealed trait CommonRejection extends Rejection
 object CommonRejection {
 
   /**
-    * Signals the inability to parse a json structure into a [[ch.epfl.bluebrain.nexus.iam.types.Identity]]
+    * Signals the inability to parse a json structure into a [[ch.epfl.bluebrain.nexus.commons.types.identity.Identity]]
     * instance.
     *
     * @param message a human readable description of the cause

@@ -15,7 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission
 import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.java8.time._
 import io.circe.parser._

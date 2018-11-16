@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.core.groups
 
 import cats.MonadError
 import cats.syntax.functor._
-import ch.epfl.bluebrain.nexus.iam.types.Identity._
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups.UsedGroupsAggregate
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 

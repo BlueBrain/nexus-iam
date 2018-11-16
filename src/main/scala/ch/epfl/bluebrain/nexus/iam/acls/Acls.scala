@@ -203,16 +203,16 @@ object Acls {
     case (Initial, _) => Initial
 
     case (c: Current, AclReplaced(p, acl, rev, instant, identity)) =>
-      c.copy(p, acl, rev, updated = instant, updatedBy = identity)
+      c.copy(p, acl, rev, updatedAt = instant, updatedBy = identity)
 
     case (c: Current, AclAppended(p, acl, rev, instant, identity)) =>
-      c.copy(p, c.acl ++ acl, rev, updated = instant, updatedBy = identity)
+      c.copy(p, c.acl ++ acl, rev, updatedAt = instant, updatedBy = identity)
 
     case (c: Current, AclSubtracted(p, acl, rev, instant, identity)) =>
-      c.copy(p, c.acl -- acl, rev, updated = instant, updatedBy = identity)
+      c.copy(p, c.acl -- acl, rev, updatedAt = instant, updatedBy = identity)
 
     case (c: Current, AclDeleted(p, rev, instant, identity)) =>
-      c.copy(p, AccessControlList.empty, rev, updated = instant, updatedBy = identity)
+      c.copy(p, AccessControlList.empty, rev, updatedAt = instant, updatedBy = identity)
   }
 
   def evaluate[F[_]: Async](state: AclState, command: AclCommand): F[EventOrRejection] = {

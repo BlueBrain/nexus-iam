@@ -3,9 +3,9 @@ package ch.epfl.bluebrain.nexus.iam.elastic
 import java.net.URLEncoder
 
 import cats.syntax.show._
-import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 object ElasticIds {
 

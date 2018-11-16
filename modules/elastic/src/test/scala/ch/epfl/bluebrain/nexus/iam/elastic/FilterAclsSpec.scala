@@ -10,8 +10,8 @@ import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient.{UntypedHttpClient, withAkkaUnmarshaller}
 import ch.epfl.bluebrain.nexus.commons.test.{Randomness, Resources}
 import ch.epfl.bluebrain.nexus.commons.types.Meta
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, UserRef}
 import ch.epfl.bluebrain.nexus.commons.types.search.{Pagination, QueryResults}
 import ch.epfl.bluebrain.nexus.iam.core.{AuthenticatedUser, ServiceAccount}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event.PermissionsAdded
@@ -20,7 +20,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControl
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls
 import ch.epfl.bluebrain.nexus.iam.elastic.types.{FullAccessControl, FullAccessControlList}
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 import io.circe.{Decoder, Json}

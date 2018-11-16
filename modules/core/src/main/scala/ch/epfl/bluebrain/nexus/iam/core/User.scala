@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.core
 
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.IdentityId.IdentityIdPrefix
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.IdentityId.IdentityIdPrefix
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto._
 import io.circe.{Decoder, Encoder}

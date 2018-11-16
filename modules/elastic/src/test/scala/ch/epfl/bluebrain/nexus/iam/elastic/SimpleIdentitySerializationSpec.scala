@@ -2,8 +2,8 @@ package ch.epfl.bluebrain.nexus.iam.elastic
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.test.Resources
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization._
 import io.circe.syntax._
 import org.scalatest.prop.TableDrivenPropertyChecks

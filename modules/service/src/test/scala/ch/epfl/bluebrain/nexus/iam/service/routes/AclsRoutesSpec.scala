@@ -18,8 +18,8 @@ import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.{OrderedKeys, unm
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, HttpClient, RdfMediaTypes, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.Initial
 import ch.epfl.bluebrain.nexus.iam.core.acls._
@@ -38,7 +38,7 @@ import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate

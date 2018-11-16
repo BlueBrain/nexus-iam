@@ -4,8 +4,8 @@ import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.model.Uri.Path
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.commons.types.Meta
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{AuthenticatedRef, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{AuthenticatedRef, GroupRef, UserRef}
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControl, AccessControlList}
 import io.circe.generic.extras.Configuration
