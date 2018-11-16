@@ -14,22 +14,13 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.InitialAcl
-import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission, ResourceMetadata}
-import ch.epfl.bluebrain.nexus.rdf.Iri
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, AkkaSourcingConfig, PassivationStrategy, RetryStrategy}
 
 class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: Clock, initAcl: InitialAcl) {
-
-  private val types: Set[AbsoluteIri] = Set(nxv.AccessControlList)
-
-  private val base: Iri.AbsoluteIri = url"https://bluebrain.github.io/nexus/acls/".value
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -72,10 +63,8 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
         agg
           .evaluateS(path.repr, cmd)
           .map(_.flatMap {
-            case Initial =>
-              Left(AclUnexpectedState(path, "Unexpected initial state"))
-            case Current(_, _, rev, created, updated, createdBy, updatedBy) =>
-              Right(ResourceMetadata(base + path.repr, rev, types, created, createdBy, updated, updatedBy))
+            case Initial    => Left(AclUnexpectedState(path, "Unexpected initial state"))
+            case c: Current => Right(c.toResourceMetadata)
           })
       case false => F.pure(Left(AclUnauthorizedWrite(cmd.path)))
     }
@@ -85,7 +74,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
     *
     * @param path the target path for the ACL
     */
-  def fetchUnsafe(path: Path): F[AccessControlList] =
+  def fetchUnsafe(path: Path): F[ResourceAccessControlList] =
     agg.currentState(path.repr).map(stateToAcl(path, _))
 
   /**
@@ -94,7 +83,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
     * @param path the target path for the ACL
     * @param rev  the revision to fetch
     */
-  def fetchUnsafe(path: Path, rev: Long): F[AccessControlList] =
+  def fetchUnsafe(path: Path, rev: Long): F[ResourceAccessControlList] =
     agg
       .foldLeft[AclState](path.repr, Initial) {
         case (state, event) if event.rev <= rev => next(state, event)
@@ -108,8 +97,8 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
     * @param path   the target path for the ACL
     * @param caller the caller which contains the identities to filter
     */
-  def fetch(path: Path)(implicit caller: Caller): F[AccessControlList] =
-    fetchUnsafe(path).map(_.filter(caller.identities))
+  def fetch(path: Path)(implicit caller: Caller): F[ResourceAccessControlList] =
+    fetchUnsafe(path).map(_.map(_.filter(caller.identities)))
 
   /**
     * Fetches the entire ACL for a ''path'' for the provided ''identities'' on the provided ''rev''
@@ -118,14 +107,14 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
     * @param rev    the revision to fetch
     * @param caller the caller which contains the identities to filter
     */
-  def fetch(path: Path, rev: Long)(implicit caller: Caller): F[AccessControlList] =
-    fetchUnsafe(path, rev).map(_.filter(caller.identities))
+  def fetch(path: Path, rev: Long)(implicit caller: Caller): F[ResourceAccessControlList] =
+    fetchUnsafe(path, rev).map(_.map(_.filter(caller.identities)))
 
-  private def stateToAcl(path: Path, state: AclState): AccessControlList =
+  private def stateToAcl(path: Path, state: AclState): ResourceAccessControlList =
     (state, path) match {
       case (Initial, initAcl.path) => initAcl.acl
-      case (Initial, _)            => AccessControlList.empty
-      case (c: Current, _)         => c.acl
+      case (Initial, _)            => initAcl.acl.map(_ => AccessControlList.empty)
+      case (c: Current, _)         => c.toResource
     }
 
   /**
@@ -141,7 +130,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
 
   private def checkPermissions(path: Path)(implicit caller: Caller): F[Boolean] =
     fetch(path).flatMap { c =>
-      val hasPerms = c.value.exists {
+      val hasPerms = c.value.value.exists {
         case (_, perms) => perms.contains(writePermission)
       }
       if (hasPerms) F.pure(true)
@@ -182,18 +171,6 @@ object Acls {
       Aggregate.inMemory[F, String]("acls", Initial, next, evaluate[F])
     aggF.map(new Acls(_, index))
   }
-
-  /**
-    * Aggregate type for ACLs.
-    *
-    * @tparam F the effect type under which the aggregate operates
-    */
-  type Agg[F[_]] = Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]
-
-  private[acls] val writePermission = Permission.unsafe("acls/write")
-
-  private[acls] type EventOrRejection   = Either[AclRejection, AclEvent]
-  private[acls] type AclMetaOrRejection = Either[AclRejection, ResourceMetadata]
 
   def next(state: AclState, ev: AclEvent): AclState = (state, ev) match {
 

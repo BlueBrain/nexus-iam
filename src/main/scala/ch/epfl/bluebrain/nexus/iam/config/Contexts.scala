@@ -8,5 +8,6 @@ object Contexts {
 
   val resourceCtxUri: AbsoluteIri = base + "resource.json"
   val iamCtxUri: AbsoluteIri      = base + "iam.json"
+  val searchCtxUri: AbsoluteIri   = base + "search.json"
   val errorCtxUri: AbsoluteIri    = base + "error.json"
 }

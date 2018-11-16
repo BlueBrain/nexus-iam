@@ -1,10 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
+import java.time.{Clock, Instant, ZoneId}
+
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.User
-import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList
-import ch.epfl.bluebrain.nexus.iam.types.Permission
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, base}
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
@@ -27,7 +28,8 @@ import scala.util.Random
   */
 @State(Scope.Thread)
 class InMemoryAclsTreeBenchmark extends Randomness {
-
+  val clock: Clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  val instant      = clock.instant()
   //10 permissions
   val permissions: List[Permission] = Own :: List.fill(9)(Permission(genString(length = 10)).get)
 
@@ -35,19 +37,15 @@ class InMemoryAclsTreeBenchmark extends Randomness {
   // Number of users <= 100
   // Number of projects <= 100
   // Number of organizations <= 10
-  val orgs1                  = List.fill(10)(genString(length = 10))
-  val projects1              = List.fill(100)(genString(length = 10))
-  val users1: List[Identity] = List.fill(100)(User(genString(length = 10), "realm"))
+  val orgs1              = List.fill(10)(genString(length = 10))
+  val projects1          = List.fill(100)(genString(length = 10))
+  val users1: List[User] = List.fill(100)(User(genString(length = 10), "realm"))
 
   val index1 = InMemoryAclsTree()
 
   ingest(orgs1, projects1, users1, index1, 1000)
 
-  def ingest(orgs: List[String],
-             projects: List[String],
-             users: List[Identity],
-             index: InMemoryAclsTree,
-             total: Int): Unit =
+  def ingest(orgs: List[String], projects: List[String], users: List[User], index: InMemoryAclsTree, total: Int): Unit =
     (0 until total).foreach { v =>
       val org     = orgs(genInt(max = orgs.size - 1))
       val project = projects(genInt(max = projects.size - 1))
@@ -55,11 +53,18 @@ class InMemoryAclsTreeBenchmark extends Randomness {
       val user2   = users(genInt(max = users.size - 1))
       val perm    = Random.shuffle(permissions).take(4).toSet
       val perm2   = Random.shuffle(permissions).take(4).toSet
-      val acl     = AccessControlList(user -> perm, user2 -> perm2)
+      val acl = ResourceF(base + "id3",
+                          3L,
+                          Set.empty,
+                          instant,
+                          user,
+                          instant,
+                          user2,
+                          AccessControlList(user -> perm, user2 -> perm2))
       genInt(max = 2) match {
-        case 0 => index.replace(/, v.toLong, acl)
-        case 1 => index.replace(Path(org), v.toLong, acl)
-        case 2 => index.replace(org / project, v.toLong, acl)
+        case 0 => index.replace(/, acl.copy(rev = v.toLong))
+        case 1 => index.replace(Path(org), acl.copy(rev = v.toLong))
+        case 2 => index.replace(org / project, acl.copy(rev = v.toLong))
       }
     }
 

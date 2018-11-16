@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlLists, ResourceAccessControlList}
 import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 trait AclsIndex[F[_]] {
@@ -9,12 +9,11 @@ trait AclsIndex[F[_]] {
   /**
     * Replaces the current index entry for id ''path'' with the value ''acl''.
     *
-    * @param path the id of the index entry to be replaced
-    * @param rev  the revision of the [[AccessControlList]]
-    * @param acl  the value of the index entry to be replaced
+    * @param path        the id of the index entry to be replaced
+    * @param aclResource the value of the index entry to be replaced
     * @return F(true) if the update was successfully performed, F(false) otherwise
     */
-  def replace(path: Path, rev: Long, acl: AccessControlList): F[Boolean]
+  def replace(path: Path, aclResource: ResourceAccessControlList): F[Boolean]
 
   /**
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.

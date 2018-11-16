@@ -1,7 +1,14 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
+import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.config.Contexts._
+import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.service.http.Path
+import io.circe.syntax._
+import io.circe.{Encoder, Json}
 
 import scala.collection.immutable.ListMap
 
@@ -10,7 +17,7 @@ import scala.collection.immutable.ListMap
   *
   * @param value a map of path and AccessControlList
   */
-final case class AccessControlLists(value: Map[Path, AccessControlList]) {
+final case class AccessControlLists(value: Map[Path, ResourceAccessControlList]) {
 
   /**
     * Adds the provided ''acls'' to the current ''value'' and returns a new [[AccessControlLists]] with the added ACLs.
@@ -22,19 +29,19 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
     val toMergeKeys = acls.value.keySet -- toAddKeys
     val added       = value ++ acls.value.filterKeys(toAddKeys.contains)
     val merged = value.filterKeys(toMergeKeys.contains).map {
-      case (p, currAcl) => p -> (currAcl ++ acls.value.getOrElse(p, AccessControlList.empty))
+      case (p, currResourceAcl) => p -> currResourceAcl.map(_ ++ acls.value(p).value)
     }
     AccessControlLists(added ++ merged)
   }
 
   /**
-    * Adds a key pair of Path and [[AccessControlList]] to the current ''value'' and returns a new [[AccessControlLists]] with the added acl.
+    * Adds a key pair of Path and [[ResourceAccessControlList]] to the current ''value'' and returns a new [[AccessControlLists]] with the added acl.
     *
     * @param entry the key pair of Path and ACL to be added
     */
-  def +(entry: (Path, AccessControlList)): AccessControlLists = {
-    val (path, acl) = entry
-    val toAdd       = value.get(path).map(_ ++ acl).getOrElse(acl)
+  def +(entry: (Path, ResourceAccessControlList)): AccessControlLists = {
+    val (path, aclResource) = entry
+    val toAdd               = aclResource.map(acl => value.get(path).map(_.value ++ acl).getOrElse(acl))
     AccessControlLists(value + (path -> toAdd))
   }
 
@@ -50,19 +57,19 @@ final case class AccessControlLists(value: Map[Path, AccessControlList]) {
     */
   def filter(identities: Set[Identity]): AccessControlLists =
     value.foldLeft(AccessControlLists.empty) {
-      case (acc, (p, acl)) => acc + (p -> acl.filter(identities))
+      case (acc, (p, aclResource)) => acc + (p -> aclResource.map(_.filter(identities)))
     }
 
   /**
     * @return a new [[AccessControlLists]] containing the ACLs with non empty [[AccessControlList]]
     */
   def removeEmpty: AccessControlLists =
-    AccessControlLists(value.foldLeft(Map.empty[Path, AccessControlList]) {
-      case (acc, (_, acl)) if acl.value.isEmpty => acc
+    AccessControlLists(value.foldLeft(Map.empty[Path, ResourceAccessControlList]) {
+      case (acc, (_, acl)) if acl.value.value.isEmpty => acc
       case (acc, (p, acl)) =>
-        val filteredAcl = acl.value.filterNot { case (_, v) => v.isEmpty }
+        val filteredAcl = acl.value.value.filterNot { case (_, v) => v.isEmpty }
         if (filteredAcl.isEmpty) acc
-        else acc + (p -> AccessControlList(filteredAcl))
+        else acc + (p -> acl.map(_ => AccessControlList(filteredAcl)))
 
     })
 }
@@ -72,10 +79,22 @@ object AccessControlLists {
   /**
     * An empty [[AccessControlLists]].
     */
-  val empty: AccessControlLists = AccessControlLists(Map.empty[Path, AccessControlList])
+  val empty: AccessControlLists = AccessControlLists(Map.empty[Path, ResourceAccessControlList])
 
   /**
     * Convenience factory method to build an ACLs from var args of ''Path'' to ''AccessControlList'' tuples.
     */
-  final def apply(tuple: (Path, AccessControlList)*): AccessControlLists = AccessControlLists(tuple.toMap)
+  final def apply(tuple: (Path, ResourceAccessControlList)*): AccessControlLists = AccessControlLists(tuple.toMap)
+
+  implicit def aclsEncoder(implicit http: HttpConfig): Encoder[AccessControlLists] = Encoder.encodeJson.contramap {
+    case AccessControlLists(value) =>
+      val arr = value.map {
+        case (path, acl) => Json.obj("path" -> Json.fromString(path.repr)) deepMerge acl.asJson.removeKeys("@context")
+      }
+      Json
+        .obj(nxv.total.prefix -> Json.fromInt(arr.size), nxv.results.prefix -> Json.arr(arr.toSeq: _*))
+        .addContext(resourceCtxUri)
+        .addContext(iamCtxUri)
+        .addContext(searchCtxUri)
+  }
 }

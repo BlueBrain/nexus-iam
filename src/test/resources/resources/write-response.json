@@ -10,7 +10,7 @@
   ],
   "_rev" : 1,
   "_createdBy" : "http://nexus.example.com/v1/realms/myrealm/users/mysubject",
-  "_updatedBy" : "http://nexus.example.com/v1/realms/myrealm/groups/mygroup",
+  "_updatedBy" : "http://nexus.example.com/v1/realms/myrealm/users/mysubject2",
   "_createdAt" : "1970-01-01T01:00:00Z",
   "_updatedAt" : "1970-01-01T01:00:00Z"
 }

@@ -32,5 +32,17 @@ class AccessControlListSpec
       val json = jsonContentOf("/acls/acl.json")
       json.as[AccessControlList].right.value shouldEqual acls
     }
+
+    "remove ACL" in {
+      val read  = Permission.unsafe("read")
+      val write = Permission.unsafe("write")
+      val other = Permission.unsafe("other")
+      val acl   = AccessControlList(user -> Set(read, write), group -> Set(other))
+      val acl2  = AccessControlList(group -> Set(read))
+
+      acl -- acl2 shouldEqual acl
+      acl -- AccessControlList(user -> Set(read), group                              -> Set(other)) shouldEqual AccessControlList(user -> Set(write))
+      acl -- AccessControlList(user -> Set(read)) shouldEqual AccessControlList(user -> Set(write), group                              -> Set(other))
+    }
   }
 }

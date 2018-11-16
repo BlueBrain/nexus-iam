@@ -3,9 +3,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiFunction
 
 import cats.Id
-import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
+import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path.Segment
@@ -22,26 +22,27 @@ import scala.annotation.tailrec
   * @param acls a data structure used to store the ACLs for a path
   */
 class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
-                                acls: ConcurrentHashMap[Path, RevAccessControlList])
+                                acls: ConcurrentHashMap[Path, ResourceAccessControlList])
     extends AclsIndex[Id] {
 
   private val any = "*"
 
-  override def replace(path: Path, rev: Long, acl: AccessControlList): Id[Boolean] = {
+  override def replace(path: Path, aclResource: ResourceAccessControlList): Id[Boolean] = {
     @tailrec
     def inner(p: Path, children: Set[Path]): Unit = {
       tree.merge(p, children, (current, _) => current ++ children)
       if (!p.isEmpty) inner(p.tail, Set(p))
     }
+    val rev = aclResource.rev
 
-    val f: BiFunction[RevAccessControlList, RevAccessControlList, RevAccessControlList] = (curr, _) =>
+    val f: BiFunction[ResourceAccessControlList, ResourceAccessControlList, ResourceAccessControlList] = (curr, _) =>
       curr match {
-        case (currRev, _) if rev > currRev => rev -> acl
-        case other                         => other
+        case c if rev > c.rev => aclResource
+        case other            => other
     }
-    val (updatedRev, updatedAcl) = acls.merge(path, rev -> acl, f)
+    val updated = acls.merge(path, aclResource, f)
 
-    val update = updatedRev == rev && updatedAcl == acl
+    val update = updated == aclResource
     if (update) inner(path, Set.empty)
     update
   }
@@ -56,8 +57,8 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
       val (_, result) = currentAcls.sorted.value
         .foldLeft(Set.empty[Path] -> AccessControlLists.empty) {
           case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith) => ownPaths     -> (acc + entry)
-          case ((ownPaths, acc), entry @ (p, acl)) if containsOwn(acl)            => ownPaths + p -> (acc + entry)
-          case ((ownPaths, acc), (p, acl))                                        => ownPaths     -> (acc + (p -> acl.filter(identities)))
+          case ((ownPaths, acc), entry @ (p, acl)) if containsOwn(acl.value)      => ownPaths + p -> (acc + entry)
+          case ((ownPaths, acc), (p, acl))                                        => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
         }
       result
     }
@@ -90,8 +91,8 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
         val consumed = toConsume.takeWhile(_ != any)
         tree.getSafe(pathOf(consumed)) match {
           case Some(children) if consumed.size + 1 == segments.size =>
-            AccessControlLists(children.foldLeft(Map.empty[Path, AccessControlList]) { (acc, p) =>
-              acls.getSafe(p).map { case (_, acl) => acc + (p -> acl) }.getOrElse(acc)
+            AccessControlLists(children.foldLeft(Map.empty[Path, ResourceAccessControlList]) { (acc, p) =>
+              acls.getSafe(p).map(r => acc + (p -> r)).getOrElse(acc)
             })
           case Some(children) =>
             children.foldLeft(AccessControlLists.empty) {
@@ -104,7 +105,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
         }
       } else {
         val p = pathOf(toConsume)
-        acls.getSafe(p).map { case (_, acl) => AccessControlLists(p -> acl) }.getOrElse(AccessControlLists.empty)
+        acls.getSafe(p).map(r => AccessControlLists(p -> r)).getOrElse(AccessControlLists.empty)
       }
     }
     inner(segments)
@@ -113,8 +114,6 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
 }
 
 object InMemoryAclsTree {
-
-  private[index] type RevAccessControlList = (Long, AccessControlList)
 
   private[index] implicit class ConcurrentHashMapSyntax[K, V](private val map: ConcurrentHashMap[K, V]) extends AnyVal {
     def getSafe(key: K): Option[V] = Option(map.get(key))
@@ -125,7 +124,8 @@ object InMemoryAclsTree {
     *
     */
   final def apply(): InMemoryAclsTree =
-    new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, RevAccessControlList]())
+    new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](),
+                         new ConcurrentHashMap[Path, ResourceAccessControlList]())
 
   /**
     * Constructs an in memory implementation of [[AclsIndex]] using the [[Task]] effect type
@@ -134,8 +134,8 @@ object InMemoryAclsTree {
   final def task(): AclsIndex[Task] = new AclsIndex[Task] {
     private val underlying = apply()
 
-    override def replace(path: Path, rev: Long, acl: AccessControlList): Task[Boolean] =
-      Task.pure(underlying.replace(path, rev, acl))
+    override def replace(path: Path, aclResource: ResourceAccessControlList): Task[Boolean] =
+      Task.pure(underlying.replace(path, aclResource))
 
     override def get(path: Path, ancestors: Boolean, self: Boolean)(
         implicit identities: Set[Identity]): Task[AccessControlLists] =
