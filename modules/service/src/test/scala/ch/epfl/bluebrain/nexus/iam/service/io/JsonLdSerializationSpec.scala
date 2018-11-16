@@ -15,7 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
 import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import io.circe.parser._
 import io.circe.{Decoder, Encoder}
 import org.scalatest.prop.TableDrivenPropertyChecks

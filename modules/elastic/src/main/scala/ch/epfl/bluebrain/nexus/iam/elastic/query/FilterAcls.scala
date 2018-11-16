@@ -16,8 +16,8 @@ import ch.epfl.bluebrain.nexus.iam.elastic.ElasticIds._
 import ch.epfl.bluebrain.nexus.iam.elastic._
 import ch.epfl.bluebrain.nexus.iam.elastic.query.FilterAcls._
 import ch.epfl.bluebrain.nexus.iam.elastic.types.{FullAccessControl, FullAccessControlList}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import io.circe.Json
 
 import scala.annotation.tailrec

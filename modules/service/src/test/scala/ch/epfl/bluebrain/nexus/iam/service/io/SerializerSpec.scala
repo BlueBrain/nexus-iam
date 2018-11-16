@@ -14,7 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
 import ch.epfl.bluebrain.nexus.iam.service.io.Serializer.EventSerializer
 import ch.epfl.bluebrain.nexus.iam.service.io.SerializerSpec.{DataAndJson, results}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 import shapeless.Typeable
 

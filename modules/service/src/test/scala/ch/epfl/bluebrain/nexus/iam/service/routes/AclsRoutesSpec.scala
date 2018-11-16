@@ -38,7 +38,7 @@ import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.routes.Error.classNameOf
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.{ShardingAggregate, SourcingAkkaSettings}
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate

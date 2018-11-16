@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.oidc.config
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.oidc.config.AppConfig._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.UriOps._
 
 import scala.concurrent.duration.FiniteDuration

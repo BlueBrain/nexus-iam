@@ -32,7 +32,7 @@ import ch.epfl.bluebrain.nexus.iam.service.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.service.routes.CommonRejection._
 import ch.epfl.bluebrain.nexus.iam.service.types.Subtract
 import ch.epfl.bluebrain.nexus.iam.service.types.{ApiUri, PartialUpdate}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.auto._
 

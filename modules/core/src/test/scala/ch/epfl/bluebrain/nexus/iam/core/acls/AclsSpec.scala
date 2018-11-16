@@ -11,7 +11,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permission, Permissions}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import org.scalatest.{Matchers, WordSpecLike}

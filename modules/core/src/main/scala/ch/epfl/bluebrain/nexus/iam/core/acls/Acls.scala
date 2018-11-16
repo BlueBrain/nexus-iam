@@ -9,7 +9,7 @@ import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.State.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 import journal.Logger
 

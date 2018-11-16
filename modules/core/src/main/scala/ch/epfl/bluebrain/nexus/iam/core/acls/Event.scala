@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 import ch.epfl.bluebrain.nexus.commons.types._
 import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.{AccessControlList, Permissions}
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 
 /**
   * Base enumeration type for __event__ definitions.  Events are proofs that the system has changed its internal state.

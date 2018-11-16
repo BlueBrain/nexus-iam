@@ -37,7 +37,7 @@ import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.eventEncoder
 import ch.epfl.bluebrain.nexus.iam.service.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.service.routes.{AclsRoutes, AuthRoutes, StaticRoutes}
 import ch.epfl.bluebrain.nexus.iam.service.types.ApiUri
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.SequentialTagIndexer
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
