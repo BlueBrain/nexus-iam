@@ -14,7 +14,10 @@ object Permission {
   private val valid = "[a-zA-Z-:_\\/]{1,32}".r
 
   final def apply(value: String): Option[Permission] =
-    valid.findFirstIn(value).map(new Permission(_))
+    valid.findFirstIn(value).map(unsafe)
+
+  final def unsafe(value: String): Permission =
+    new Permission(value)
 
   /**
     * Resource ownership access permission definition. Owning a resource offers the ability

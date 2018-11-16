@@ -4,6 +4,7 @@ import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvi
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
+import ch.epfl.bluebrain.nexus.service.http.Path
 import com.typesafe.config.Config
 import pureconfig.ConvertHelpers._
 import pureconfig._
@@ -22,6 +23,9 @@ class Settings(config: Config) extends Extension {
 
   private implicit val permissionConverter: ConfigConvert[Permission] =
     ConfigConvert.viaString[Permission](optF(Permission(_)), _.toString)
+
+  private implicit val pathConverter: ConfigConvert[Path] =
+    ConfigConvert.viaString[Path](s => Right(Path(s)), _.toString)
 
   val appConfig = AppConfig(
     loadConfigOrThrow[Description](config, "app.description"),

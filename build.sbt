@@ -25,7 +25,7 @@ scalafmt: {
  */
 
 // Dependency versions
-val rdfVersion                 = "0.2.25"
+val rdfVersion                 = "0.2.27"
 val commonsVersion             = "0.10.36"
 val serviceVersion             = "0.10.18"
 val sourcingVersion            = "0.12.0"
@@ -61,6 +61,7 @@ lazy val akkaSlf4j           = "com.typesafe.akka"       %% "akka-slf4j"        
 lazy val akkaStream          = "com.typesafe.akka"       %% "akka-stream"                % akkaVersion
 lazy val catsCore            = "org.typelevel"           %% "cats-core"                  % catsVersion
 lazy val circeCore           = "io.circe"                %% "circe-core"                 % circeVersion
+lazy val circeJava8          = "io.circe"                %% "circe-java8"                % circeVersion
 lazy val journalCore         = "io.verizon.journal"      %% "core"                       % journalVersion
 lazy val mockitoCore         = "org.mockito"             % "mockito-core"                % mockitoVersion
 lazy val monixEval           = "io.monix"                %% "monix-eval"                 % monixVersion
@@ -90,6 +91,7 @@ lazy val iam = project
       akkaCluster,
       catsCore,
       circeCore,
+      circeJava8,
       journalCore,
       kryo,
       monixEval,

@@ -1,0 +1,8 @@
+{
+  "@context": {
+    "nxv": "https://bluebrain.github.io/nexus/vocabulary/",
+    "AccessControlList": "nxv:AccessControlList",
+    "Realms": "nxv:Realms",
+    "Permissions": "nxv:Permissions"
+  }
+}

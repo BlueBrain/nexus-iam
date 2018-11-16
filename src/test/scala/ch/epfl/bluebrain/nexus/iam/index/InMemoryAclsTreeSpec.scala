@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.iam.types._
@@ -14,9 +14,9 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
   "A in memory Acls index" should {
     val index = InMemoryAclsTree()
 
-    val user: Identity  = UserRef("realm", "uuid")
-    val user2: Identity = UserRef("realm", "uuid2")
-    val group: Identity = GroupRef("realm", "group")
+    val user: Identity  = User("uuid", "realm")
+    val user2: Identity = User("uuid2", "realm")
+    val group: Identity = Group("group", "realm")
 
     val read: Permission  = Permission("read").value
     val write: Permission = Permission("write").value
@@ -132,7 +132,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
           index.get(Path("org2"), ancestors = false, self = false)(Set(user)) shouldEqual
             AccessControlLists(Path("org2") -> aclOrg2)
 
-          index.get(Path("org2"), ancestors, self)(Set(Anonymous())) shouldEqual AccessControlLists.empty
+          index.get(Path("org2"), ancestors, self)(Set(Anonymous)) shouldEqual AccessControlLists.empty
       }
     }
 

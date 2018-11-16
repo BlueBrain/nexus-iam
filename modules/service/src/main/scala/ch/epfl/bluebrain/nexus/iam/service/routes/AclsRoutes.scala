@@ -13,7 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.elastic.SimpleIdentitySerialization.identityD
 import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.identityEncoder
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.WrongOrInvalidJson
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.core.{AnonymousUser, ServiceAccount, User}
 import ch.epfl.bluebrain.nexus.iam.core.acls._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CallerCtx._

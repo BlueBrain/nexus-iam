@@ -6,14 +6,14 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import cats.effect.{ContextShift, IO}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, Identity, Permission, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.IOValues
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -21,6 +21,7 @@ import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mockito.MockitoSugar
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -35,7 +36,8 @@ class AclsSpec
     with Randomness
     with OptionValues
     with EitherValues
-    with Inspectors {
+    with Inspectors
+    with MockitoSugar {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
 
@@ -43,23 +45,24 @@ class AclsSpec
 
   private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writePermission))
 
+  private val index: AclsIndex[IO] = mock[AclsIndex[IO]]
+
   private implicit val clock: Clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private val acls                         = Acls.inMemory[IO].ioValue
-  private val identities: List[Identity]   = List(UserRef("realm", "sub"), GroupRef("realm", "group"), Anonymous())
+  private val acls                         = Acls.inMemory[IO](index).ioValue
+  private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
   private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
-  List(Permission("read").value, Permission("write").value, Permission("other").value, Permission("attach").value)
-  private val instant = clock.instant()
+  private val instant                      = clock.instant()
 
   trait Context {
-    val createdBy: Identity = UserRef("realm", "sub")
-    implicit val tokenIds   = Set(GroupRef("realm", "admin"), createdBy)
-    val path: Path          = genString(length = 4) / genString(length = 4)
-    val id: AbsoluteIri     = Iri.absolute(s"https://bluebrain.github.io/nexus/acls/").right.value + path.repr
-    val user1               = identities(genInt(max = 1))
-    val user2               = identities.filterNot(_ == user1).head
-    val permsUser1          = Random.shuffle(permissions).take(1 + genInt(max = 299))
-    val permsUser2          = Random.shuffle(permissions).take(1 + genInt(max = 299))
-    val acl                 = AccessControlList(user1 -> permsUser1, user2 -> permsUser2)
+    val createdBy: Subject = User("sub", "realm")
+    implicit val caller    = Caller(createdBy, Set[Identity](Group("admin", "realm")))
+    val path: Path         = genString(length = 4) / genString(length = 4)
+    val id: AbsoluteIri    = Iri.absolute(s"https://bluebrain.github.io/nexus/acls/").right.value + path.repr
+    val user1              = identities(genInt(max = 1))
+    val user2              = identities.filterNot(_ == user1).head
+    val permsUser1         = Random.shuffle(permissions).take(1 + genInt(max = 299))
+    val permsUser2         = Random.shuffle(permissions).take(1 + genInt(max = 299))
+    val acl                = AccessControlList(user1 -> permsUser1, user2 -> permsUser2)
   }
 
   trait AppendCtx extends Context {
@@ -72,12 +75,8 @@ class AclsSpec
 
     "performing replace operations" should {
 
-      "reject when subject not present" in new Context {
-        acls.replace(path, 0L, acl)(Set(GroupRef("realm", genString()))).ioValue shouldEqual Left(AclMissingSubject)
-      }
-
       "reject when no parent acls/write permissions present" in new Context {
-        acls.replace(path, 0L, acl)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
+        acls.replace(path, 0L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
           Left(AclUnauthorizedWrite(path))
       }
 
@@ -92,25 +91,25 @@ class AclsSpec
 
       "successfully be created" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
         acls.fetchUnsafe(path).ioValue shouldEqual acl
       }
 
       "successfully be updated" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
-        val replaced                = AccessControlList(user1 -> permsUser1)
-        val updatedBy               = UserRef(genString(), genString())
-        val otherIds: Set[Identity] = Set(GroupRef("realm", "admin"), updatedBy)
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+        val replaced         = AccessControlList(user1 -> permsUser1)
+        val updatedBy        = User(genString(), genString())
+        val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy))
         acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, updatedBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy))
         acls.fetchUnsafe(path).ioValue shouldEqual replaced
 
       }
 
       "reject when wrong revision after updated" in new Context {
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
@@ -133,17 +132,12 @@ class AclsSpec
         acls.append(path, 1L, append).ioValue shouldEqual Left(NothingToBeUpdated(path))
       }
 
-      "reject when subject not present" in new AppendCtx {
-        acls.replace(path, 0L, acl).ioValue.right.value
-
-        acls.append(path, 1L, aclAppend)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
-      }
-
       "reject when no parent acls/write permissions present" in new AppendCtx {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls.append(path, 1L, aclAppend)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
+        acls
+          .append(path, 1L, aclAppend)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .ioValue shouldEqual
           Left(AclUnauthorizedWrite(path))
       }
 
@@ -166,7 +160,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.append(path, 1L, aclAppend).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
 
         acls.fetchUnsafe(path).ioValue shouldEqual (aclAppend ++ acl)
 
@@ -182,17 +176,10 @@ class AclsSpec
         acls.subtract(path, 1L, nonExisting).ioValue shouldEqual Left(NothingToBeUpdated(path))
       }
 
-      "reject when subject not present" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
-
-        acls.subtract(path, 1L, acl)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
-      }
-
       "reject when no parent acls/write permissions present" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls.subtract(path, 1L, acl)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
+        acls.subtract(path, 1L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
           Left(AclUnauthorizedWrite(path))
       }
 
@@ -215,7 +202,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.subtract(path, 1L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
 
         acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
       }
@@ -229,17 +216,10 @@ class AclsSpec
         acls.delete(path, 2L).ioValue shouldEqual Left(AclIsEmpty(path))
       }
 
-      "reject when subject not present" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
-
-        acls.delete(path, 1L)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
-      }
-
       "reject when no parent acls/write permissions present" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls.delete(path, 1L)(Set(GroupRef(genString(), "admin"), createdBy)).ioValue shouldEqual
+        acls.delete(path, 1L)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
           Left(AclUnauthorizedWrite(path))
       }
 
@@ -255,11 +235,10 @@ class AclsSpec
         acls.replace(path, 0L, acl).ioValue.right.value
 
         acls.delete(path, 1L).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), createdBy, createdBy, instant, instant))
+          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
 
         acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
       }
     }
-
   }
 }

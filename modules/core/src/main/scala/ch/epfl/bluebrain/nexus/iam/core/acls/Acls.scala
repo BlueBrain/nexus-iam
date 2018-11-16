@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.core.acls
 
 import cats.MonadError
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.Acls.PermissionAggregate
 import ch.epfl.bluebrain.nexus.iam.core.acls.Command._
 import ch.epfl.bluebrain.nexus.iam.core.acls.CommandRejection._

@@ -3,12 +3,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiFunction
 
 import cats.Id
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists}
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path.Segment
+import monix.eval.Task
 
 import scala.annotation.tailrec
 
@@ -125,4 +126,19 @@ object InMemoryAclsTree {
     */
   final def apply(): InMemoryAclsTree =
     new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, RevAccessControlList]())
+
+  /**
+    * Constructs an in memory implementation of [[AclsIndex]] using the [[Task]] effect type
+    *
+    */
+  final def task(): AclsIndex[Task] = new AclsIndex[Task] {
+    private val underlying = apply()
+
+    override def replace(path: Path, rev: Long, acl: AccessControlList): Task[Boolean] =
+      Task.pure(underlying.replace(path, rev, acl))
+
+    override def get(path: Path, ancestors: Boolean, self: Boolean)(
+        implicit identities: Set[Identity]): Task[AccessControlLists] =
+      Task.pure(underlying.get(path, ancestors, self))
+  }
 }

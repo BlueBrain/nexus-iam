@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.service.groups
 
 import cats.MonadError
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.iam.types.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event.PermissionsAdded
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups

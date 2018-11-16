@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.elastic.types
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permissions
 import ch.epfl.bluebrain.nexus.service.http.Path
 

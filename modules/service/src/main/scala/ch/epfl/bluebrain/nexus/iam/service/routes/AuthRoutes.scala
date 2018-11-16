@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
 import ch.epfl.bluebrain.nexus.commons.http.{ContextUri, JsonLdCirceSupport}
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.UserInfo.userInfoEncoder
 import ch.epfl.bluebrain.nexus.iam.service.io.JsonLdSerialization.identityEncoder
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.core.groups.UsedGroups
 import ch.epfl.bluebrain.nexus.iam.service.auth.ClaimExtractor.{JsonSyntax, OAuth2BearerTokenSyntax}
 import ch.epfl.bluebrain.nexus.iam.service.auth.{ClaimExtractor, DownstreamAuthClient}

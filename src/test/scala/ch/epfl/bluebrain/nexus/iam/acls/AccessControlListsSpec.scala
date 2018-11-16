@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{GroupRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.http.Path._
@@ -10,8 +10,8 @@ import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 class AccessControlListsSpec extends WordSpecLike with Matchers with OptionValues {
 
   "AccessControlLists" should {
-    val user: Identity  = UserRef("realm", "uuid")
-    val group: Identity = GroupRef("realm", "group")
+    val user: Identity  = User("uuid", "realm")
+    val group: Identity = Group("group", "realm")
 
     val read: Permission  = Permission("read").value
     val write: Permission = Permission("write").value

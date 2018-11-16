@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.Instant
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 /**
@@ -26,9 +26,9 @@ sealed trait AclEvent extends Product with Serializable {
   def instant: Instant
 
   /**
-    * @return the identity which created this event
+    * @return the subject which created this event
     */
-  def identity: Identity
+  def subject: Subject
 
 }
 
@@ -37,46 +37,46 @@ object AclEvent {
   /**
     * A witness to ACL replace.
     *
-    * @param path     the target path for the ACL
-    * @param acl      the ACL replaced, represented as a mapping of identities to permissions
-    * @param rev      the revision that this event generated
-    * @param instant  the instant when this event was recorded
-    * @param identity the identity which generated this event
+    * @param path    the target path for the ACL
+    * @param acl     the ACL replaced, represented as a mapping of identities to permissions
+    * @param rev     the revision that this event generated
+    * @param instant the instant when this event was recorded
+    * @param subject the subject which generated this event
     */
-  final case class AclReplaced(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
+  final case class AclReplaced(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
       extends AclEvent
 
   /**
     * A witness to ACL append.
     *
-    * @param path     the target path for the ACL
-    * @param acl      the ACL appended, represented as a mapping of identities to permissions
-    * @param rev      the revision that this event generated
-    * @param instant  the instant when this event was recorded
-    * @param identity the identity which generated this event
+    * @param path    the target path for the ACL
+    * @param acl     the ACL appended, represented as a mapping of identities to permissions
+    * @param rev     the revision that this event generated
+    * @param instant the instant when this event was recorded
+    * @param subject the subject which generated this event
     */
-  final case class AclAppended(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
+  final case class AclAppended(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
       extends AclEvent
 
   /**
     * A witness to ACL subtraction.
     *
-    * @param path     the target path for the ACL
-    * @param acl      the ACL subtracted, represented as a mapping of identities to permissions
-    * @param rev      the revision that this event generated
-    * @param instant  the instant when this event was recorded
-    * @param identity the identity which generated this event
+    * @param path    the target path for the ACL
+    * @param acl     the ACL subtracted, represented as a mapping of identities to permissions
+    * @param rev     the revision that this event generated
+    * @param instant the instant when this event was recorded
+    * @param subject the subject which generated this event
     */
-  final case class AclSubtracted(path: Path, acl: AccessControlList, rev: Long, instant: Instant, identity: Identity)
+  final case class AclSubtracted(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
       extends AclEvent
 
   /**
     * A witness to ACL deletion.
     *
-    * @param path     the target path for the ACL
-    * @param rev      the revision that this event generated
-    * @param instant  the instant when this event was recorded
-    * @param identity the identity which generated this event
+    * @param path    the target path for the ACL
+    * @param rev     the revision that this event generated
+    * @param instant the instant when this event was recorded
+    * @param subject the subject which generated this event
     */
-  final case class AclDeleted(path: Path, rev: Long, instant: Instant, identity: Identity) extends AclEvent
+  final case class AclDeleted(path: Path, rev: Long, instant: Instant, subject: Subject) extends AclEvent
 }

@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.core.groups
 import java.util.UUID
 
 import cats.instances.try_._
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.iam.types.Identity.GroupRef
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate
 import ch.epfl.bluebrain.nexus.sourcing.mem.MemoryAggregate._
 import org.scalatest.{Matchers, WordSpecLike}

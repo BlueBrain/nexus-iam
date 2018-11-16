@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.Instant
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 /**
@@ -33,8 +33,8 @@ object AclState {
                            rev: Long,
                            created: Instant,
                            updated: Instant,
-                           createdBy: Identity,
-                           updatedBy: Identity)
+                           createdBy: Subject,
+                           updatedBy: Subject)
       extends AclState
 
 }

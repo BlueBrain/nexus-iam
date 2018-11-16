@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.core.acls.types
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 
 /**
   * Type definition representing a mapping of identities to permissions for a specific resource.

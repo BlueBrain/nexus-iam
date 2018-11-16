@@ -15,6 +15,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.Settings
+import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
 import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaSourcingConfig
@@ -79,9 +80,11 @@ object Main {
       as.dispatcher
     )
 
+    val aclsIndex: AclsIndex[Task] = InMemoryAclsTree.task()
+
     val acls: Acls[Task] = {
       implicit val sc = Scheduler.global
-      Acls[Task].runSyncUnsafe()
+      Acls[Task](aclsIndex).runSyncUnsafe()
     }
 
     val aclRoutes   = new AclsRoutes(acls).routes

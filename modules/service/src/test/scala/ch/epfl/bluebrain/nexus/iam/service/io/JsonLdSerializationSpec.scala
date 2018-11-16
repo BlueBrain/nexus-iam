@@ -8,8 +8,8 @@ import akka.http.scaladsl.model.Uri
 import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.types.Meta
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.{Anonymous, AuthenticatedRef, UserRef}
-import ch.epfl.bluebrain.nexus.commons.types.identity.IdentityId
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, AuthenticatedRef, UserRef}
+import ch.epfl.bluebrain.nexus.iam.types.IdentityId
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event
 import ch.epfl.bluebrain.nexus.iam.core.acls.Event._
 import ch.epfl.bluebrain.nexus.iam.core.acls.types.Permission._

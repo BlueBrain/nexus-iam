@@ -1,7 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
+import cats.implicits._
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.types.Permission
+import io.circe._
+import io.circe.syntax._
 
 /**
   * Type definition representing a mapping of identities to permissions for a specific resource.
@@ -71,4 +75,27 @@ object AccessControlList {
     */
   def apply(acl: (Identity, Set[Permission])*): AccessControlList =
     AccessControlList(acl.toMap)
+
+  implicit def aclEncoder(implicit http: HttpConfig): Encoder[AccessControlList] = Encoder.encodeJson.contramap {
+    case AccessControlList(value) =>
+      val acl = value.map {
+        case (identity, perms) => Json.obj("identity" -> identity.asJson, "permissions" -> perms.asJson)
+      }
+      Json.obj("acl" -> Json.arr(acl.toSeq: _*))
+  }
+
+  implicit val aclDecoder: Decoder[AccessControlList] = {
+    def inner(hcc: HCursor): Decoder.Result[(Identity, Set[Permission])] =
+      for {
+        identity <- hcc.get[Identity]("identity")
+        perms    <- hcc.get[Set[Permission]]("permissions")
+      } yield identity -> perms
+
+    Decoder.instance { hc =>
+      for {
+        arr <- hc.downField("acl").focus.flatMap(_.asArray).toRight(DecodingFailure("acl field not found", hc.history))
+        acl <- arr.foldM(Map.empty[Identity, Set[Permission]]) { case (acc, j) => inner(j.hcursor).map(acc + _) }
+      } yield AccessControlList(acl)
+    }
+  }
 }
