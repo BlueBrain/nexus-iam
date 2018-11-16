@@ -29,7 +29,7 @@ object AclRejection {
     * @param path the target path for the ACL
     * @param value the error message
     */
-  final case class AclUnexpected(path: Path, value: String)
+  final case class AclUnexpectedState(path: Path, value: String)
       extends AclRejection(
         s"unexpected error while operating on the ACL surface API for path '$path'. Reason: '$value'")
 

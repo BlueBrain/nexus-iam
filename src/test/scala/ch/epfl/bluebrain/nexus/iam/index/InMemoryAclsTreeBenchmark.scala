@@ -1,8 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.index
 
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.UserRef
+import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList
 import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
@@ -37,7 +37,7 @@ class InMemoryAclsTreeBenchmark extends Randomness {
   // Number of organizations <= 10
   val orgs1                  = List.fill(10)(genString(length = 10))
   val projects1              = List.fill(100)(genString(length = 10))
-  val users1: List[Identity] = List.fill(100)(UserRef("realm", genString(length = 10)))
+  val users1: List[Identity] = List.fill(100)(User(genString(length = 10), "realm"))
 
   val index1 = InMemoryAclsTree()
 
@@ -91,7 +91,7 @@ class InMemoryAclsTreeBenchmark extends Randomness {
   // Number of organizations <= 100
   val orgs2                  = List.fill(100)(genString(length = 10))
   val projects2              = List.fill(1000)(genString(length = 10))
-  val users2: List[Identity] = List.fill(500)(UserRef("realm", genString(length = 10)))
+  val users2: List[Identity] = List.fill(500)(User(genString(length = 10), "realm"))
 
   val index2 = InMemoryAclsTree()
 

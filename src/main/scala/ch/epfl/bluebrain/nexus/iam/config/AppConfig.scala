@@ -2,8 +2,8 @@ package ch.epfl.bluebrain.nexus.iam.config
 
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity
-import ch.epfl.bluebrain.nexus.commons.types.identity.Identity.GroupRef
+import ch.epfl.bluebrain.nexus.iam.types.Identity
+import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
 import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
@@ -29,7 +29,7 @@ final case class AppConfig(description: Description,
                            cluster: ClusterConfig,
                            persistence: PersistenceConfig,
                            indexing: IndexingConfig,
-                           initAcl: InitialAcl)
+                           initialAcl: InitialAcl)
 
 object AppConfig {
 
@@ -106,7 +106,7 @@ object AppConfig {
 
   final case class InitialAcl(path: Path, identities: InitialIdentities, permissions: Set[Permission]) {
     private val map: Map[Identity, Set[Permission]] =
-      identities.groups.map(GroupRef(identities.realm, _) -> permissions).toMap
+      identities.groups.map(Group(_, identities.realm) -> permissions).toMap
     val acl: AccessControlList = AccessControlList(map)
   }
 
@@ -151,6 +151,6 @@ object AppConfig {
   implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig = appConfig.persistence
   implicit def toHttp(implicit appConfig: AppConfig): HttpConfig               = appConfig.http
   implicit def toIndexing(implicit appConfig: AppConfig): IndexingConfig       = appConfig.indexing
-  implicit def inInitialAcl(implicit appConfig: AppConfig): InitialAcl         = appConfig.initAcl
+  implicit def inInitialAcl(implicit appConfig: AppConfig): InitialAcl         = appConfig.initialAcl
 
 }
