@@ -16,19 +16,17 @@ import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import monix.eval.Task
 import org.mockito.Mockito
-import org.mockito.Mockito.when
+import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
 
 import scala.concurrent.duration._
 
@@ -37,7 +35,7 @@ class AclsRoutesSpec
     with Matchers
     with EitherValues
     with OptionValues
-    with MockitoSugar
+    with IdiomaticMockitoFixture
     with BeforeAndAfter
     with ScalatestRouteTest
     with test.Resources
@@ -51,7 +49,7 @@ class AclsRoutesSpec
 
   private val acls: Acls[Task]     = mock[Acls[Task]]
   private val realms: Realms[Task] = mock[Realms[Task]]
-  val routes                       = new AclsRoutes(acls, realms).routes
+  private val routes               = new AclsRoutes(acls, realms).routes
 
   before {
     Mockito.reset(acls)
@@ -68,7 +66,7 @@ class AclsRoutesSpec
     val acl     = AccessControlList(user -> readWrite, group -> manage)
     val token   = OAuth2BearerToken("valid")
 
-    implicit val caller = Caller(user, Set(user, group))
+    implicit val caller: Caller = Caller(user, Set(user, group))
 
     val id   = url"https://bluebrain.github.io/nexus/acls/myorg/myproj".value
     val path = "myorg" / "myproj"
@@ -101,13 +99,13 @@ class AclsRoutesSpec
             quote("{updatedBy}") -> updatedBty.id.asString)
       ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
-    when(realms.caller(AuthToken(token.token))).thenReturn(Task(Option(caller)))
+    realms.caller(AuthToken(token.token)) shouldReturn Task(Option(caller))
 
     val responseMeta =
       ResourceMetadata(id, 1L, Set(nxv.AccessControlList), clock.instant(), user, clock.instant(), user)
 
     "create ACL" in {
-      when(acls.replace(path, 0L, acl)).thenReturn(Task.pure[AclMetaOrRejection](Right(responseMeta)))
+      acls.replace(path, 0L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
 
       Put(s"/v1/acls/myorg/myproj", aclJson) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -116,7 +114,7 @@ class AclsRoutesSpec
     }
 
     "append ACL" in {
-      when(acls.append(path, 1L, acl)).thenReturn(Task.pure[AclMetaOrRejection](Right(responseMeta)))
+      acls.append(path, 1L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Append"))
       Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -125,7 +123,7 @@ class AclsRoutesSpec
     }
 
     "subtract ACL" in {
-      when(acls.subtract(path, 1L, acl)).thenReturn(Task.pure[AclMetaOrRejection](Right(responseMeta)))
+      acls.subtract(path, 1L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Subtract"))
       Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -134,7 +132,7 @@ class AclsRoutesSpec
     }
 
     "delete ACL" in {
-      when(acls.delete(path, 1L)).thenReturn(Task.pure[AclMetaOrRejection](Right(responseMeta)))
+      acls.delete(path, 1L) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
       Delete(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.OK
@@ -142,7 +140,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true" in {
-      when(acls.fetch(path)).thenReturn(Task.pure(resourceAcl1))
+      acls.fetch(path) shouldReturn Task.pure(resourceAcl1)
       Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
@@ -150,7 +148,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true and rev = 1" in {
-      when(acls.fetch(path, 1L)).thenReturn(Task.pure(resourceAcl1))
+      acls.fetch(path, 1L) shouldReturn Task.pure(resourceAcl1)
       Get(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
@@ -158,7 +156,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true with path containing *" in {
-      when(acls.list(Path("/myorg/*").right.value, ancestors = false, self = true)).thenReturn(Task.pure(aclsFetch))
+      acls.list(Path("/myorg/*").right.value, ancestors = false, self = true) shouldReturn Task.pure(aclsFetch)
       Get(s"/v1/acls/myorg/*") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK
@@ -166,7 +164,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = false and rev = 2" in {
-      when(acls.fetchUnsafe(path, 2L)).thenReturn(Task.pure(resourceAcl1))
+      acls.fetchUnsafe(path, 2L) shouldReturn Task.pure(resourceAcl1)
       Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
@@ -174,7 +172,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true and ancestors = true" in {
-      when(acls.list(path, ancestors = true, self = true)).thenReturn(Task.pure(aclsFetch))
+      acls.list(path, ancestors = true, self = true) shouldReturn Task.pure(aclsFetch)
       Get(s"/v1/acls/myorg/myproj?ancestors=true&self=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK
@@ -213,7 +211,8 @@ class AclsRoutesSpec
     }
 
     "return error when making a call that returns exception on the ACLs" in {
-      Get(s"/v1/acls/myorg/myProj2") ~> addCredentials(token) ~> routes ~> check {
+      acls.fetch(path) shouldReturn Task.raiseError(new RuntimeException)
+      Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
           Map(quote("{code}") -> "Unexpected", quote("{msg}") -> "Something went wrong. Please, try again later."))

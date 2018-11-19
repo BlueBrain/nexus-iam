@@ -37,7 +37,7 @@ val catsVersion                = "1.4.0"
 val circeVersion               = "0.10.0"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "2.23.0"
+val mockitoVersion             = "1.0.1"
 val monixVersion               = "3.0.0-RC2"
 val pureconfigVersion          = "0.9.2"
 val scalaTestVersion           = "3.0.5"
@@ -64,7 +64,7 @@ lazy val catsCore            = "org.typelevel"           %% "cats-core"         
 lazy val circeCore           = "io.circe"                %% "circe-core"                 % circeVersion
 lazy val circeJava8          = "io.circe"                %% "circe-java8"                % circeVersion
 lazy val journalCore         = "io.verizon.journal"      %% "core"                       % journalVersion
-lazy val mockitoCore         = "org.mockito"             % "mockito-core"                % mockitoVersion
+lazy val mockitoScala        = "org.mockito"             %% "mockito-scala"              % mockitoVersion
 lazy val monixEval           = "io.monix"                %% "monix-eval"                 % monixVersion
 lazy val logbackClassic      = "ch.qos.logback"          % "logback-classic"             % logbackVersion
 lazy val pureconfig          = "com.github.pureconfig"   %% "pureconfig"                 % pureconfigVersion
@@ -103,7 +103,7 @@ lazy val iam = project
       serviceHttp,
       akkaHttpTestKit % Test,
       commonTest      % Test,
-      mockitoCore     % Test,
+      mockitoScala    % Test,
       scalaTest       % Test,
     )
   )
