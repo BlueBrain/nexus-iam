@@ -16,7 +16,7 @@ import scala.util.Random
 
 /**
   * Benchmark on Graph operations
-  * To run it, execute on thei sbt shell: ''jmh:run -i 10 -wi 10 -f1 -t1 .*InMemoryAclsTreeBenchmark.*''
+  * To run it, execute on the sbt shell: ''jmh:run -i 10 -wi 10 -f1 -t1 .*InMemoryAclsTreeBenchmark.*''
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
   * Results:
   * Benchmark                   Mode  Cnt       Score      Error  Units
