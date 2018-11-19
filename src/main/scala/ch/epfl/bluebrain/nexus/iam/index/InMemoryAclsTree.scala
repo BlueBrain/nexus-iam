@@ -79,8 +79,8 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
 
   private def getWithAncestors(path: Path): AccessControlLists = {
     val currentAcls = get(path)
-    if (path.isEmpty) currentAcls
-    else currentAcls ++ getWithAncestors(path.tail(dropSlash = true))
+    if (path.isEmpty || path == Path./) currentAcls
+    else currentAcls ++ getWithAncestors(path.tail(dropSlash = path.tail() != Path./))
   }
 
   private def pathOf(segments: Vector[String]): Path =
