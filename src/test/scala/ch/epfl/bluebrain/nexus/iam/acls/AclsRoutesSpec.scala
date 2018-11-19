@@ -165,7 +165,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true and ancestors = true" in {
-      when(acls.list(path, self = true)).thenReturn(Task.pure(aclsFetch))
+      when(acls.list(path, ancestors = true, self = true)).thenReturn(Task.pure(aclsFetch))
       Get(s"/v1/acls/myorg/myproj?ancestors=true&self=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK

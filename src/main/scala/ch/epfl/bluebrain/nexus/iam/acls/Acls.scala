@@ -121,11 +121,12 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F], clock: 
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.
     *
     * @param path      the path where the ACLs are going to be looked up
+    * @param ancestors flag to decide whether or not ancestor paths should be included in the response
     * @param self      flag to decide whether or not ancestor other identities than the provided ones should be included in the response
     * @param caller    the caller that contains the provided identities
     */
-  def list(path: Path, self: Boolean)(implicit caller: Caller): F[AccessControlLists] =
-    index.get(path, ancestors = true, self)(caller.identities)
+  def list(path: Path, ancestors: Boolean, self: Boolean)(implicit caller: Caller): F[AccessControlLists] =
+    index.get(path, ancestors, self)(caller.identities)
 
   private def checkPermissions(path: Path)(implicit caller: Caller): F[Boolean] =
     fetch(path).flatMap { c =>

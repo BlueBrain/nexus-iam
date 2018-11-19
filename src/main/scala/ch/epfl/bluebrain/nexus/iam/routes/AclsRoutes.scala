@@ -62,7 +62,7 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
                 case (Some(rev), false, false) =>
                   complete(acls.fetchUnsafe(path, rev).toSingleList(path).runToFuture)
                 case (_, true, self) =>
-                  complete(acls.list(path, self).runToFuture)
+                  complete(acls.list(path, ancestors = true, self).runToFuture)
                 case (_, _, false) =>
                   complete(acls.fetchUnsafe(path).toSingleList(path).runToFuture)
                 case (_, _, true) =>
