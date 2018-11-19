@@ -134,7 +134,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F],
   private def checkPermissions(path: Path)(implicit caller: Caller): F[Boolean] =
     fetch(path).flatMap { c =>
       val hasPerms = c.value.value.exists {
-        case (_, perms) => perms.contains(writePermission)
+        case (_, perms) => perms.contains(writeAcls)
       }
       if (hasPerms) F.pure(true)
       else if (path.isEmpty) F.pure(false)

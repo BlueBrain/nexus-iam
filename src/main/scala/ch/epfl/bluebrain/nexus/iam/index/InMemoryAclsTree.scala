@@ -6,7 +6,6 @@ import cats.Id
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Permission._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path.Segment
 import monix.eval.Task
@@ -53,14 +52,14 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
       implicit identities: Set[Identity]): Id[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
-      def containsOwn(acl: AccessControlList): Boolean =
-        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(Own) }
+      def containsAclsWrite(acl: AccessControlList): Boolean =
+        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(writeAcls) }
 
       val (_, result) = currentAcls.sorted.value
         .foldLeft(Set.empty[Path] -> AccessControlLists.empty) {
-          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith) => ownPaths     -> (acc + entry)
-          case ((ownPaths, acc), entry @ (p, acl)) if containsOwn(acl.value)      => ownPaths + p -> (acc + entry)
-          case ((ownPaths, acc), (p, acl))                                        => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
+          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith)  => ownPaths     -> (acc + entry)
+          case ((ownPaths, acc), entry @ (p, acl)) if containsAclsWrite(acl.value) => ownPaths + p -> (acc + entry)
+          case ((ownPaths, acc), (p, acl))                                         => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
         }
       result
     }

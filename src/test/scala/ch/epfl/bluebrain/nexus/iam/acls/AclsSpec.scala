@@ -42,7 +42,7 @@ class AclsSpec
 
   private implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
-  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writePermission))
+  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writeAcls))
 
   private val index: AclsIndex[IO] = mock[AclsIndex[IO]]
 

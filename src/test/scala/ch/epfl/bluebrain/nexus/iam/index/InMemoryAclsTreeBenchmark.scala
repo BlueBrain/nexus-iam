@@ -3,11 +3,10 @@ package ch.epfl.bluebrain.nexus.iam.index
 import java.time.{Clock, Instant, ZoneId}
 
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.iam.types.Identity.User
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, base}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, base, _}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.types.Permission._
+import ch.epfl.bluebrain.nexus.iam.types.Identity.User
+import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.openjdk.jmh.annotations._
@@ -35,7 +34,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
 
   val instant = clock.instant()
   //10 permissions
-  val permissions: List[Permission] = Own :: List.fill(9)(Permission(genString(length = 10)).get)
+  val permissions: List[Permission] = writeAcls :: List.fill(9)(Permission(genString(length = 10)).get)
 
   // Number of ACLs: 1000
   // Number of users <= 100

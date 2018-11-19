@@ -15,7 +15,7 @@ package object acls {
 
   val types: Set[AbsoluteIri] = Set(nxv.AccessControlList)
 
-  val writePermission = Permission.unsafe("acls/write")
+  val writeAcls = Permission.unsafe("acls/write")
 
   type Agg[F[_]]                 = Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]
   type EventOrRejection          = Either[AclRejection, AclEvent]
