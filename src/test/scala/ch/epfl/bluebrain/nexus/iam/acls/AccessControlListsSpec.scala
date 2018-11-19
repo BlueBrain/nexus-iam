@@ -9,8 +9,8 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import io.circe.syntax._
 import org.scalatest.{EitherValues, Matchers, WordSpecLike}
 
@@ -62,14 +62,14 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
                            "a" / "b" -> acl3)
     }
     "sort ACLs" in {
-      AccessControlLists("aa" / "bb" -> acl,
-                         /           -> acl3,
-                         "a" / "b"   -> acl.map(_ => AccessControlList.empty),
-                         Path("a")   -> acl2).sorted shouldEqual
-        AccessControlLists(/           -> acl3,
-                           Path("a")   -> acl2,
-                           "a" / "b"   -> acl.map(_ => AccessControlList.empty),
-                           "aa" / "bb" -> acl)
+      AccessControlLists("aa" / "bb"            -> acl,
+                         /                      -> acl3,
+                         "a" / "b"              -> acl.map(_ => AccessControlList.empty),
+                         Path("/a").right.value -> acl2).sorted shouldEqual
+        AccessControlLists(/                      -> acl3,
+                           Path("/a").right.value -> acl2,
+                           "a" / "b"              -> acl.map(_ => AccessControlList.empty),
+                           "aa" / "bb"            -> acl)
     }
 
     "filter identities" in {
@@ -96,8 +96,10 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
 
     "converts ACL to Json" in {
       val acls =
-        AccessControlLists(Path("one/two") -> acl.map(_ => AccessControlList(user  -> readWrite, group -> manage)),
-                           Path("one")     -> acl2.map(_ => AccessControlList(user -> readWrite)))
+        AccessControlLists(
+          Path("/one/two").right.value -> acl.map(_ => AccessControlList(user  -> readWrite, group -> manage)),
+          Path("/one").right.value     -> acl2.map(_ => AccessControlList(user -> readWrite))
+        )
       val json = jsonContentOf("/acls/acls.json")
       acls.asJson shouldEqual json
     }

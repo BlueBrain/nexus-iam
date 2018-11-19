@@ -8,7 +8,7 @@ import cats.effect.{ContextShift, IO}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.iam.IOValues
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{InitialAcl, InitialIdentities}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
@@ -16,8 +16,8 @@ import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -42,11 +42,12 @@ class AclsSpec
 
   private implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
-  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writePermission))
+  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writeAcls))
 
   private val index: AclsIndex[IO] = mock[AclsIndex[IO]]
 
   private implicit val clock: Clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private implicit val http                = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
   private val acls                         = Acls.inMemory[IO](index).ioValue
   private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
   private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
@@ -56,7 +57,7 @@ class AclsSpec
     val createdBy: Subject = User("sub", "realm")
     implicit val caller    = Caller(createdBy, Set[Identity](Group("admin", "realm")))
     val path: Path         = genString(length = 4) / genString(length = 4)
-    val id: AbsoluteIri    = Iri.absolute(s"https://bluebrain.github.io/nexus/acls/").right.value + path.repr
+    val id: AbsoluteIri    = Iri.absolute(s"http://nexus.example.com/v1/acls/").right.value + path.asString
     val user1              = identities(genInt(max = 1))
     val user2              = identities.filterNot(_ == user1).head
     val permsUser1         = Random.shuffle(permissions).take(1 + genInt(max = 299))

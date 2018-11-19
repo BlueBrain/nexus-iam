@@ -10,7 +10,8 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group}
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
@@ -62,7 +63,9 @@ object AppConfig {
     * @param prefix     prefix to add to HTTP routes
     * @param publicUri  public URI of the service
     */
-  final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri)
+  final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri) {
+    val publicIri: AbsoluteIri = url"$publicUri".value
+  }
 
   /**
     * Cluster configuration
@@ -110,8 +113,8 @@ object AppConfig {
     private val map: Map[Identity, Set[Permission]] =
       identities.groups.map(Group(_, identities.realm) -> permissions).toMap
 
-    def acl(implicit c: Clock): ResourceAccessControlList =
-      ResourceF(acls.base + path.repr,
+    def acl(implicit c: Clock, http: HttpConfig): ResourceAccessControlList =
+      ResourceF(acls.base + path.asString,
                 1L,
                 acls.types,
                 c.instant(),

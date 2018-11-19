@@ -19,8 +19,8 @@ import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import monix.eval.Task
@@ -90,12 +90,13 @@ class AclsRoutesSpec
                                  user,
                                  AccessControlList(user -> readWrite))
 
-    val aclsFetch = AccessControlLists(Path("one/two") -> resourceAcl1, Path("one") -> resourceAcl2)
+    val aclsFetch =
+      AccessControlLists(Path("/one/two").right.value -> resourceAcl1, Path("/one").right.value -> resourceAcl2)
 
     def response(rev: Long, createdBy: Identity, updatedBty: Identity, path: Path): Json =
       jsonContentOf(
         "/resources/write-response-routes.json",
-        Map(quote("{path}")      -> path.repr.drop(1),
+        Map(quote("{path}")      -> path.asString.drop(1),
             quote("{createdBy}") -> createdBy.id.asString,
             quote("{updatedBy}") -> updatedBty.id.asString)
       ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
@@ -156,6 +157,14 @@ class AclsRoutesSpec
       }
     }
 
+    "get ACL self = true with path containing *" in {
+      when(acls.list(Path("/myorg/*").right.value, ancestors = false, self = true)).thenReturn(Task.pure(aclsFetch))
+      Get(s"/v1/acls/myorg/*") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
     "get ACL self = false and rev = 2" in {
       when(acls.fetchUnsafe(path, 2L)).thenReturn(Task.pure(resourceAcl1))
       Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
@@ -183,6 +192,17 @@ class AclsRoutesSpec
       }
     }
 
+    "return error when getting ACL with rev and path containing *" in {
+      Get(s"/v1/acls/myorg/*?rev=2") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf(
+          "/acls/error.json",
+          Map(quote("{code}") -> "IllegalParameter",
+              quote("{msg}")  -> "'rev' query parameter and path containing '*' cannot be present simultaneously.")
+        )
+        status shouldEqual StatusCodes.BadRequest
+      }
+    }
+
     "return error when invalid query parameter" in {
       Get(s"/v1/acls/myorg/myproj?rev=2ancestors=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
@@ -198,6 +218,15 @@ class AclsRoutesSpec
           "/acls/error.json",
           Map(quote("{code}") -> "Unexpected", quote("{msg}") -> "Something went wrong. Please, try again later."))
         status shouldEqual StatusCodes.InternalServerError
+      }
+    }
+
+    "return error when path contains double slash" in {
+      Get(s"/v1/acls/myorg//") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf("/acls/error.json",
+                                                   Map(quote("{code}") -> "IllegalParameter",
+                                                       quote("{msg}")  -> "path '/myorg//' cannot contain double slash"))
+        status shouldEqual StatusCodes.BadRequest
       }
     }
   }

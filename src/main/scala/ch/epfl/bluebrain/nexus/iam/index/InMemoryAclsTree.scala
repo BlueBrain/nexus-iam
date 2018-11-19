@@ -6,9 +6,8 @@ import cats.Id
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Identity
-import ch.epfl.bluebrain.nexus.iam.types.Permission._
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path.Segment
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path.Segment
 import monix.eval.Task
 
 import scala.annotation.tailrec
@@ -31,8 +30,10 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
     @tailrec
     def inner(p: Path, children: Set[Path]): Unit = {
       tree.merge(p, children, (current, _) => current ++ children)
-      if (!p.isEmpty) inner(p.tail, Set(p))
+      if (!(p.isEmpty || p == Path./))
+        inner(p.tail(dropSlash = p.tail() != Path./), Set(p))
     }
+
     val rev = aclResource.rev
 
     val f: BiFunction[ResourceAccessControlList, ResourceAccessControlList, ResourceAccessControlList] = (curr, _) =>
@@ -51,14 +52,14 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
       implicit identities: Set[Identity]): Id[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
-      def containsOwn(acl: AccessControlList): Boolean =
-        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(Own) }
+      def containsAclsWrite(acl: AccessControlList): Boolean =
+        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(writeAcls) }
 
       val (_, result) = currentAcls.sorted.value
         .foldLeft(Set.empty[Path] -> AccessControlLists.empty) {
-          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith) => ownPaths     -> (acc + entry)
-          case ((ownPaths, acc), entry @ (p, acl)) if containsOwn(acl.value)      => ownPaths + p -> (acc + entry)
-          case ((ownPaths, acc), (p, acl))                                        => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
+          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith)  => ownPaths     -> (acc + entry)
+          case ((ownPaths, acc), entry @ (p, acl)) if containsAclsWrite(acl.value) => ownPaths + p -> (acc + entry)
+          case ((ownPaths, acc), (p, acl))                                         => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
         }
       result
     }
@@ -71,17 +72,18 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
       if (ancestors)
         result.removeEmpty
       else
-        AccessControlLists(result.value.filterKeys(_.length == path.length)).removeEmpty
+        AccessControlLists(result.value.filterKeys(_.size == path.size)).removeEmpty
     }
   }
 
   private def getWithAncestors(path: Path): AccessControlLists = {
     val currentAcls = get(path)
-    if (path.isEmpty) currentAcls
-    else currentAcls ++ getWithAncestors(path.tail)
+    if (path.isEmpty || path == Path./) currentAcls
+    else currentAcls ++ getWithAncestors(path.tail(dropSlash = path.tail() != Path./))
   }
 
-  private def pathOf(segments: Vector[String]): Path = Path(segments.mkString("/", "/", ""))
+  private def pathOf(segments: Vector[String]): Path =
+    if (segments.isEmpty) Path./ else segments.foldLeft[Path](Path.Empty)(_ / _)
 
   private def get(path: Path): AccessControlLists = {
     val segments = path.segments.toVector

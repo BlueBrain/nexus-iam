@@ -14,8 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.{IllegalParameter, Unexpected}
-import ch.epfl.bluebrain.nexus.rdf.Iri
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe._
@@ -28,9 +27,6 @@ import scala.collection.immutable.Seq
 object instances extends FailFastCirceSupport {
 
   private val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
-
-  implicit val absoluteIriEncoder: Encoder[AbsoluteIri] = Encoder.encodeString.contramap(_.asString)
-  implicit val absoluteIriDecoder: Decoder[AbsoluteIri] = Decoder.decodeString.emap(Iri.absolute)
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val config = rejectionConfig

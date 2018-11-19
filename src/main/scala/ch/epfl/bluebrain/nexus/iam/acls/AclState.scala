@@ -2,9 +2,10 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.Instant
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.{ResourceF, ResourceMetadata}
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 /**
   * Enumeration of ACLs states.
@@ -37,11 +38,11 @@ object AclState {
                            createdBy: Subject,
                            updatedBy: Subject)
       extends AclState {
-    lazy val toResource: ResourceAccessControlList =
-      ResourceF(base + path.repr, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
+    def toResource(implicit http: HttpConfig): ResourceAccessControlList =
+      ResourceF(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
 
-    lazy val toResourceMetadata: ResourceMetadata =
-      ResourceMetadata(base + path.repr, rev, types, createdAt, createdBy, updatedAt, updatedBy)
+    def toResourceMetadata(implicit http: HttpConfig): ResourceMetadata =
+      ResourceMetadata(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy)
   }
 
 }

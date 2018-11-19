@@ -2,9 +2,9 @@ package ch.epfl.bluebrain.nexus.iam.types
 
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Decoder.Result
 import io.circe._
