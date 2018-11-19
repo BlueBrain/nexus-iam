@@ -46,7 +46,7 @@ val kryoVersion                = "0.5.2"
 // Dependencies modules
 lazy val rdfJena             = "ch.epfl.bluebrain.nexus" %% "rdf-jena"                   % rdfVersion
 lazy val rdfCirce            = "ch.epfl.bluebrain.nexus" %% "rdf-circe"                  % rdfVersion
-lazy val rdfAkka            = "ch.epfl.bluebrain.nexus" %% "rdf-akka"                  % rdfVersion
+lazy val rdfAkka             = "ch.epfl.bluebrain.nexus" %% "rdf-akka"                   % rdfVersion
 lazy val rdfNexus            = "ch.epfl.bluebrain.nexus" %% "rdf-nexus"                  % rdfVersion
 lazy val serviceIndexing     = "ch.epfl.bluebrain.nexus" %% "service-indexing"           % serviceVersion
 lazy val serviceKamon        = "ch.epfl.bluebrain.nexus" %% "service-kamon"              % serviceVersion
