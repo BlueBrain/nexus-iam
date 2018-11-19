@@ -6,7 +6,7 @@ import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import io.circe.syntax._
 import io.circe.{Encoder, Json}
 
@@ -48,7 +48,8 @@ final case class AccessControlLists(value: Map[Path, ResourceAccessControlList])
   /**
     * @return new [[AccessControlLists]] with the same elements as the current one but sorted by [[Path]] (alphabetically)
     */
-  def sorted: AccessControlLists = AccessControlLists(ListMap(value.toSeq.sortBy { case (path, _) => path.repr }: _*))
+  def sorted: AccessControlLists =
+    AccessControlLists(ListMap(value.toSeq.sortBy { case (path, _) => path.asString }: _*))
 
   /**
     * Generates a new [[AccessControlLists]] only containing the provided ''identities''.
@@ -89,7 +90,8 @@ object AccessControlLists {
   implicit def aclsEncoder(implicit http: HttpConfig): Encoder[AccessControlLists] = Encoder.encodeJson.contramap {
     case AccessControlLists(value) =>
       val arr = value.map {
-        case (path, acl) => Json.obj("path" -> Json.fromString(path.repr)) deepMerge acl.asJson.removeKeys("@context")
+        case (path, acl) =>
+          Json.obj("path" -> Json.fromString(path.asString)) deepMerge acl.asJson.removeKeys("@context")
       }
       Json
         .obj(nxv.total.prefix -> Json.fromInt(arr.size), nxv.results.prefix -> Json.arr(arr.toSeq: _*))

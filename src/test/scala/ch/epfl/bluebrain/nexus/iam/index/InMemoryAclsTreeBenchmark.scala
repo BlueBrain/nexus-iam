@@ -6,16 +6,18 @@ import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, base}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Permission._
-import ch.epfl.bluebrain.nexus.service.http.Path
-import ch.epfl.bluebrain.nexus.service.http.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.openjdk.jmh.annotations._
+import org.scalatest.EitherValues
 
 import scala.util.Random
 
 /**
   * Benchmark on Graph operations
-  * To run it, execute on the sbt shell: ''jmh:run -i 10 -wi 10 -f1 -t1 .*InMemoryAclsTreeBenchmark.*''
+  * To run it, execute on thei sbt shell: ''jmh:run -i 10 -wi 10 -f1 -t1 .*InMemoryAclsTreeBenchmark.*''
   * Which means "10 iterations" "10 warmup iterations" "1 fork" "1 thread"
   * Results:
   * Benchmark                   Mode  Cnt       Score      Error  Units
@@ -27,9 +29,11 @@ import scala.util.Random
   * listSmallAllProjects       thrpt   10   49324,746 ± 1720,131  ops/s
   */
 @State(Scope.Thread)
-class InMemoryAclsTreeBenchmark extends Randomness {
-  val clock: Clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  val instant      = clock.instant()
+class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
+  private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
+
+  val instant = clock.instant()
   //10 permissions
   val permissions: List[Permission] = Own :: List.fill(9)(Permission(genString(length = 10)).get)
 
@@ -63,7 +67,7 @@ class InMemoryAclsTreeBenchmark extends Randomness {
                           AccessControlList(user -> perm, user2 -> perm2))
       genInt(max = 2) match {
         case 0 => index.replace(/, acl.copy(rev = v.toLong))
-        case 1 => index.replace(Path(org), acl.copy(rev = v.toLong))
+        case 1 => index.replace(Path(org).right.value, acl.copy(rev = v.toLong))
         case 2 => index.replace(org / project, acl.copy(rev = v.toLong))
       }
     }
@@ -72,7 +76,7 @@ class InMemoryAclsTreeBenchmark extends Randomness {
   def listSmallAclOrgs(): Unit = {
     implicit val identities: Set[Identity] = Random.shuffle(users1).take(10).toSet
 
-    val _ = index1.get(Path("*"), ancestors = false, self = false)
+    val _ = index1.get(Path("*").right.value, ancestors = false, self = false)
   }
 
   @Benchmark
@@ -106,7 +110,7 @@ class InMemoryAclsTreeBenchmark extends Randomness {
   def listBigAclOrgs(): Unit = {
     implicit val identities: Set[Identity] = Random.shuffle(users2).take(10).toSet
 
-    val _ = index2.get(Path("*"), ancestors = false, self = false)
+    val _ = index2.get(Path("*").right.value, ancestors = false, self = false)
   }
 
   @Benchmark

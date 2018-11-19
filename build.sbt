@@ -25,7 +25,7 @@ scalafmt: {
  */
 
 // Dependency versions
-val rdfVersion                 = "0.2.27"
+val rdfVersion                 = "0.2.28"
 val commonsVersion             = "0.10.36"
 val serviceVersion             = "0.10.18"
 val sourcingVersion            = "0.12.0"
@@ -46,6 +46,7 @@ val kryoVersion                = "0.5.2"
 // Dependencies modules
 lazy val rdfJena             = "ch.epfl.bluebrain.nexus" %% "rdf-jena"                   % rdfVersion
 lazy val rdfCirce            = "ch.epfl.bluebrain.nexus" %% "rdf-circe"                  % rdfVersion
+lazy val rdfAkka            = "ch.epfl.bluebrain.nexus" %% "rdf-akka"                  % rdfVersion
 lazy val rdfNexus            = "ch.epfl.bluebrain.nexus" %% "rdf-nexus"                  % rdfVersion
 lazy val serviceIndexing     = "ch.epfl.bluebrain.nexus" %% "service-indexing"           % serviceVersion
 lazy val serviceKamon        = "ch.epfl.bluebrain.nexus" %% "service-kamon"              % serviceVersion
@@ -78,6 +79,7 @@ lazy val iam = project
     name       := "iam",
     moduleName := "iam",
     libraryDependencies ++= Seq(
+      rdfAkka,
       rdfCirce,
       rdfJena,
       rdfNexus,

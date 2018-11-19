@@ -1,17 +1,17 @@
 package ch.epfl.bluebrain.nexus.iam
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 
 package object acls {
 
-  //TODO: replace this with publicUri / v1 / acls
-  val base: Iri.AbsoluteIri = url"https://bluebrain.github.io/nexus/acls/".value
+  def base(implicit http: HttpConfig): Iri.AbsoluteIri = http.publicIri + (http.prefix / "acls")
 
   val types: Set[AbsoluteIri] = Set(nxv.AccessControlList)
 

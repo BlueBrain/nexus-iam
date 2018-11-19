@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
 sealed abstract class AclRejection(val msg: String) extends Product with Serializable

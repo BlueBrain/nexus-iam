@@ -14,7 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes.PatchAcl
 import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes.PatchAcl.{AppendAcl, SubtractAcl}
 import ch.epfl.bluebrain.nexus.iam.types.Caller
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import com.github.ghik.silencer.silent
 import io.circe.{Decoder, DecodingFailure}
 import monix.eval.Task
@@ -23,8 +23,13 @@ import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes._
 
 class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config: AppConfig) {
 
-  private val simultaneousParamsRejection: AkkaRejection =
+  private val any = "*"
+
+  private val simultaneousRevAndAncestorsRejection: AkkaRejection =
     validationRejection("'rev' and 'ancestors' query parameters cannot be present simultaneously.")
+
+  private val simultaneousRevAndAnyRejection: AkkaRejection =
+    validationRejection("'rev' query parameter and path containing '*' cannot be present simultaneously.")
 
   def routes: Route =
     (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling())) {
@@ -55,7 +60,11 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
             } ~
               (get & parameter("rev".as[Long] ?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
                 case (Some(_), true, _) =>
-                  reject(simultaneousParamsRejection)
+                  reject(simultaneousRevAndAncestorsRejection)
+                case (Some(_), _, _) if path.segments.contains(any) =>
+                  reject(simultaneousRevAndAnyRejection)
+                case (_, ancestors, self) if path.segments.contains(any) =>
+                  complete(acls.list(path, ancestors, self).runToFuture)
                 case (Some(rev), false, true) =>
                   complete(acls.fetch(path, rev).toSingleList(path).runToFuture)
                 //TODO: Instead of fetchUnsafe, make sure the fetch checks if you have permissions to see all the acls

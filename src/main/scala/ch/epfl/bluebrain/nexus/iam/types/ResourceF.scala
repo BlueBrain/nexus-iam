@@ -4,13 +4,13 @@ import java.time.Instant
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import io.circe.syntax._
 import io.circe.{Encoder, Json}
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 
 /**
   * The metadata information for any resource in the service

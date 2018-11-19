@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.acls
 import java.time.Instant
 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
-import ch.epfl.bluebrain.nexus.service.http.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 /**
   * Enumeration of ACL collection command types.
