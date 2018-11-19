@@ -16,7 +16,7 @@ class AccessControlListSpec
     with Resources {
 
   "An Access Control List" should {
-    val user: Identity  = User("mysubject", "myrealm")
+    val user: Identity  = User("uuid", "realm")
     val group: Identity = Group("mygroup", "myrealm")
     val readWrite       = Set(Permission("acls/read").value, Permission("acls/write").value)
     val manage          = Set(Permission("acls/manage").value)

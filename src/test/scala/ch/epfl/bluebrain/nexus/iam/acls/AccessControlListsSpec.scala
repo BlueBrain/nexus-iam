@@ -22,7 +22,7 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
     val instant = clock.instant()
     val user    = User("uuid", "realm")
     val user2   = User("uuid2", "realm")
-    val group   = Group("group", "realm")
+    val group   = Group("mygroup", "myrealm")
 
     val read: Permission  = Permission.unsafe("read")
     val write: Permission = Permission.unsafe("write")

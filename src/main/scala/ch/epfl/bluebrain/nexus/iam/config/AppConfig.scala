@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.iam.acls
 import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, ResourceAccessControlList}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group}
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.service.http.Path
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
@@ -110,12 +110,15 @@ object AppConfig {
     private val map: Map[Identity, Set[Permission]] =
       identities.groups.map(Group(_, identities.realm) -> permissions).toMap
 
-    //TODO: Find a way not to hardcode the user. Probably require a user
-    //in the app.conf
-    private val user = User(identities.realm, "admin")
-
     def acl(implicit c: Clock): ResourceAccessControlList =
-      ResourceF(acls.base + path.repr, 1L, acls.types, c.instant(), user, c.instant(), user, AccessControlList(map))
+      ResourceF(acls.base + path.repr,
+                1L,
+                acls.types,
+                c.instant(),
+                Anonymous,
+                c.instant(),
+                Anonymous,
+                AccessControlList(map))
   }
 
   final case class InitialIdentities(realm: String, groups: Set[String])
