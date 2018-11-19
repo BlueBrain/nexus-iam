@@ -37,7 +37,7 @@ object instances extends FailFastCirceSupport {
     deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
   }
 
-  implicit val commonRejectionEncoder: Encoder[ResourceRejection] = {
+  implicit val resourceRejectionEncoder: Encoder[ResourceRejection] = {
     implicit val config = rejectionConfig
     deriveEncoder[ResourceRejection].mapJson(_ addContext errorCtxUri)
   }
@@ -123,7 +123,7 @@ object instances extends FailFastCirceSupport {
     new RejectionStatusCode[ResourceRejection] {
       override def apply(rej: ResourceRejection): StatusCode = rej match {
         case _: IllegalParameter => StatusCodes.BadRequest
-        case _: Unexpected       => StatusCodes.BadRequest
+        case _: Unexpected       => StatusCodes.InternalServerError
       }
     }
 }

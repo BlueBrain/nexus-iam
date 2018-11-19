@@ -16,6 +16,7 @@ import akka.util.Timeout
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.Settings
 import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
+import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaSourcingConfig
@@ -87,7 +88,7 @@ object Main {
       Acls[Task](aclsIndex).runSyncUnsafe()
     }
 
-    val aclRoutes   = new AclsRoutes(acls).routes
+    val aclRoutes   = new AclsRoutes(acls, new Realms()).routes
     val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
     val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
