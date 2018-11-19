@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.acls
 import java.time.Instant
 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
+import ch.epfl.bluebrain.nexus.iam.types.{ResourceF, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.service.http.Path
 
 /**
@@ -35,6 +36,12 @@ object AclState {
                            updatedAt: Instant,
                            createdBy: Subject,
                            updatedBy: Subject)
-      extends AclState
+      extends AclState {
+    lazy val toResource: ResourceAccessControlList =
+      ResourceF(base + path.repr, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
+
+    lazy val toResourceMetadata: ResourceMetadata =
+      ResourceMetadata(base + path.repr, rev, types, createdAt, createdBy, updatedAt, updatedBy)
+  }
 
 }

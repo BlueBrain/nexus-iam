@@ -6,14 +6,13 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import cats.effect.{ContextShift, IO}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Identity, Permission, ResourceMetadata}
-import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.IOValues
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
-import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
+import ch.epfl.bluebrain.nexus.iam.types.Identity._
+import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -90,9 +89,10 @@ class AclsSpec
       }
 
       "successfully be created" in new Context {
+        val metadata = ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
-        acls.fetchUnsafe(path).ioValue shouldEqual acl
+          Right(metadata)
+        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => acl)
       }
 
       "successfully be updated" in new Context {
@@ -101,9 +101,10 @@ class AclsSpec
         val replaced         = AccessControlList(user1 -> permsUser1)
         val updatedBy        = User(genString(), genString())
         val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy))
+        val metadata         = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy))
-        acls.fetchUnsafe(path).ioValue shouldEqual replaced
+          Right(metadata)
+        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => replaced)
 
       }
 
@@ -159,10 +160,11 @@ class AclsSpec
       "successfully be appended" in new AppendCtx {
         acls.replace(path, 0L, acl).ioValue.right.value
 
+        val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.append(path, 1L, aclAppend).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+          Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual (aclAppend ++ acl)
+        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => aclAppend ++ acl)
 
       }
     }
@@ -201,10 +203,11 @@ class AclsSpec
       "successfully be subtracted" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
+        val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.subtract(path, 1L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+          Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
+        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
 
@@ -234,10 +237,11 @@ class AclsSpec
       "successfully be deleted" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
+        val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.delete(path, 1L).ioValue shouldEqual
-          Right(ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+          Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual AccessControlList.empty
+        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
   }

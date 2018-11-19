@@ -5,7 +5,7 @@ import java.time.{Clock, Instant, ZoneId}
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.syntax._
@@ -15,7 +15,7 @@ class ResourceFSpec extends WordSpecLike with Matchers with Inspectors with Eith
 
   "A ResourceMetadata" should {
     val user          = User("mysubject", "myrealm")
-    val group         = Group("mygroup", "myrealm")
+    val user2         = User("mysubject2", "myrealm")
     implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
     val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
     val instant       = clock.instant()
@@ -23,7 +23,7 @@ class ResourceFSpec extends WordSpecLike with Matchers with Inspectors with Eith
 
     "converted to Json" in {
       val json  = jsonContentOf("/resources/write-response.json")
-      val model = ResourceMetadata(id, 1L, Set(nxv.AccessControlList, nxv.Realm), instant, user, instant, group)
+      val model = ResourceMetadata(id, 1L, Set(nxv.AccessControlList, nxv.Realm), instant, user, instant, user2)
 
       model.asJson shouldEqual json
     }
