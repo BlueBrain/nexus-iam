@@ -1,4 +1,4 @@
-package ch.epfl.bluebrain.nexus.iam.config
+package ch.epfl.bluebrain.nexus.iam.client.config
 
 import cats.Show
 import cats.syntax.show._
@@ -40,6 +40,11 @@ object Vocabulary {
     val maxScore      = PrefixMapping("maxScore")
     val score         = PrefixMapping("score")
     val uuid          = PrefixMapping("uuid")
+
+    //Identity
+    val realm   = PrefixMapping("realm", base + "realm")
+    val subject = PrefixMapping("subject", base + "subject")
+    val group   = PrefixMapping("group", base + "group")
 
     //Resource types
     val Realm             = withSuffix("Realm")

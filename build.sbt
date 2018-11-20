@@ -127,6 +127,29 @@ lazy val iam = project
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
   )
 
+lazy val client = project
+  .in(file("client"))
+  .settings(
+    name       := "iam-client",
+    moduleName := "iam-client",
+    coverageFailOnMinimum      := false,
+    Test / testOptions         += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
+    libraryDependencies ++= Seq(
+      rdfAkka,
+      rdfCirce,
+      akkaHttp,
+      akkaStream,
+      catsCore,
+      circeCore,
+      logbackClassic,
+      serviceHttp,
+      akkaHttpTestKit % Test,
+      commonTest      % Test,
+      mockitoScala    % Test,
+      scalaTest       % Test,
+    )
+  )
+
 lazy val testSettings = Seq(
   Test / testOptions         += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
   Test / parallelExecution   := false,
