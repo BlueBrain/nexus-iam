@@ -73,6 +73,23 @@ class AclsSpec
 
   "The Acls surface API" when {
 
+    "performing get operations" should {
+      "fetch initial ACLs" in new Context {
+        acls.fetch(/, self = true).ioValue.value shouldEqual initAcl.acl
+        acls.fetch(/, self = false).ioValue.value shouldEqual initAcl.acl
+      }
+
+      "fetch initial with revision" in new Context {
+        acls.fetch(/, 10L, self = true).ioValue.value shouldEqual initAcl.acl
+        acls.fetch(/, 10L, self = false).ioValue.value shouldEqual initAcl.acl
+      }
+
+      "fetch other non existing ACLs" in new Context {
+        acls.fetch(path, self = true).ioValue shouldEqual None
+        acls.fetch(path, 10L, self = false).ioValue shouldEqual None
+      }
+    }
+
     "performing replace operations" should {
 
       "reject when no parent acls/write permissions present" in new Context {
@@ -93,7 +110,7 @@ class AclsSpec
         val metadata = ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.replace(path, 0L, acl).ioValue shouldEqual
           Right(metadata)
-        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => acl)
+        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => acl)
       }
 
       "successfully be updated" in new Context {
@@ -105,8 +122,7 @@ class AclsSpec
         val metadata         = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
           Right(metadata)
-        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => replaced)
-
+        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => replaced)
       }
 
       "reject when wrong revision after updated" in new Context {
@@ -165,7 +181,7 @@ class AclsSpec
         acls.append(path, 1L, aclAppend).ioValue shouldEqual
           Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => aclAppend ++ acl)
+        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => aclAppend ++ acl)
 
       }
     }
@@ -208,7 +224,7 @@ class AclsSpec
         acls.subtract(path, 1L, acl).ioValue shouldEqual
           Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => AccessControlList.empty)
+        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
 
@@ -242,7 +258,7 @@ class AclsSpec
         acls.delete(path, 1L).ioValue shouldEqual
           Right(metadata)
 
-        acls.fetchUnsafe(path).ioValue shouldEqual metadata.map(_ => AccessControlList.empty)
+        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
   }

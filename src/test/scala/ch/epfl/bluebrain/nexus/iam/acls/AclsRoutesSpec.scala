@@ -140,7 +140,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true" in {
-      acls.fetch(path) shouldReturn Task.pure(resourceAcl1)
+      acls.fetch(path, self = true) shouldReturn Task.pure(Option(resourceAcl1))
       Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
@@ -148,7 +148,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true and rev = 1" in {
-      acls.fetch(path, 1L) shouldReturn Task.pure(resourceAcl1)
+      acls.fetch(path, 1L, self = true) shouldReturn Task.pure(Option(resourceAcl1))
       Get(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
@@ -163,10 +163,18 @@ class AclsRoutesSpec
       }
     }
 
-    "get ACL self = false and rev = 2" in {
-      acls.fetchUnsafe(path, 2L) shouldReturn Task.pure(resourceAcl1)
+    "get ACL self = false and rev = 2 when response is an empty ACL" in {
+      acls.fetch(path, 2L, self = false) shouldReturn Task.pure(Option(resourceAcl1.map(_ => AccessControlList.empty)))
       Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
-        responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
+        responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes-empty.json")
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
+    "get ACL self = false and rev = 2 when response is None" in {
+      acls.fetch(path, 2L, self = false) shouldReturn Task.pure[OptResourceAccessControlList](None)
+      Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes-empty.json")
         status shouldEqual StatusCodes.OK
       }
     }
@@ -211,7 +219,7 @@ class AclsRoutesSpec
     }
 
     "return error when making a call that returns exception on the ACLs" in {
-      acls.fetch(path) shouldReturn Task.raiseError(new RuntimeException)
+      acls.fetch(path, self = true) shouldReturn Task.raiseError(new RuntimeException)
       Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",

@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam
 
 import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 
 object syntax {
 
@@ -27,6 +27,16 @@ object syntax {
         case segment: String => Some(segment)
         case _               => None
       }
+  }
+
+  final implicit class PathTailSyntax(private val path: Path) extends AnyVal {
+
+    /**
+      * @return parent segment or end slash.
+      *         E.g.: /a/b returns /a
+      *         E.g.: / returns /
+      */
+    def parent: Path = path.tail(dropSlash = path.tail() != Path./)
   }
 
 }
