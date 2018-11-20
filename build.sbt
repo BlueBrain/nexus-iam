@@ -130,10 +130,10 @@ lazy val iam = project
 lazy val client = project
   .in(file("client"))
   .settings(
-    name       := "iam-client",
-    moduleName := "iam-client",
-    coverageFailOnMinimum      := false,
-    Test / testOptions         += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
+    name                  := "iam-client",
+    moduleName            := "iam-client",
+    coverageFailOnMinimum := false,
+    Test / testOptions    += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
     libraryDependencies ++= Seq(
       rdfAkka,
       rdfCirce,
