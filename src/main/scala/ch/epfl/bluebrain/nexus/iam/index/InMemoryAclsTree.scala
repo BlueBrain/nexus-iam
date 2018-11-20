@@ -4,6 +4,7 @@ import java.util.function.BiFunction
 
 import cats.Id
 import ch.epfl.bluebrain.nexus.iam.acls._
+import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
@@ -31,7 +32,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
     def inner(p: Path, children: Set[Path]): Unit = {
       tree.merge(p, children, (current, _) => current ++ children)
       if (!(p.isEmpty || p == Path./))
-        inner(p.tail(dropSlash = p.tail() != Path./), Set(p))
+        inner(p.parent, Set(p))
     }
 
     val rev = aclResource.rev
@@ -79,7 +80,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
   private def getWithAncestors(path: Path): AccessControlLists = {
     val currentAcls = get(path)
     if (path.isEmpty || path == Path./) currentAcls
-    else currentAcls ++ getWithAncestors(path.tail(dropSlash = path.tail() != Path./))
+    else currentAcls ++ getWithAncestors(path.parent)
   }
 
   private def pathOf(segments: Vector[String]): Path =

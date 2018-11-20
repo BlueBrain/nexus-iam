@@ -4,22 +4,21 @@ import akka.http.javadsl.server.Rejections.validationRejection
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{Route, Rejection => AkkaRejection}
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, Acls, ResourceAccessControlList}
+import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes.PatchAcl
 import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes.PatchAcl.{AppendAcl, SubtractAcl}
+import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import com.github.ghik.silencer.silent
 import io.circe.{Decoder, DecodingFailure}
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
-import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes._
 
 class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config: AppConfig) {
 
@@ -65,17 +64,12 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
                   reject(simultaneousRevAndAnyRejection)
                 case (_, ancestors, self) if path.segments.contains(any) =>
                   complete(acls.list(path, ancestors, self).runToFuture)
-                case (Some(rev), false, true) =>
-                  complete(acls.fetch(path, rev).toSingleList(path).runToFuture)
-                //TODO: Instead of fetchUnsafe, make sure the fetch checks if you have permissions to see all the acls
-                case (Some(rev), false, false) =>
-                  complete(acls.fetchUnsafe(path, rev).toSingleList(path).runToFuture)
+                case (Some(rev), false, self) =>
+                  complete(acls.fetch(path, rev, self).toSingleList(path).runToFuture)
+                case (_, false, self) =>
+                  complete(acls.fetch(path, self).toSingleList(path).runToFuture)
                 case (_, true, self) =>
                   complete(acls.list(path, ancestors = true, self).runToFuture)
-                case (_, _, false) =>
-                  complete(acls.fetchUnsafe(path).toSingleList(path).runToFuture)
-                case (_, _, true) =>
-                  complete(acls.fetch(path).toSingleList(path).runToFuture)
               }
           }
         }
@@ -86,9 +80,13 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
 
 object AclsRoutes {
 
-  private[routes] implicit class TaskResourceACLSyntax(private val value: Task[ResourceAccessControlList])
+  private[routes] implicit class TaskResourceACLSyntax(private val value: Task[OptResourceAccessControlList])
       extends AnyVal {
-    def toSingleList(path: Path): Task[AccessControlLists] = value.map(acl => AccessControlLists(path -> acl))
+    def toSingleList(path: Path): Task[AccessControlLists] = value.map {
+      case None                                              => AccessControlLists.empty
+      case Some(acl) if acl.value == AccessControlList.empty => AccessControlLists.empty
+      case Some(acl)                                         => AccessControlLists(path -> acl)
+    }
   }
 
   private[routes] sealed trait PatchAcl

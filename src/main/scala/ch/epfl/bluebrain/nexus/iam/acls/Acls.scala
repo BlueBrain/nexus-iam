@@ -15,6 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl}
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
+import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
@@ -60,8 +61,9 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F],
   def delete(path: Path, rev: Long)(implicit caller: Caller): F[AclMetaOrRejection] =
     evaluate(path, DeleteAcl(path, rev, clock.instant(), caller.subject))
 
+  //TODO: When permissions surface API is ready, this method should also check that the permissions provided on the ACLs are valid ones.
   private def evaluate(path: Path, cmd: AclCommand)(implicit caller: Caller): F[AclMetaOrRejection] =
-    checkPermissions(path).flatMap {
+    ancestorsContainsWrite(path).flatMap {
       case true =>
         agg
           .evaluateS(path.asString, cmd)
@@ -73,52 +75,25 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F],
     }
 
   /**
-    * Fetches the entire ACL for a ''path'' for all the identities on the latest revision
-    *
-    * @param path the target path for the ACL
-    */
-  def fetchUnsafe(path: Path): F[ResourceAccessControlList] =
-    agg.currentState(path.asString).map(stateToAcl(path, _))
-
-  /**
-    * Fetches the entire ACL for a ''path'' for all the identities on the provided ''rev''
-    *
-    * @param path the target path for the ACL
-    * @param rev  the revision to fetch
-    */
-  def fetchUnsafe(path: Path, rev: Long): F[ResourceAccessControlList] =
-    agg
-      .foldLeft[AclState](path.asString, Initial) {
-        case (state, event) if event.rev <= rev => next(state, event)
-        case (state, _)                         => state
-      }
-      .map(stateToAcl(path, _))
-
-  /**
-    * Fetches the entire ACL for a ''path'' for the provided ''identities'' on the latest revision
-    *
-    * @param path   the target path for the ACL
-    * @param caller the caller which contains the identities to filter
-    */
-  def fetch(path: Path)(implicit caller: Caller): F[ResourceAccessControlList] =
-    fetchUnsafe(path).map(_.map(_.filter(caller.identities)))
-
-  /**
-    * Fetches the entire ACL for a ''path'' for the provided ''identities'' on the provided ''rev''
+    * Fetches the entire ACL for a ''path'' on the provided ''rev''.
     *
     * @param path   the target path for the ACL
     * @param rev    the revision to fetch
-    * @param caller the caller which contains the identities to filter
+    * @param self   flag to decide whether or not ACLs of other identities than the provided ones should be included in the response.
+    *               This is constrained by the current caller having ''acls/read'' permissions on the provided ''path'' or it's parents
     */
-  def fetch(path: Path, rev: Long)(implicit caller: Caller): F[ResourceAccessControlList] =
-    fetchUnsafe(path, rev).map(_.map(_.filter(caller.identities)))
+  def fetch(path: Path, rev: Long, self: Boolean)(implicit caller: Caller): F[OptResourceAccessControlList] =
+    check(path, fetchUnsafe(path, rev), self)
 
-  private def stateToAcl(path: Path, state: AclState): ResourceAccessControlList =
-    (state, path) match {
-      case (Initial, initAcl.path) => initAcl.acl
-      case (Initial, _)            => initAcl.acl.map(_ => AccessControlList.empty)
-      case (c: Current, _)         => c.toResource
-    }
+  /**
+    * Fetches the entire ACL for a ''path''.
+    *
+    * @param path the target path for the ACL
+    * @param self flag to decide whether or not ACLs of other identities than the provided ones should be included in the response.
+    *             This is constrained by the current caller having ''acls/read'' permissions on the provided ''path'' or it's parents
+    */
+  def fetch(path: Path, self: Boolean)(implicit caller: Caller): F[OptResourceAccessControlList] =
+    check(path, fetchUnsafe(path), self)
 
   /**
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.
@@ -131,18 +106,51 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: Monad[F],
   def list(path: Path, ancestors: Boolean, self: Boolean)(implicit caller: Caller): F[AccessControlLists] =
     index.get(path, ancestors, self)(caller.identities)
 
-  private def checkPermissions(path: Path)(implicit caller: Caller): F[Boolean] =
-    fetch(path).flatMap { c =>
-      val hasPerms = c.value.value.exists {
-        case (_, perms) => perms.contains(writeAcls)
-      }
-      if (hasPerms) F.pure(true)
-      else if (path.isEmpty) F.pure(false)
-      else checkPermissions(path.tail(dropSlash = path.tail() != Path./))
+  private def check(path: Path, fetched: F[OptResourceAccessControlList], self: Boolean)(
+      implicit caller: Caller): F[OptResourceAccessControlList] = {
+    fetched flatMap {
+      case acls if self                            => F.pure(acls.map(_.map(_.filter(caller.identities))))
+      case Some(acls) if containsWrite(acls.value) => F.pure(Some(acls))
+      case acls =>
+        ancestorsContainsWrite(path.parent).map {
+          case true  => acls
+          case false => acls.map(_.map(_.filter(caller.identities)))
+        }
     }
+  }
+
+  private def fetchUnsafe(path: Path): F[OptResourceAccessControlList] =
+    agg.currentState(path.asString).map(stateToAcl(path, _))
+
+  private def fetchUnsafe(path: Path, rev: Long): F[OptResourceAccessControlList] =
+    agg
+      .foldLeft[AclState](path.asString, Initial) {
+        case (state, event) if event.rev <= rev => next(state, event)
+        case (state, _)                         => state
+      }
+      .map(stateToAcl(path, _))
+
+  private def stateToAcl(path: Path, state: AclState): OptResourceAccessControlList =
+    (state, path) match {
+      case (Initial, initAcl.path) => Some(initAcl.acl)
+      case (Initial, _)            => None
+      case (c: Current, _)         => Some(c.toResource)
+    }
+
+  private def containsWrite(acl: AccessControlList)(implicit caller: Caller): Boolean =
+    acl.value.exists { case (ident, perms) => caller.identities.contains(ident) && perms.contains(writeAcls) }
+
+  private def ancestorsContainsWrite(path: Path)(implicit caller: Caller): F[Boolean] =
+    if (path.isEmpty)
+      F.pure(false)
+    else
+      fetchUnsafe(path).flatMap {
+        case Some(acls) if containsWrite(acls.value) => F.pure(true)
+        case _ if path == Path./                     => F.pure(false)
+        case _                                       => ancestorsContainsWrite(path.parent)
+      }
 }
 
-@SuppressWarnings(Array("OptionGet"))
 object Acls {
 
   /**
