@@ -72,7 +72,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
       .flatMap {
         case Left(rej)         => F.pure(Left(rej))
         case Right(Initial)    => F.raiseError(UnexpectedInitialState(path.toIri))
-        case Right(c: Current) => F.pure(Right(c.toResourceMetadata))
+        case Right(c: Current) => F.pure(Right(c.resourceMetadata))
       }
 
   /**
@@ -83,7 +83,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
     * @param self   flag to decide whether or not ACLs of other identities than the provided ones should be included in the response.
     *               This is constrained by the current caller having ''acls/read'' permissions on the provided ''path'' or it's parents
     */
-  def fetch(path: Path, rev: Long, self: Boolean)(implicit caller: Caller): F[OptResourceAccessControlList] =
+  def fetch(path: Path, rev: Long, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path, rev).map(filterSelf)
     else check(path, write) *> fetchUnsafe(path, rev)
 
@@ -94,7 +94,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
     * @param self flag to decide whether or not ACLs of other identities than the provided ones should be included in the response.
     *             This is constrained by the current caller having ''acls/read'' permissions on the provided ''path'' or it's parents
     */
-  def fetch(path: Path, self: Boolean)(implicit caller: Caller): F[OptResourceAccessControlList] =
+  def fetch(path: Path, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path).map(filterSelf)
     else check(path, write) *> fetchUnsafe(path)
 
@@ -109,10 +109,10 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
   def list(path: Path, ancestors: Boolean, self: Boolean)(implicit caller: Caller): F[AccessControlLists] =
     index.get(path, ancestors, self)(caller.identities)
 
-  private def fetchUnsafe(path: Path): F[OptResourceAccessControlList] =
+  private def fetchUnsafe(path: Path): F[ResourceOpt] =
     agg.currentState(path.asString).map(stateToAcl(path, _))
 
-  private def fetchUnsafe(path: Path, rev: Long): F[OptResourceAccessControlList] =
+  private def fetchUnsafe(path: Path, rev: Long): F[ResourceOpt] =
     agg
       .foldLeft[AclState](path.asString, Initial) {
         case (state, event) if event.rev <= rev => next(state, event)
@@ -120,18 +120,18 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
       }
       .map(stateToAcl(path, _))
 
-  private def stateToAcl(path: Path, state: AclState): OptResourceAccessControlList =
+  private def stateToAcl(path: Path, state: AclState): ResourceOpt =
     (state, path) match {
       case (Initial, initAcl.path) => Some(initAcl.acl)
       case (Initial, _)            => None
-      case (c: Current, _)         => Some(c.toResource)
+      case (c: Current, _)         => Some(c.resource)
     }
 
   private def check(path: Path, permission: Permission)(implicit caller: Caller): F[Unit] =
     hasPermission(path, permission, ancestors = true)
       .ifM(F.unit, F.raiseError(AccessDenied(path.toIri, permission)))
 
-  private def filterSelf(opt: OptResourceAccessControlList)(implicit caller: Caller): OptResourceAccessControlList =
+  private def filterSelf(opt: ResourceOpt)(implicit caller: Caller): ResourceOpt =
     opt.map(_.map(acl => acl.filter(caller.identities)))
 
   def hasPermission(path: Path, perm: Permission, ancestors: Boolean = true)(implicit caller: Caller): F[Boolean] = {

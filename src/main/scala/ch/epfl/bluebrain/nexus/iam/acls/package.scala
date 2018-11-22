@@ -12,9 +12,9 @@ package object acls {
 
   val write: Permission = Permission.unsafe("acls/write")
 
-  type Agg[F[_]]                    = Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]
-  type EventOrRejection             = Either[AclRejection, AclEvent]
-  type AclMetaOrRejection           = Either[AclRejection, ResourceMetadata]
-  type ResourceAccessControlList    = ResourceF[AccessControlList]
-  type OptResourceAccessControlList = Option[ResourceF[AccessControlList]]
+  type Agg[F[_]]          = Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]
+  type EventOrRejection   = Either[AclRejection, AclEvent]
+  type AclMetaOrRejection = Either[AclRejection, ResourceMetadata]
+  type Resource           = ResourceF[AccessControlList]
+  type ResourceOpt        = Option[Resource]
 }

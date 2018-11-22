@@ -80,7 +80,7 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
 
 object AclsRoutes {
 
-  private[routes] implicit class TaskResourceACLSyntax(private val value: Task[OptResourceAccessControlList])
+  private[routes] implicit class TaskResourceACLSyntax(private val value: Task[ResourceOpt])
       extends AnyVal {
     def toSingleList(path: Path): Task[AccessControlLists] = value.map {
       case None                                              => AccessControlLists.empty

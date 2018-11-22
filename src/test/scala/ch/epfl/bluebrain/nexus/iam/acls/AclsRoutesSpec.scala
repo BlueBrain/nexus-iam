@@ -173,7 +173,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = false and rev = 2 when response is None" in {
-      acls.fetch(path, 2L, self = false) shouldReturn Task.pure[OptResourceAccessControlList](None)
+      acls.fetch(path, 2L, self = false) shouldReturn Task.pure[ResourceOpt](None)
       Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes-empty.json")
         status shouldEqual StatusCodes.OK

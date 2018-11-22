@@ -22,12 +22,12 @@ import scala.annotation.tailrec
   * @param acls a data structure used to store the ACLs for a path
   */
 class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
-                                acls: ConcurrentHashMap[Path, ResourceAccessControlList])
+                                acls: ConcurrentHashMap[Path, Resource])
     extends AclsIndex[Id] {
 
   private val any = "*"
 
-  override def replace(path: Path, aclResource: ResourceAccessControlList): Id[Boolean] = {
+  override def replace(path: Path, aclResource: Resource): Id[Boolean] = {
     @tailrec
     def inner(p: Path, children: Set[Path]): Unit = {
       tree.merge(p, children, (current, _) => current ++ children)
@@ -37,7 +37,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
 
     val rev = aclResource.rev
 
-    val f: BiFunction[ResourceAccessControlList, ResourceAccessControlList, ResourceAccessControlList] = (curr, _) =>
+    val f: BiFunction[Resource, Resource, Resource] = (curr, _) =>
       curr match {
         case c if rev > c.rev => aclResource
         case other            => other
@@ -94,7 +94,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
         val consumed = toConsume.takeWhile(_ != any)
         tree.getSafe(pathOf(consumed)) match {
           case Some(children) if consumed.size + 1 == segments.size =>
-            AccessControlLists(children.foldLeft(Map.empty[Path, ResourceAccessControlList]) { (acc, p) =>
+            AccessControlLists(children.foldLeft(Map.empty[Path, Resource]) { (acc, p) =>
               acls.getSafe(p).map(r => acc + (p -> r)).getOrElse(acc)
             })
           case Some(children) =>
@@ -128,7 +128,7 @@ object InMemoryAclsTree {
     */
   final def apply(): InMemoryAclsTree =
     new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](),
-                         new ConcurrentHashMap[Path, ResourceAccessControlList]())
+                         new ConcurrentHashMap[Path, Resource]())
 
   /**
     * Constructs an in memory implementation of [[AclsIndex]] using the [[Task]] effect type
@@ -137,7 +137,7 @@ object InMemoryAclsTree {
   final def task(): AclsIndex[Task] = new AclsIndex[Task] {
     private val underlying = apply()
 
-    override def replace(path: Path, aclResource: ResourceAccessControlList): Task[Boolean] =
+    override def replace(path: Path, aclResource: Resource): Task[Boolean] =
       Task.pure(underlying.replace(path, aclResource))
 
     override def get(path: Path, ancestors: Boolean, self: Boolean)(
