@@ -9,7 +9,7 @@ import cats.ApplicativeError
 import cats.effect.Timer
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
 import ch.epfl.bluebrain.nexus.iam.acls
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, ResourceAccessControlList}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, Resource}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group}
@@ -73,8 +73,9 @@ object AppConfig {
     * @param publicUri  public URI of the service
     */
   final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri) {
-    lazy val publicIri: AbsoluteIri = url"$publicUri".value
-    lazy val aclsIri: AbsoluteIri   = url"$publicUri/$prefix/acls".value
+    lazy val publicIri: AbsoluteIri      = url"$publicUri".value
+    lazy val aclsIri: AbsoluteIri        = url"$publicUri/$prefix/acls".value
+    lazy val permissionsIri: AbsoluteIri = url"$publicUri/$prefix/permissions".value
   }
 
   /**
@@ -123,7 +124,7 @@ object AppConfig {
     private val map: Map[Identity, Set[Permission]] =
       identities.groups.map(Group(_, identities.realm) -> permissions).toMap
 
-    def acl(implicit c: Clock, http: HttpConfig): ResourceAccessControlList =
+    def acl(implicit c: Clock, http: HttpConfig): Resource =
       ResourceF(http.aclsIri + path.asString,
                 1L,
                 acls.types,
