@@ -50,14 +50,6 @@ object AclRejection {
       extends AclRejection(s"ACL on path '$path' with incorrect revision '$rev' provided.")
 
   /**
-    * Signals an attempt to write ACL on a path where you don't have permissions.
-    *
-    * @param path the target path for the ACL
-    */
-  final case class AclUnauthorizedWrite(path: Path)
-      extends AclRejection(s"You don't have permissions to write ACL on path '$path'.")
-
-  /**
     * Signals an attempt to create/replace/append/subtract ACL collection which contains void permissions.
     *
     * @param path the target path for the ACL

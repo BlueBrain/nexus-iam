@@ -43,8 +43,9 @@ class AclsRoutesSpec
     with ScalaFutures {
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
 
+  private val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
   private implicit val appConfig = new Settings(ConfigFactory.parseResources("app.conf").resolve()).appConfig
-    .copy(http = HttpConfig("some", 8080, "v1", "http://nexus.example.com"))
+    .copy(http = http)
   private implicit val clock: Clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
 
   private val acls: Acls[Task]     = mock[Acls[Task]]
@@ -71,7 +72,7 @@ class AclsRoutesSpec
     val id   = url"https://bluebrain.github.io/nexus/acls/myorg/myproj".value
     val path = "myorg" / "myproj"
 
-    val resourceAcl1 = ResourceF(base + "id1",
+    val resourceAcl1 = ResourceF(http.aclsIri + "id1",
                                  1L,
                                  Set[AbsoluteIri](nxv.AccessControlList),
                                  clock.instant(),
@@ -79,7 +80,7 @@ class AclsRoutesSpec
                                  clock.instant(),
                                  user2,
                                  AccessControlList(user -> readWrite, group -> manage))
-    val resourceAcl2 = ResourceF(base + "id2",
+    val resourceAcl2 = ResourceF(http.aclsIri + "id2",
                                  2L,
                                  Set[AbsoluteIri](nxv.AccessControlList),
                                  clock.instant(),

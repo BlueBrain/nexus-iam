@@ -39,10 +39,10 @@ object AclState {
                            updatedBy: Subject)
       extends AclState {
     def toResource(implicit http: HttpConfig): ResourceAccessControlList =
-      ResourceF(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
+      ResourceF(http.aclsIri + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
 
     def toResourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      ResourceMetadata(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy)
+      ResourceMetadata(http.aclsIri + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy)
   }
 
 }

@@ -54,7 +54,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
       def containsAclsWrite(acl: AccessControlList): Boolean =
-        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(writeAcls) }
+        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(write) }
 
       val (_, result) = currentAcls.sorted.value
         .foldLeft(Set.empty[Path] -> AccessControlLists.empty) {

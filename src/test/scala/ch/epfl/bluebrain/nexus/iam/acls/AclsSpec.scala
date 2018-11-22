@@ -11,13 +11,13 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
+import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
@@ -26,6 +26,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
+//noinspection TypeAnnotation
 class AclsSpec
     extends TestKit(ActorSystem("AclsSpec"))
     with ScalaFutures
@@ -42,7 +43,7 @@ class AclsSpec
 
   private implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
-  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(writeAcls))
+  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(write))
 
   private val index: AclsIndex[IO] = mock[AclsIndex[IO]]
 
@@ -52,6 +53,9 @@ class AclsSpec
   private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
   private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
   private val instant                      = clock.instant()
+
+  private def pathIriString(path: Path): String =
+    s"${http.publicIri.asUri}/${http.prefix}/acls${path.asString}"
 
   trait Context {
     val createdBy: Subject = User("sub", "realm")
@@ -88,13 +92,35 @@ class AclsSpec
         acls.fetch(path, self = true).ioValue shouldEqual None
         acls.fetch(path, 10L, self = false).ioValue shouldEqual None
       }
+
+      "fail to fetch by revision when using self=false without write permissions" in new Context {
+        val failed = acls
+          .fetch(path, 1L, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
+      }
+
+      "fail to fetch when using self=false without write permissions" in new Context {
+        val failed = acls
+          .fetch(path, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
+      }
     }
 
     "performing replace operations" should {
 
       "reject when no parent acls/write permissions present" in new Context {
-        acls.replace(path, 0L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
+        val failed = acls
+          .replace(path, 0L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new Context {
@@ -153,10 +179,12 @@ class AclsSpec
       "reject when no parent acls/write permissions present" in new AppendCtx {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls
+        val failed = acls
           .append(path, 1L, aclAppend)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
-          .ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new AppendCtx {
@@ -198,8 +226,12 @@ class AclsSpec
       "reject when no parent acls/write permissions present" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls.subtract(path, 1L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
+        val failed = acls
+          .subtract(path, 1L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new Context {
@@ -239,15 +271,18 @@ class AclsSpec
       "reject when no parent acls/write permissions present" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        acls.delete(path, 1L)(Caller(createdBy, Set(createdBy, Group("admin", genString())))).ioValue shouldEqual
-          Left(AclUnauthorizedWrite(path))
+        val failed = acls
+          .delete(path, 1L)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
+          .failed[AccessDenied]
+          .ioValue
+        failed.resource.asString shouldEqual pathIriString(path)
+        failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new Context {
         acls.replace(path, 0L, acl).ioValue.right.value
 
-        forAll(List(0L, 2L, 10L)) { rev =>
-          acls.delete(path, rev).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
+        forAll(List(0L, 2L, 10L)) { rev => acls.delete(path, rev).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
         }
       }
 

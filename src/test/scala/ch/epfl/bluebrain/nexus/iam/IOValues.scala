@@ -1,21 +1,29 @@
 package ch.epfl.bluebrain.nexus.iam
 
 import cats.effect.IO
-import ch.epfl.bluebrain.nexus.iam.IOValues.IOValuesSyntax
-import org.scalatest.concurrent.ScalaFutures
+import org.scalactic.source
+import org.scalatest.Matchers._
+import org.scalatest.concurrent.ScalaFutures.{convertScalaFuture, PatienceConfig}
 
-import scala.concurrent.Future
+import scala.reflect.ClassTag
 
-trait IOValues extends ScalaFutures {
+trait IOValues {
   implicit final def ioValues[A](io: IO[A]): IOValuesSyntax[A] =
-    new IOValuesSyntax(io) {
-      override def futureValue(f: Future[A]): A = f.futureValue
-    }
-}
+    new IOValuesSyntax(io)
 
-object IOValues {
-  abstract class IOValuesSyntax[A](io: IO[A]) {
-    def futureValue(f: Future[A]): A
-    def ioValue: A = futureValue(io.unsafeToFuture())
+  protected class IOValuesSyntax[A](io: IO[A]) {
+    def failed[Ex <: Throwable: ClassTag](implicit pos: source.Position): IO[Ex] = {
+      val Ex = implicitly[ClassTag[Ex]]
+      io.redeemWith({
+        case Ex(ex) => IO.pure(ex)
+        case other  =>
+          IO(fail(s"Wrong throwable type caught, expected: '${Ex.runtimeClass.getName}', actual: '${other.getClass.getName}'"))
+      }, a => IO(fail(s"The IO did not fail as expected, but computed the value '$a'")))
+    }
+
+    def ioValue(implicit config: PatienceConfig, pos: source.Position): A =
+      io.unsafeToFuture().futureValue
   }
 }
+
+object IOValues extends IOValues

@@ -73,7 +73,8 @@ object AppConfig {
     * @param publicUri  public URI of the service
     */
   final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri) {
-    val publicIri: AbsoluteIri = url"$publicUri".value
+    lazy val publicIri: AbsoluteIri = url"$publicUri".value
+    lazy val aclsIri: AbsoluteIri   = url"$publicUri/$prefix/acls".value
   }
 
   /**
@@ -123,7 +124,7 @@ object AppConfig {
       identities.groups.map(Group(_, identities.realm) -> permissions).toMap
 
     def acl(implicit c: Clock, http: HttpConfig): ResourceAccessControlList =
-      ResourceF(acls.base + path.asString,
+      ResourceF(http.aclsIri + path.asString,
                 1L,
                 acls.types,
                 c.instant(),
