@@ -23,4 +23,12 @@ object IamError {
     */
   final case class AccessDenied(resource: AbsoluteIri, permission: Permission)
       extends IamError(s"Access '${permission.value}' to resource '${resource.asUri}' denied.")
+
+  /**
+    * Signals an unexpected state was detected after a command evaluation.
+    *
+    * @param resource the resource on which the action was attempted
+    */
+  final case class UnexpectedInitialState(resource: AbsoluteIri)
+      extends IamError(s"Unexpected state on resource '${resource.asUri}'.")
 }

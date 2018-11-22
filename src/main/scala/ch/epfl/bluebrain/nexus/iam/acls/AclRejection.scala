@@ -24,16 +24,6 @@ object AclRejection {
   final case class AclNotFound(path: Path) extends AclRejection(s"ACL on path '$path' does not exists.")
 
   /**
-    * Signals an unexpected error while operating on the ACL surface API.
-    *
-    * @param path the target path for the ACL
-    * @param value the error message
-    */
-  final case class AclUnexpectedState(path: Path, value: String)
-      extends AclRejection(
-        s"unexpected error while operating on the ACL surface API for path '$path'. Reason: '$value'")
-
-  /**
     * Signals an attempt to delete ACLs that are already empty.
     *
     * @param path the target path for the ACL

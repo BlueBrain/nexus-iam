@@ -16,7 +16,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl}
 import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
 import ch.epfl.bluebrain.nexus.iam.syntax._
-import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
+import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
@@ -69,10 +69,11 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
   private def evaluate(path: Path, cmd: AclCommand): F[AclMetaOrRejection] =
     agg
       .evaluateS(path.asString, cmd)
-      .map(_.flatMap {
-        case Initial    => Left(AclUnexpectedState(path, "Unexpected initial state"))
-        case c: Current => Right(c.toResourceMetadata)
-      })
+      .flatMap {
+        case Left(rej)         => F.pure(Left(rej))
+        case Right(Initial)    => F.raiseError(UnexpectedInitialState(path.toIri))
+        case Right(c: Current) => F.pure(Right(c.toResourceMetadata))
+      }
 
   /**
     * Fetches the entire ACL for a ''path'' on the provided ''rev''.

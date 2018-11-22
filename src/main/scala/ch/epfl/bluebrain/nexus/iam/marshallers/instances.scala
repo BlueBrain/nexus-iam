@@ -113,7 +113,6 @@ object instances extends FailFastCirceSupport {
         case _: NothingToBeUpdated         => StatusCodes.BadRequest
         case _: AclIsEmpty                 => StatusCodes.BadRequest
         case _: AclInvalidEmptyPermissions => StatusCodes.BadRequest
-        case _: AclUnexpectedState         => StatusCodes.InternalServerError
         case _: AclNotFound                => StatusCodes.NotFound
         case _: AclIncorrectRev            => StatusCodes.Conflict
         case AclMissingSubject             => StatusCodes.Unauthorized
