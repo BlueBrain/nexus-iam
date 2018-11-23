@@ -17,7 +17,7 @@ object AclState {
   /**
     * The initial (undefined) state.
     */
-  sealed trait Initial extends AclState
+  sealed trait Initial      extends AclState
   final case object Initial extends Initial
 
   /**

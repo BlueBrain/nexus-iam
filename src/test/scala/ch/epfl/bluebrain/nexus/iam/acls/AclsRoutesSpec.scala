@@ -8,8 +8,9 @@ import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import ch.epfl.bluebrain.nexus.commons.test
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.iam.ExpectedException
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.config.Settings
+import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
@@ -41,10 +42,11 @@ class AclsRoutesSpec
     with test.Resources
     with Randomness
     with ScalaFutures {
+
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
 
   private val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
-  private implicit val appConfig = new Settings(ConfigFactory.parseResources("app.conf").resolve()).appConfig
+  private implicit val appConfig: AppConfig = new Settings(ConfigFactory.parseResources("app.conf").resolve()).appConfig
     .copy(http = http)
   private implicit val clock: Clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
 
@@ -72,14 +74,16 @@ class AclsRoutesSpec
     val id   = url"https://bluebrain.github.io/nexus/acls/myorg/myproj".value
     val path = "myorg" / "myproj"
 
-    val resourceAcl1 = ResourceF(http.aclsIri + "id1",
-                                 1L,
-                                 Set[AbsoluteIri](nxv.AccessControlList),
-                                 clock.instant(),
-                                 user,
-                                 clock.instant(),
-                                 user2,
-                                 AccessControlList(user -> readWrite, group -> manage))
+    val resourceAcl1 = ResourceF(
+      http.aclsIri + "id1",
+      1L,
+      Set[AbsoluteIri](nxv.AccessControlList),
+      clock.instant(),
+      user,
+      clock.instant(),
+      user2,
+      AccessControlList(user -> readWrite, group -> manage)
+    )
     val resourceAcl2 = ResourceF(http.aclsIri + "id2",
                                  2L,
                                  Set[AbsoluteIri](nxv.AccessControlList),
@@ -220,7 +224,7 @@ class AclsRoutesSpec
     }
 
     "return error when making a call that returns exception on the ACLs" in {
-      acls.fetch(path, self = true) shouldReturn Task.raiseError(new RuntimeException)
+      acls.fetch(path, self = true) shouldReturn Task.raiseError(ExpectedException)
       Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",

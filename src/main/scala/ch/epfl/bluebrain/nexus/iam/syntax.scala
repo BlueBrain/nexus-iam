@@ -31,6 +31,7 @@ object syntax {
   }
 
   final implicit class RichPath(private val path: Path) extends AnyVal {
+
     /**
       * @return parent segment or end slash.
       *         E.g.: /a/b returns /a

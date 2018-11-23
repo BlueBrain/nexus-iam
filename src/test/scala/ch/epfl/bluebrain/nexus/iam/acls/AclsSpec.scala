@@ -2,11 +2,8 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.{Clock, Instant, ZoneId}
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import cats.effect.{ContextShift, IO}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.IOValues
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
@@ -14,32 +11,26 @@ import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
+import ch.epfl.bluebrain.nexus.iam.{ActorSystemFixture, IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.rdf.Iri
-import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.scalatest._
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 import scala.util.Random
 
 //noinspection TypeAnnotation
 class AclsSpec
-    extends TestKit(ActorSystem("AclsSpec"))
-    with ScalaFutures
-    with WordSpecLike
+    extends ActorSystemFixture("AclsSpec")
     with Matchers
-    with IOValues
+    with IOEitherValues
+    with IOOptionValues
     with Randomness
-    with OptionValues
-    with EitherValues
     with Inspectors
     with MockitoSugar {
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
 
   private implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
 
@@ -79,13 +70,13 @@ class AclsSpec
 
     "performing get operations" should {
       "fetch initial ACLs" in new Context {
-        acls.fetch(/, self = true).ioValue.value shouldEqual initAcl.acl
-        acls.fetch(/, self = false).ioValue.value shouldEqual initAcl.acl
+        acls.fetch(/, self = true).some shouldEqual initAcl.acl
+        acls.fetch(/, self = false).some shouldEqual initAcl.acl
       }
 
       "fetch initial with revision" in new Context {
-        acls.fetch(/, 10L, self = true).ioValue.value shouldEqual initAcl.acl
-        acls.fetch(/, 10L, self = false).ioValue.value shouldEqual initAcl.acl
+        acls.fetch(/, 10L, self = true).some shouldEqual initAcl.acl
+        acls.fetch(/, 10L, self = false).some shouldEqual initAcl.acl
       }
 
       "fetch other non existing ACLs" in new Context {
@@ -97,7 +88,6 @@ class AclsSpec
         val failed = acls
           .fetch(path, 1L, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
@@ -106,7 +96,6 @@ class AclsSpec
         val failed = acls
           .fetch(path, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
@@ -118,7 +107,6 @@ class AclsSpec
         val failed = acls
           .replace(path, 0L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
@@ -129,35 +117,33 @@ class AclsSpec
 
       "reject when empty permissions" in new Context {
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.replace(path, 0L, emptyAcls).ioValue shouldEqual Left(AclInvalidEmptyPermissions(path))
+        acls.replace(path, 0L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
       }
 
       "successfully be created" in new Context {
         val metadata = ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
-        acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(metadata)
-        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => acl)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.fetch(path, self = false).some shouldEqual metadata.map(_ => acl)
       }
 
       "successfully be updated" in new Context {
-        acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+        acls.replace(path, 0L, acl).accepted shouldEqual
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         val replaced         = AccessControlList(user1 -> permsUser1)
         val updatedBy        = User(genString(), genString())
         val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy))
         val metadata         = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy)
-        acls.replace(path, 1L, replaced)(otherIds).ioValue shouldEqual
-          Right(metadata)
-        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => replaced)
+        acls.replace(path, 1L, replaced)(otherIds).accepted shouldEqual metadata
+        acls.fetch(path, self = false).some shouldEqual metadata.map(_ => replaced)
       }
 
       "reject when wrong revision after updated" in new Context {
-        acls.replace(path, 0L, acl).ioValue shouldEqual
-          Right(ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy))
+        acls.replace(path, 0L, acl).accepted shouldEqual
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.replace(path, rev, replaced).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
+          acls.replace(path, rev, replaced).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
         }
       }
     }
@@ -165,51 +151,51 @@ class AclsSpec
     "performing append operations" should {
 
       "reject when trying to append the already existing ACL" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
-        acls.append(path, 1L, acl).ioValue shouldEqual Left(NothingToBeUpdated(path))
+        acls.append(path, 1L, acl).rejected[NothingToBeUpdated].path shouldEqual path
       }
 
       "reject when trying to append the partially already existing ACL" in new AppendCtx {
-        val _      = acls.replace(path, 0L, acl).ioValue.right.value
+        val _      = acls.replace(path, 0L, acl).accepted
         val append = AccessControlList(user1 -> permsUser1)
-        acls.append(path, 1L, append).ioValue shouldEqual Left(NothingToBeUpdated(path))
+        acls.append(path, 1L, append).rejected[NothingToBeUpdated].path shouldEqual path
       }
 
       "reject when no parent acls/write permissions present" in new AppendCtx {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val failed = acls
           .append(path, 1L, aclAppend)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new AppendCtx {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.append(path, rev, aclAppend).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
+          val rej = acls.append(path, rev, aclAppend).rejected[AclIncorrectRev]
+          rej.path shouldEqual path
+          rej.rev shouldEqual rev
         }
       }
 
       "reject when empty permissions" in new AppendCtx {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.append(path, 1L, emptyAcls).ioValue shouldEqual Left(AclInvalidEmptyPermissions(path))
+        acls.append(path, 1L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
       }
 
       "successfully be appended" in new AppendCtx {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
-        acls.append(path, 1L, aclAppend).ioValue shouldEqual
-          Right(metadata)
+        acls.append(path, 1L, aclAppend).accepted shouldEqual metadata
 
-        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => aclAppend ++ acl)
+        acls.fetch(path, self = false).some shouldEqual metadata.map(_ => aclAppend ++ acl)
 
       }
     }
@@ -217,83 +203,81 @@ class AclsSpec
     "performing subtract operations" should {
 
       "reject when trying to subtract nonExisting ACL" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
         val nonExisting =
           AccessControlList(user1 -> Set(Permission(genString()).value), user2 -> Set(Permission(genString()).value))
-        acls.subtract(path, 1L, nonExisting).ioValue shouldEqual Left(NothingToBeUpdated(path))
+        acls.subtract(path, 1L, nonExisting).rejected[NothingToBeUpdated].path shouldEqual path
       }
 
       "reject when no parent acls/write permissions present" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val failed = acls
           .subtract(path, 1L, acl)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.subtract(path, rev, acl).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
+          acls.subtract(path, rev, acl).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
         }
       }
 
       "reject when empty permissions" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.subtract(path, 1L, emptyAcls).ioValue shouldEqual Left(AclInvalidEmptyPermissions(path))
+        acls.subtract(path, 1L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
       }
 
       "successfully be subtracted" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
-        acls.subtract(path, 1L, acl).ioValue shouldEqual
-          Right(metadata)
+        acls.subtract(path, 1L, acl).accepted shouldEqual metadata
 
-        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => AccessControlList.empty)
+        acls.fetch(path, self = false).some shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
 
     "performing delete operations" should {
 
       "reject when already deleted" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
-        acls.subtract(path, 1L, acl).ioValue.right.value
-        acls.delete(path, 2L).ioValue shouldEqual Left(AclIsEmpty(path))
+        acls.replace(path, 0L, acl).accepted
+        acls.subtract(path, 1L, acl).accepted
+        acls.delete(path, 2L).rejected[AclIsEmpty].path shouldEqual path
       }
 
       "reject when no parent acls/write permissions present" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val failed = acls
           .delete(path, 1L)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
-          .ioValue
         failed.resource.asString shouldEqual pathIriString(path)
         failed.permission shouldEqual write
       }
 
       "reject when wrong revision" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
-        forAll(List(0L, 2L, 10L)) { rev => acls.delete(path, rev).ioValue shouldEqual Left(AclIncorrectRev(path, rev))
+        forAll(List(0L, 2L, 10L)) { rev =>
+          acls.delete(path, rev).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
         }
       }
 
       "successfully be deleted" in new Context {
-        acls.replace(path, 0L, acl).ioValue.right.value
+        acls.replace(path, 0L, acl).accepted
 
         val metadata = ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.delete(path, 1L).ioValue shouldEqual
           Right(metadata)
 
-        acls.fetch(path, self = false).ioValue.value shouldEqual metadata.map(_ => AccessControlList.empty)
+        acls.fetch(path, self = false).some shouldEqual metadata.map(_ => AccessControlList.empty)
       }
     }
   }

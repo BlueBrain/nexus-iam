@@ -21,8 +21,7 @@ import scala.annotation.tailrec
   * @param tree the data structure used to build the tree with the parent paths and the children paths
   * @param acls a data structure used to store the ACLs for a path
   */
-class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]],
-                                acls: ConcurrentHashMap[Path, Resource])
+class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]], acls: ConcurrentHashMap[Path, Resource])
     extends AclsIndex[Id] {
 
   private val any = "*"
@@ -127,8 +126,7 @@ object InMemoryAclsTree {
     *
     */
   final def apply(): InMemoryAclsTree =
-    new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](),
-                         new ConcurrentHashMap[Path, Resource]())
+    new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, Resource]())
 
   /**
     * Constructs an in memory implementation of [[AclsIndex]] using the [[Task]] effect type

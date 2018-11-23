@@ -141,10 +141,11 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
         case None      => false
       }
     if (!ancestors) hasPermission(path)
-    else ancestorsOf(path).foldLeftM(false) {
-      case (true, _)  => F.pure(true)
-      case (false, p) => hasPermission(p)
-    }
+    else
+      ancestorsOf(path).foldLeftM(false) {
+        case (true, _)  => F.pure(true)
+        case (false, p) => hasPermission(p)
+      }
   }
 
   private def ancestorsOf(path: Path): List[Path] = {

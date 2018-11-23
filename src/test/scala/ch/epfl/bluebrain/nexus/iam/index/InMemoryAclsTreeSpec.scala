@@ -63,7 +63,14 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(user -> Set(other, writeAcls)))
     val aclProject1_org2 =
-      ResourceF(http.aclsIri + "id5", 5L, Set.empty, instant, user, instant, user2, AccessControlList(group -> Set(write)))
+      ResourceF(http.aclsIri + "id5",
+                5L,
+                Set.empty,
+                instant,
+                user,
+                instant,
+                user2,
+                AccessControlList(group -> Set(write)))
     val aclProject2_org1 =
       ResourceF(http.aclsIri + "id6",
                 6L,
