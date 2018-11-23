@@ -18,6 +18,13 @@ object PermissionsRejection {
       extends PermissionsRejection("Cannot subtract an empty collection of permissions.")
 
   /**
+    * Rejection returned when a subject intends to subtract from the minimum collection of permissions.
+    */
+  final case class CannotSubtractFromMinimumCollection(permissions: Set[Permission])
+      extends PermissionsRejection(
+        s"Cannot subtract permissions from the minimum collection of permissions: '${permissions.mkString("\"", ", ", "\"")}'")
+
+  /**
     * Rejection returned when a subject intends to subtract permissions when the current collection is empty.
     */
   final case object CannotSubtractFromEmptyCollection
@@ -46,8 +53,8 @@ object PermissionsRejection {
     * Rejection returned when a subject intends to delete (empty) the current collection of permissions, but the
     * collection is already empty.
     */
-  final case object CannotDeleteEmptyCollection
-      extends PermissionsRejection("Cannot delete an empty collection of permissions.")
+  final case object CannotDeleteMinimumCollection
+      extends PermissionsRejection("Cannot delete the minimum collection of permissions.")
 
   /**
     * Rejection returned when a subject intends to perform an operation on the current collection of permissions, but

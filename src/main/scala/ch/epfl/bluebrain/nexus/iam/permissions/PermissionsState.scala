@@ -2,39 +2,49 @@ package ch.epfl.bluebrain.nexus.iam.permissions
 
 import java.time.Instant
 
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsState.{Current, Initial}
-import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
-import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Subject}
+import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceMetadata}
 import com.github.ghik.silencer.silent
 
 /**
   * Enumeration of Permissions states.
   */
 sealed trait PermissionsState extends Product with Serializable {
+
   /**
     * @return the current state revision
     */
   def rev: Long
 
   /**
-    * @return an optional [[Resource]] representation
+    * @return the current state in a [[Resource]] representation
     */
-  def resourceOption(implicit http: HttpConfig): Option[Resource]
+  def resource(implicit http: HttpConfig, pc: PermissionsConfig): Resource
 
-  private[permissions] def next(permissions: Set[Permission], instant: Instant, subject: Subject): Current =
+  /**
+    * @return the current state in a [[ResourceMetadata]] representation
+    */
+  def resourceMetadata(implicit http: HttpConfig): ResourceMetadata
+
+  private[permissions] def withPermissions(
+      permissions: Set[Permission],
+      instant: Instant,
+      subject: Subject
+  )(implicit pc: PermissionsConfig): Current =
     this match {
       case _: Initial =>
         Current(
           rev = 1L,
-          permissions = permissions,
+          permissions = permissions ++ pc.minimum,
           createdAt = instant,
           createdBy = subject,
           updatedAt = instant,
           updatedBy = subject
         )
       case current: Current =>
-        current.copy(rev = rev + 1, permissions = permissions, updatedAt = instant, updatedBy = subject)
+        current.copy(rev = rev + 1, permissions = permissions ++ pc.minimum, updatedAt = instant, updatedBy = subject)
     }
 }
 
@@ -45,8 +55,14 @@ object PermissionsState {
     */
   sealed trait Initial extends PermissionsState {
     override def rev: Long = 0L
-    override def resourceOption(implicit @silent http: HttpConfig): Option[Resource] = None
+
+    override def resource(implicit http: HttpConfig, pc: PermissionsConfig): Resource =
+      resourceMetadata.map(_ => pc.minimum)
+
+    override def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
+      ResourceMetadata(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
   }
+
   /**
     * Initial state for the permission set.
     */
@@ -71,18 +87,10 @@ object PermissionsState {
       updatedBy: Subject,
   ) extends PermissionsState {
 
-    /**
-       * @return the current state in a [[Resource]] representation
-      */
-    def resource(implicit http: HttpConfig): Resource =
-      ResourceF(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, permissions)
+    override def resource(implicit http: HttpConfig, @silent pc: PermissionsConfig): Resource =
+      resourceMetadata.map(_ => permissions)
 
-    /**
-      * @return the current state in a [[ResourceMetadata]] representation
-      */
-    def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      resource.discard
-
-    override def resourceOption(implicit http: HttpConfig): Option[Resource] = Some(resource)
+    override def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
+      ResourceMetadata(id, rev, types, createdAt, createdBy, updatedAt, updatedBy)
   }
 }

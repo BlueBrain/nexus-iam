@@ -19,7 +19,11 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaSourcingConfig, PassivationStrategy, RetryStrategy => SourcingRetryStrategy}
+import ch.epfl.bluebrain.nexus.sourcing.akka.{
+  AkkaSourcingConfig,
+  PassivationStrategy,
+  RetryStrategy => SourcingRetryStrategy
+}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -41,7 +45,7 @@ final case class AppConfig(description: Description,
                            persistence: PersistenceConfig,
                            indexing: IndexingConfig,
                            initialAcl: InitialAcl,
-                           permissions: SourcingConfig)
+                           permissions: PermissionsConfig)
 
 object AppConfig {
 
@@ -210,7 +214,8 @@ object AppConfig {
       * @tparam Command the type of the aggregate command
       */
     def passivationStrategy[State, Command](
-        shouldPassivate: (String, String, State, Option[Command]) => Boolean = (_: String, _: String, _: State, _: Option[Command]) => false
+        shouldPassivate: (String, String, State, Option[Command]) => Boolean =
+          (_: String, _: String, _: State, _: Option[Command]) => false
     ): PassivationStrategy[State, Command] =
       PassivationStrategy(
         passivation.lapsedSinceLastInteraction,
@@ -235,6 +240,14 @@ object AppConfig {
           SourcingRetryStrategy.never
       }
   }
+
+  /**
+    * Permissions configuration.
+    *
+    * @param sourcing the permission sourcing configuration
+    * @param minimum  the minimum set of permissions
+    */
+  final case class PermissionsConfig(sourcing: SourcingConfig, minimum: Set[Permission])
 
   val orderedKeys = OrderedKeys(
     List(
