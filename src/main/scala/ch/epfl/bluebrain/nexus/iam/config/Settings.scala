@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.iam.config
 
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import akka.http.scaladsl.model.Uri
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import com.typesafe.config.Config
@@ -27,14 +26,7 @@ class Settings(config: Config) extends Extension {
   private implicit val pathConverter: ConfigConvert[Path] =
     ConfigConvert.viaString[Path](optF(Path(_).toOption), _.toString)
 
-  val appConfig = AppConfig(
-    loadConfigOrThrow[Description](config, "app.description"),
-    loadConfigOrThrow[HttpConfig](config, "app.http"),
-    loadConfigOrThrow[ClusterConfig](config, "app.cluster"),
-    loadConfigOrThrow[PersistenceConfig](config, "app.persistence"),
-    loadConfigOrThrow[IndexingConfig](config, "app.indexing"),
-    loadConfigOrThrow[InitialAcl](config, "app.initial-acl")
-  )
+  val appConfig: AppConfig = loadConfigOrThrow[AppConfig](config, "app")
 }
 
 object Settings extends ExtensionId[Settings] with ExtensionIdProvider {

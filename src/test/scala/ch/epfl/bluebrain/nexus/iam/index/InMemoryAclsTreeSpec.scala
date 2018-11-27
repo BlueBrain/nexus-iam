@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import java.time.{Clock, Instant, ZoneId}
 
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, base, _}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, write => writeAcls}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
@@ -27,7 +27,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
     val other: Permission = Permission.unsafe("other")
 
     val aclProject =
-      ResourceF(base + "id1",
+      ResourceF(http.aclsIri + "id1",
                 1L,
                 Set.empty,
                 instant,
@@ -36,7 +36,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(user -> Set(read, write), group -> Set(other)))
     val aclProject1_org1 =
-      ResourceF(base + "id2",
+      ResourceF(http.aclsIri + "id2",
                 2L,
                 Set.empty,
                 instant,
@@ -45,7 +45,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(user -> Set(read), group -> Set(read)))
     val aclOrg =
-      ResourceF(base + "id3",
+      ResourceF(http.aclsIri + "id3",
                 3L,
                 Set.empty,
                 instant,
@@ -54,7 +54,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(user2 -> Set(read, other), group -> Set(write, writeAcls)))
     val aclOrg2 =
-      ResourceF(base + "id4",
+      ResourceF(http.aclsIri + "id4",
                 4L,
                 Set.empty,
                 instant,
@@ -63,9 +63,16 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(user -> Set(other, writeAcls)))
     val aclProject1_org2 =
-      ResourceF(base + "id5", 5L, Set.empty, instant, user, instant, user2, AccessControlList(group -> Set(write)))
+      ResourceF(http.aclsIri + "id5",
+                5L,
+                Set.empty,
+                instant,
+                user,
+                instant,
+                user2,
+                AccessControlList(group -> Set(write)))
     val aclProject2_org1 =
-      ResourceF(base + "id6",
+      ResourceF(http.aclsIri + "id6",
                 6L,
                 Set.empty,
                 instant,
@@ -74,7 +81,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user2,
                 AccessControlList(group -> Set(other), user -> Set(write)))
     val aclRoot =
-      ResourceF(base + "id7",
+      ResourceF(http.aclsIri + "id7",
                 7L,
                 Set.empty,
                 instant,
@@ -110,7 +117,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
 
     "failed to add ACLs on /org1 with same revision" in {
       val acl =
-        ResourceF(base + "id2",
+        ResourceF(http.aclsIri + "id2",
                   2L,
                   Set.empty,
                   instant,

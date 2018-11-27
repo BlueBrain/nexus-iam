@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
@@ -29,7 +30,7 @@ object syntax {
       }
   }
 
-  final implicit class PathTailSyntax(private val path: Path) extends AnyVal {
+  final implicit class RichPath(private val path: Path) extends AnyVal {
 
     /**
       * @return parent segment or end slash.
@@ -37,6 +38,12 @@ object syntax {
       *         E.g.: / returns /
       */
     def parent: Path = path.tail(dropSlash = path.tail() != Path./)
+
+    /**
+      * @return a fully qualified iri for the path (i.e.: https://nexus.example.com/v1/acls/my/path)
+      */
+    def toIri(implicit cfg: HttpConfig): AbsoluteIri =
+      cfg.aclsIri + path
   }
 
 }

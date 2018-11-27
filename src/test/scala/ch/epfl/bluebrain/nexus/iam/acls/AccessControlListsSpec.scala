@@ -34,7 +34,7 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
     val tpes = Set[AbsoluteIri](nxv.AccessControlList)
 
     val acl =
-      ResourceF(base + "id1",
+      ResourceF(http.aclsIri + "id1",
                 1L,
                 tpes,
                 instant,
@@ -43,9 +43,9 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
                 user2,
                 AccessControlList(user -> Set(read, write), group -> Set(other)))
     val acl2 =
-      ResourceF(base + "id2", 2L, tpes, instant, user, instant, user, AccessControlList(group -> Set(read)))
+      ResourceF(http.aclsIri + "id2", 2L, tpes, instant, user, instant, user, AccessControlList(group -> Set(read)))
     val acl3 =
-      ResourceF(base + "id3", 3L, tpes, instant, user, instant, user2, AccessControlList(group -> Set(other)))
+      ResourceF(http.aclsIri + "id3", 3L, tpes, instant, user, instant, user2, AccessControlList(group -> Set(other)))
 
     "merge two ACLs" in {
       AccessControlLists(/           -> acl) ++ AccessControlLists(/ -> acl2, "a" / "b" -> acl3) shouldEqual

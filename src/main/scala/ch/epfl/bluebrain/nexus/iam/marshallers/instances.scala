@@ -14,6 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.{IllegalParameter, Unexpected}
+import ch.epfl.bluebrain.nexus.iam.types.IamError
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
@@ -27,6 +28,11 @@ import scala.collection.immutable.Seq
 object instances extends FailFastCirceSupport {
 
   private val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
+
+  implicit val iamErrorEncoder: Encoder[IamError] = {
+    implicit val config = rejectionConfig
+    deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
+  }
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val config = rejectionConfig
@@ -107,10 +113,8 @@ object instances extends FailFastCirceSupport {
         case _: NothingToBeUpdated         => StatusCodes.BadRequest
         case _: AclIsEmpty                 => StatusCodes.BadRequest
         case _: AclInvalidEmptyPermissions => StatusCodes.BadRequest
-        case _: AclUnexpectedState         => StatusCodes.InternalServerError
         case _: AclNotFound                => StatusCodes.NotFound
         case _: AclIncorrectRev            => StatusCodes.Conflict
-        case _: AclUnauthorizedWrite       => StatusCodes.Unauthorized
         case AclMissingSubject             => StatusCodes.Unauthorized
       }
     }

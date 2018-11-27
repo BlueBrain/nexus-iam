@@ -61,6 +61,18 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
     */
   def filter(identities: Set[Identity]): AccessControlList =
     AccessControlList(value.filterKeys(identities.contains))
+
+  /**
+    * Determines if this contains the argument ''permission'' for at least one of the provided ''identities''.
+    *
+    * @param identities the identities to consider for having the permission
+    * @param permission the permission to check
+    * @return true if at least one of the provided identities has the provided permission
+    */
+  def hasPermission(identities: Set[Identity], permission: Permission): Boolean =
+    value.exists {
+      case (id, perms) => identities.contains(id) && perms.contains(permission)
+    }
 }
 
 object AccessControlList {

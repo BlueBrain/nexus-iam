@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 import java.time.{Clock, Instant, ZoneId}
 
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, base, _}
+import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
@@ -27,6 +27,7 @@ import scala.util.Random
   * listSmallAclProjectsOnOrg  thrpt   10  136503,019 ± 6442,895  ops/s
   * listSmallAllProjects       thrpt   10   49324,746 ± 1720,131  ops/s
   */
+//noinspection TypeAnnotation
 @State(Scope.Thread)
 class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
   private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
@@ -34,7 +35,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
 
   val instant = clock.instant()
   //10 permissions
-  val permissions: List[Permission] = writeAcls :: List.fill(9)(Permission(genString(length = 10)).get)
+  val permissions: List[Permission] = write :: List.fill(9)(Permission(genString(length = 10)).get)
 
   // Number of ACLs: 1000
   // Number of users <= 100
@@ -56,7 +57,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
       val user2   = users(genInt(max = users.size - 1))
       val perm    = Random.shuffle(permissions).take(4).toSet
       val perm2   = Random.shuffle(permissions).take(4).toSet
-      val acl = ResourceF(base + "id3",
+      val acl = ResourceF(http.aclsIri + "id3",
                           3L,
                           Set.empty,
                           instant,

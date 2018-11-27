@@ -17,7 +17,7 @@ import scala.collection.immutable.ListMap
   *
   * @param value a map of path and AccessControlList
   */
-final case class AccessControlLists(value: Map[Path, ResourceAccessControlList]) {
+final case class AccessControlLists(value: Map[Path, Resource]) {
 
   /**
     * Adds the provided ''acls'' to the current ''value'' and returns a new [[AccessControlLists]] with the added ACLs.
@@ -35,11 +35,11 @@ final case class AccessControlLists(value: Map[Path, ResourceAccessControlList])
   }
 
   /**
-    * Adds a key pair of Path and [[ResourceAccessControlList]] to the current ''value'' and returns a new [[AccessControlLists]] with the added acl.
+    * Adds a key pair of Path and [[Resource]] to the current ''value'' and returns a new [[AccessControlLists]] with the added acl.
     *
     * @param entry the key pair of Path and ACL to be added
     */
-  def +(entry: (Path, ResourceAccessControlList)): AccessControlLists = {
+  def +(entry: (Path, Resource)): AccessControlLists = {
     val (path, aclResource) = entry
     val toAdd               = aclResource.map(acl => value.get(path).map(_.value ++ acl).getOrElse(acl))
     AccessControlLists(value + (path -> toAdd))
@@ -65,7 +65,7 @@ final case class AccessControlLists(value: Map[Path, ResourceAccessControlList])
     * @return a new [[AccessControlLists]] containing the ACLs with non empty [[AccessControlList]]
     */
   def removeEmpty: AccessControlLists =
-    AccessControlLists(value.foldLeft(Map.empty[Path, ResourceAccessControlList]) {
+    AccessControlLists(value.foldLeft(Map.empty[Path, Resource]) {
       case (acc, (_, acl)) if acl.value.value.isEmpty => acc
       case (acc, (p, acl)) =>
         val filteredAcl = acl.value.value.filterNot { case (_, v) => v.isEmpty }
@@ -80,12 +80,12 @@ object AccessControlLists {
   /**
     * An empty [[AccessControlLists]].
     */
-  val empty: AccessControlLists = AccessControlLists(Map.empty[Path, ResourceAccessControlList])
+  val empty: AccessControlLists = AccessControlLists(Map.empty[Path, Resource])
 
   /**
     * Convenience factory method to build an ACLs from var args of ''Path'' to ''AccessControlList'' tuples.
     */
-  final def apply(tuple: (Path, ResourceAccessControlList)*): AccessControlLists = AccessControlLists(tuple.toMap)
+  final def apply(tuple: (Path, Resource)*): AccessControlLists = AccessControlLists(tuple.toMap)
 
   implicit def aclsEncoder(implicit http: HttpConfig): Encoder[AccessControlLists] = Encoder.encodeJson.contramap {
     case AccessControlLists(value) =>

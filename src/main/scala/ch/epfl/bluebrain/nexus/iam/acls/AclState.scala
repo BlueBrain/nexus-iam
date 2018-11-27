@@ -17,7 +17,8 @@ object AclState {
   /**
     * The initial (undefined) state.
     */
-  final case object Initial extends AclState
+  sealed trait Initial      extends AclState
+  final case object Initial extends Initial
 
   /**
     * An existing ACLs state.
@@ -38,11 +39,18 @@ object AclState {
                            createdBy: Subject,
                            updatedBy: Subject)
       extends AclState {
-    def toResource(implicit http: HttpConfig): ResourceAccessControlList =
-      ResourceF(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
 
-    def toResourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      ResourceMetadata(base + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy)
+    /**
+      * @return the current state in a [[Resource]] representation
+      */
+    def resource(implicit http: HttpConfig): Resource =
+      ResourceF(http.aclsIri + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
+
+    /**
+      * @return the current state in a [[ResourceMetadata]] representation
+      */
+    def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
+      resource.discard
   }
 
 }

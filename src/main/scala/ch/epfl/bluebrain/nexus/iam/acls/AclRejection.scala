@@ -24,16 +24,6 @@ object AclRejection {
   final case class AclNotFound(path: Path) extends AclRejection(s"ACL on path '$path' does not exists.")
 
   /**
-    * Signals an unexpected error while operating on the ACL surface API.
-    *
-    * @param path the target path for the ACL
-    * @param value the error message
-    */
-  final case class AclUnexpectedState(path: Path, value: String)
-      extends AclRejection(
-        s"unexpected error while operating on the ACL surface API for path '$path'. Reason: '$value'")
-
-  /**
     * Signals an attempt to delete ACLs that are already empty.
     *
     * @param path the target path for the ACL
@@ -48,14 +38,6 @@ object AclRejection {
     */
   final case class AclIncorrectRev(path: Path, rev: Long)
       extends AclRejection(s"ACL on path '$path' with incorrect revision '$rev' provided.")
-
-  /**
-    * Signals an attempt to write ACL on a path where you don't have permissions.
-    *
-    * @param path the target path for the ACL
-    */
-  final case class AclUnauthorizedWrite(path: Path)
-      extends AclRejection(s"You don't have permissions to write ACL on path '$path'.")
 
   /**
     * Signals an attempt to create/replace/append/subtract ACL collection which contains void permissions.
