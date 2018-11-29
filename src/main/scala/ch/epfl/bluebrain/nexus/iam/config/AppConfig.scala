@@ -80,6 +80,7 @@ object AppConfig {
     lazy val publicIri: AbsoluteIri      = url"$publicUri".value
     lazy val aclsIri: AbsoluteIri        = url"$publicUri/$prefix/acls".value
     lazy val permissionsIri: AbsoluteIri = url"$publicUri/$prefix/permissions".value
+    lazy val realmsIri: AbsoluteIri      = url"$publicUri/$prefix/realms".value
   }
 
   /**
@@ -132,6 +133,7 @@ object AppConfig {
       ResourceF(http.aclsIri + path.asString,
                 1L,
                 acls.types,
+                deprecated = false,
                 c.instant(),
                 Anonymous,
                 c.instant(),

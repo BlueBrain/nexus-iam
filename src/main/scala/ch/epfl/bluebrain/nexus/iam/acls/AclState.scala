@@ -31,6 +31,7 @@ object AclState {
     * @param createdBy the identity that created the resource
     * @param updatedBy the identity that last updated the resource
     */
+//noinspection NameBooleanParameters
   final case class Current(path: Path,
                            acl: AccessControlList,
                            rev: Long,
@@ -44,7 +45,7 @@ object AclState {
       * @return the current state in a [[Resource]] representation
       */
     def resource(implicit http: HttpConfig): Resource =
-      ResourceF(http.aclsIri + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
+      ResourceF(http.aclsIri + path.asString, rev, types, false, createdAt, createdBy, updatedAt, updatedBy, acl)
 
     /**
       * @return the current state in a [[ResourceMetadata]] representation

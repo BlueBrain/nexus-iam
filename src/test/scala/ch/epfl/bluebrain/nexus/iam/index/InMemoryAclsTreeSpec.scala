@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.scalatest._
 
+//noinspection NameBooleanParameters,TypeAnnotation
 class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues with Inspectors with EitherValues {
   private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
@@ -30,6 +31,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id1",
                 1L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -39,6 +41,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id2",
                 2L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -48,6 +51,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id3",
                 3L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -57,6 +61,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id4",
                 4L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -66,6 +71,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id5",
                 5L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -75,6 +81,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id6",
                 6L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -84,6 +91,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       ResourceF(http.aclsIri + "id7",
                 7L,
                 Set.empty,
+                false,
                 instant,
                 user,
                 instant,
@@ -120,6 +128,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
         ResourceF(http.aclsIri + "id2",
                   2L,
                   Set.empty,
+                  false,
                   instant,
                   user,
                   instant,

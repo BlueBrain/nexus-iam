@@ -1,16 +1,17 @@
 {
-  "@context" : [
+  "@context": [
     "https://bluebrain.github.io/nexus/contexts/resource.json",
     "https://bluebrain.github.io/nexus/contexts/iam.json"
   ],
-  "@id" : "http://example.com/id",
-  "@type" : [
+  "@id": "http://example.com/id",
+  "@type": [
     "AccessControlList",
     "Realm"
   ],
-  "_rev" : 1,
-  "_createdBy" : "http://nexus.example.com/v1/realms/myrealm/users/mysubject",
-  "_updatedBy" : "http://nexus.example.com/v1/realms/myrealm/users/mysubject2",
-  "_createdAt" : "1970-01-01T01:00:00Z",
-  "_updatedAt" : "1970-01-01T01:00:00Z"
+  "_rev": 1,
+  "_deprecated": false,
+  "_createdBy": "http://nexus.example.com/v1/realms/myrealm/users/mysubject",
+  "_updatedBy": "http://nexus.example.com/v1/realms/myrealm/users/mysubject2",
+  "_createdAt": "1970-01-01T01:00:00Z",
+  "_updatedAt": "1970-01-01T01:00:00Z"
 }

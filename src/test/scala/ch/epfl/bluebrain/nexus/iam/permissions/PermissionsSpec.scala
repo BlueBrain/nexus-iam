@@ -20,7 +20,7 @@ import org.scalatest.Matchers
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-//noinspection TypeAnnotation
+//noinspection TypeAnnotation,NameBooleanParameters
 class PermissionsSpec
     extends ActorSystemFixture("PermissionsSpec", true)
     with Matchers
@@ -71,7 +71,7 @@ class PermissionsSpec
       perms.effectivePermissions.ioValue shouldEqual minimum
     }
     "return the minimum permissions resource" in {
-      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, epoch, Anonymous, epoch, Anonymous, minimum)
+      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, false, epoch, Anonymous, epoch, Anonymous, minimum)
     }
     "fail to delete minimum when initial" in {
       perms.delete(0L).rejected[CannotDeleteMinimumCollection.type]

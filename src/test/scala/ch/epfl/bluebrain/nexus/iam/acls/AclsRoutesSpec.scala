@@ -31,6 +31,7 @@ import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
 
+//noinspection NameBooleanParameters
 class AclsRoutesSpec
     extends WordSpecLike
     with Matchers
@@ -78,6 +79,7 @@ class AclsRoutesSpec
       http.aclsIri + "id1",
       1L,
       Set[AbsoluteIri](nxv.AccessControlList),
+      false,
       clock.instant(),
       user,
       clock.instant(),
@@ -87,6 +89,7 @@ class AclsRoutesSpec
     val resourceAcl2 = ResourceF(http.aclsIri + "id2",
                                  2L,
                                  Set[AbsoluteIri](nxv.AccessControlList),
+                                 false,
                                  clock.instant(),
                                  user,
                                  clock.instant(),
@@ -107,7 +110,7 @@ class AclsRoutesSpec
     realms.caller(AuthToken(token.token)) shouldReturn Task(Option(caller))
 
     val responseMeta =
-      ResourceMetadata(id, 1L, Set(nxv.AccessControlList), clock.instant(), user, clock.instant(), user)
+      ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, clock.instant(), user, clock.instant(), user)
 
     "create ACL" in {
       acls.replace(path, 0L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
