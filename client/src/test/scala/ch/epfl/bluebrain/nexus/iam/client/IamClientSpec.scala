@@ -43,12 +43,13 @@ class IamClientSpec
     Mockito.reset(aclsClient)
     Mockito.reset(callerClient)
   }
+
   "An IAM client" when {
     implicit val config = IamClientConfig("v1", url"http://example.com/some/".value)
 
     val client = IamClient.fromFuture
 
-    "fetching ACLs" should {
+    "fetching ACLs and authorizing" should {
       val acl = AccessControlList(Anonymous -> Set(Permission.unsafe("create"), Permission.unsafe("read")))
       val aclWithMeta = ResourceAccessControlList(url"http://example.com/id".value,
                                                   7L,
@@ -64,9 +65,11 @@ class IamClientSpec
         val token             = OAuth2BearerToken("token")
         val expected          = AccessControlLists(/ -> aclWithMeta)
 
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true").addCredentials(token)) shouldReturn
+        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true").addCredentials(token)) shouldReturn
           Future(expected)
-        client.getAcls("a" / "b", ancestors = false, self = true).futureValue shouldEqual expected
+        client.getAcls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
+        client.authorizeOn("a" / "b", Permission.unsafe("write")).failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "succeed without token" in {
@@ -75,15 +78,16 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn Future(expected)
         client.getAcls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
       }
 
       "fail with UnauthorizedAccess" in {
         implicit val tokenOpt: Option[AuthToken] = None
 
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
+        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        whenReady(client.getAcls("a" / "b", ancestors = false, self = true).failed)(
-          _ shouldBe a[UnauthorizedAccess.type])
+        client.getAcls("a" / "b", ancestors = true, self = true).failed.futureValue shouldEqual UnauthorizedAccess
+        client.authorizeOn("a" / "b", Permission.unsafe("read")).failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "fail with other error" in {
@@ -92,7 +96,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
           Future.failed(expected)
-        whenReady(client.getAcls("a" / "b", ancestors = false, self = true).failed)(_ shouldEqual expected)
+        client.getAcls("a" / "b", ancestors = false, self = true).failed.futureValue shouldEqual expected
       }
     }
 
@@ -120,7 +124,7 @@ class IamClientSpec
 
         callerClient(Get("http://example.com/some/v1/oauth2/user?filterGroups=true").addCredentials(token)) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        whenReady(client.getCaller(filterGroups = true).failed)(_ shouldBe a[UnauthorizedAccess.type])
+        client.getCaller(filterGroups = true).failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "fail with other error" in {
@@ -130,7 +134,7 @@ class IamClientSpec
 
         callerClient(Get("http://example.com/some/v1/oauth2/user?filterGroups=true").addCredentials(token)) shouldReturn
           Future.failed(expected)
-        whenReady(client.getCaller(filterGroups = true).failed)(_ shouldEqual expected)
+        client.getCaller(filterGroups = true).failed.futureValue shouldEqual expected
       }
     }
   }
