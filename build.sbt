@@ -85,6 +85,7 @@ lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin, JmhPlugin)
+  .aggregate(client)
   .settings(
     name       := "iam",
     moduleName := "iam",
