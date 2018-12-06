@@ -24,6 +24,7 @@ object ExceptionHandling {
   final def apply(): ExceptionHandler =
     ExceptionHandler {
       case err: IamError =>
+        logger.error("Exception caught during routes processing ", err)
         complete(iamErrorStatusFrom(err) -> err)
       case err =>
         logger.error("Exception caught during routes processing ", err)
@@ -32,7 +33,10 @@ object ExceptionHandling {
     }
 
   private def iamErrorStatusFrom: StatusFrom[IamError] = StatusFrom {
-    case _: IamError.AccessDenied           => StatusCodes.Forbidden
-    case _: IamError.UnexpectedInitialState => StatusCodes.InternalServerError
+    case _: IamError.AccessDenied                => StatusCodes.Forbidden
+    case _: IamError.UnexpectedInitialState      => StatusCodes.InternalServerError
+    case _: IamError.ReadWriteConsistencyTimeout => StatusCodes.InternalServerError
+    case _: IamError.DistributedDataError        => StatusCodes.InternalServerError
+    case _: IamError.InternalError               => StatusCodes.InternalServerError
   }
 }

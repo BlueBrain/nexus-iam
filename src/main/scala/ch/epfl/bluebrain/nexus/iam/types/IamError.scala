@@ -1,6 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam.types
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 
+import scala.concurrent.duration.FiniteDuration
+
 /**
   * Generic error types global to the entire service.
   *
@@ -31,4 +33,26 @@ object IamError {
     */
   final case class UnexpectedInitialState(resource: AbsoluteIri)
       extends IamError(s"Unexpected state on resource '${resource.asUri}'.")
+
+  /**
+    * Signals that a timeout occurred while waiting for the desired read or write consistency across nodes.
+    *
+    * @param timeout the timeout duration
+    */
+  final case class ReadWriteConsistencyTimeout(timeout: FiniteDuration)
+      extends IamError(s"Timed out after '${timeout.toMillis} ms' while waiting for a consistent read or write.")
+
+  /**
+    * Signals that an error occurred when trying to perform a distributed data operation.
+    */
+  final case class DistributedDataError(reason: String)
+      extends IamError(s"An error occurred when performing a distributed data operation, reason '$reason'.")
+
+  /**
+    * Generic wrapper for iam errors that should not be exposed to clients.
+    *
+    * @param error the underlying error
+    */
+  final case class InternalError(error: IamError) extends IamError("An internal server error occurred.")
+
 }

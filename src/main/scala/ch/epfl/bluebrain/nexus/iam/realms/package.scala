@@ -1,7 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam
 
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
-import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.iam.index.KeyValueStore
+import ch.epfl.bluebrain.nexus.iam.types.{Label, Permission, ResourceF, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.sourcing.Aggregate
 
@@ -19,6 +20,8 @@ package object realms {
 
   type Resource    = ResourceF[Either[DeprecatedRealm, ActiveRealm]]
   type OptResource = Option[Resource]
+
+  type RealmIndex[F[_]] = KeyValueStore[F, Label, Resource]
 
   /**
     * The constant collection of realm types.
