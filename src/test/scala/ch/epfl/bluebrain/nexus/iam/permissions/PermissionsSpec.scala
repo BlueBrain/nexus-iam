@@ -5,6 +5,7 @@ import java.time.Instant
 import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
@@ -12,8 +13,8 @@ import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.iam.{ActorSystemFixture, IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.mockito.IdiomaticMockito
 import org.scalatest.Matchers
 

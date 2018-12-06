@@ -26,8 +26,8 @@ scalafmt: {
 
 // Dependency versions
 val rdfVersion                 = "0.2.28"
-val commonsVersion             = "0.10.37"
-val serviceVersion             = "0.10.20"
+val commonsVersion             = "0.10.40"
+val serviceVersion             = "0.10.21"
 val sourcingVersion            = "0.12.0"
 val akkaVersion                = "2.5.18"
 val akkaCorsVersion            = "0.3.1"
@@ -38,8 +38,9 @@ val catsVersion                = "1.4.0"
 val circeVersion               = "0.10.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.0.3"
+val mockitoVersion             = "1.0.5"
 val monixVersion               = "3.0.0-RC2"
+val nimbusJoseJwtVersion       = "6.4.1"
 val pureconfigVersion          = "0.9.2"
 val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
@@ -54,6 +55,7 @@ lazy val serviceKamon         = "ch.epfl.bluebrain.nexus" %% "service-kamon"    
 lazy val serviceHttp          = "ch.epfl.bluebrain.nexus" %% "service-http"               % serviceVersion
 lazy val sourcingAkka         = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"              % sourcingVersion
 lazy val commonTest           = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
+lazy val serviceTest          = "ch.epfl.bluebrain.nexus" %% "service-test"               % serviceVersion
 lazy val akkaCluster          = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
 lazy val akkaClusterSharding  = "com.typesafe.akka"       %% "akka-cluster-sharding"      % akkaVersion
 lazy val akkaHttp             = "com.typesafe.akka"       %% "akka-http"                  % akkaHttpVersion
@@ -72,6 +74,7 @@ lazy val circeJava8           = "io.circe"                %% "circe-java8"      
 lazy val journalCore          = "io.verizon.journal"      %% "core"                       % journalVersion
 lazy val mockitoScala         = "org.mockito"             %% "mockito-scala"              % mockitoVersion
 lazy val monixEval            = "io.monix"                %% "monix-eval"                 % monixVersion
+lazy val nimbusJoseJwt        = "com.nimbusds"            % "nimbus-jose-jwt"             % nimbusJoseJwtVersion
 lazy val logbackClassic       = "ch.qos.logback"          % "logback-classic"             % logbackVersion
 lazy val pureconfig           = "com.github.pureconfig"   %% "pureconfig"                 % pureconfigVersion
 lazy val scalaTest            = "org.scalatest"           %% "scalatest"                  % scalaTestVersion
@@ -106,6 +109,7 @@ lazy val iam = project
       journalCore,
       kryo,
       monixEval,
+      nimbusJoseJwt,
       logbackClassic,
       pureconfig,
       serviceKamon,
@@ -116,6 +120,7 @@ lazy val iam = project
       commonTest         % Test,
       mockitoScala       % Test,
       scalaTest          % Test,
+      serviceTest        % Test,
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
   )

@@ -3,13 +3,13 @@ package ch.epfl.bluebrain.nexus.iam.io
 import java.time.Instant
 
 import akka.actor.ExtendedActorSystem
-import ch.epfl.bluebrain.nexus.iam.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.AclDeleted
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.PermissionsDeleted
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import org.scalatest.{EitherValues, Inspectors, Matchers}
+import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import io.circe.parser._
+import org.scalatest.{EitherValues, Inspectors, Matchers}
 
 class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matchers with Inspectors with EitherValues {
 

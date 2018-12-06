@@ -4,6 +4,7 @@ import java.time.{Clock, Instant, ZoneId}
 
 import cats.effect.{ContextShift, IO}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl, InitialIdentities}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
@@ -11,11 +12,11 @@ import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
-import ch.epfl.bluebrain.nexus.iam.{ActorSystemFixture, IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
+import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.scalatest._
 import org.scalatest.mockito.MockitoSugar
 

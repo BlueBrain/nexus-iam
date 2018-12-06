@@ -1,4 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.io
+
 import java.time.Instant
 
 import akka.persistence.journal.Tagged
