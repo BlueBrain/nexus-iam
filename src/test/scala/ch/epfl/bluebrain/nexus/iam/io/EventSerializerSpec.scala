@@ -5,7 +5,9 @@ import java.time.Instant
 import akka.actor.ExtendedActorSystem
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.AclDeleted
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.PermissionsDeleted
+import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.RealmDeprecated
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
+import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import io.circe.parser._
@@ -38,9 +40,24 @@ class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matc
        |  "@type": "AclDeleted"
        |}""".stripMargin
 
+  private val rd = RealmDeprecated(Label.unsafe("blah"), 2L, Instant.EPOCH, Anonymous)
+  private val rdString =
+    """|{
+       |  "id": "blah",
+       |  "rev": 2,
+       |  "instant": "1970-01-01T00:00:00Z",
+       |  "subject": {
+       |    "@id": "http://127.0.0.1:8080/v1/anonymous",
+       |    "@type": "Anonymous"
+       |  },
+       |  "@type": "RealmDeprecated"
+       |}""".stripMargin
+
+
   private val data = Map[AnyRef, (String, String)](
     pd -> ("permissions-event" -> pdString),
-    ad -> ("acl-event"         -> adString)
+    ad -> ("acl-event"         -> adString),
+    rd -> ("realm-event"       -> rdString)
   )
 
   "An EventSerializer" should {

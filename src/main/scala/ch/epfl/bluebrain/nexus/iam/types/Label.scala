@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import io.circe.{Decoder, Encoder}
 
 import scala.util.matching.Regex
 
@@ -51,4 +52,10 @@ object Label {
   @throws[IllegalArgumentException]("if the provided value does not match the expected Label format")
   final def unsafe(value: String): Label =
     apply(value).fold(err => throw new IllegalArgumentException(err), identity)
+
+  final implicit val labelEncoder: Encoder[Label] =
+    Encoder.encodeString.contramap[Label](_.value)
+
+  final implicit val labelDecoder: Decoder[Label] =
+    Decoder.decodeString.emap(Label.apply)
 }
