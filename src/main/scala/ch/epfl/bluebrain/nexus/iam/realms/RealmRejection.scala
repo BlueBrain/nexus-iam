@@ -13,11 +13,26 @@ sealed abstract class RealmRejection(val msg: String) extends Product with Seria
 object RealmRejection {
 
   /**
-    * Rejection returned when attempting to create a realm with an id that already exists
+    * Rejection returned when attempting to create a realm with an id that already exists.
     *
     * @param id the id of the realm
     */
   final case class RealmAlreadyExists(id: Label) extends RealmRejection(s"Realm '${id.value}' already exists.")
+
+  /**
+    * Rejection returned when attempting to update a realm with an id that doesnt exist.
+    *
+    * @param id the id of the realm
+    */
+  final case class RealmNotFound(id: Label) extends RealmRejection(s"Realm '${id.value}' not found.")
+
+  /**
+    * Rejection returned when attempting to deprecate a realm that is already deprecated.
+    *
+    * @param id the id of the realm
+    */
+  final case class RealmAlreadyDeprecated(id: Label)
+      extends RealmRejection(s"Realm '${id.value}' is already deprecated.")
 
   /**
     * Rejection returned when a subject intends to perform an operation on the current realm, but either provided an

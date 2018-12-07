@@ -30,7 +30,7 @@ class WellKnownSpec extends WordSpecLike with Matchers with EitherValues with IO
       implicit val cl = httpMock(validOpenIdConfig, validJwks)
       val wk          = WellKnown[IO](openIdUrl).accepted
       wk.issuer shouldEqual issuer
-      wk.grantTypes shouldEqual Set(AuthorizationCode, Implicit, RefreshToken, Password, ClientCredentials)
+      wk.grantTypes shouldEqual grantTypes
       wk.keys shouldEqual Set(validKeyJson)
     }
 
@@ -167,5 +167,7 @@ object WellKnownSpec {
   """.stripMargin
 
   val validJwks = parse(validJwksString).right.value
+
+  val grantTypes = Set(AuthorizationCode, Implicit, RefreshToken, Password, ClientCredentials)
 
 }

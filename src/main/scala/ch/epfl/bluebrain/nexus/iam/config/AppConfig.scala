@@ -37,7 +37,8 @@ import scala.concurrent.duration._
   * @param persistence persistence configuration
   * @param indexing    indexing configuration
   * @param initialAcl  initial acl configuration (to be considered when the service is first booted)
-  * @param permissions sourcing configuration for permissions
+  * @param permissions configuration for permissions
+  * @param realms      configuration for realms
   */
 final case class AppConfig(description: Description,
                            http: HttpConfig,
@@ -45,7 +46,8 @@ final case class AppConfig(description: Description,
                            persistence: PersistenceConfig,
                            indexing: IndexingConfig,
                            initialAcl: InitialAcl,
-                           permissions: PermissionsConfig)
+                           permissions: PermissionsConfig,
+                           realms: RealmsConfig)
 
 object AppConfig {
 
@@ -170,7 +172,20 @@ object AppConfig {
       initialDelay: FiniteDuration,
       maxRetries: Int,
       factor: Int
-  )
+  ) {
+    /**
+      * Computes a retry strategy from the provided configuration.
+      */
+    def retryStrategy[F[_]: Timer, E](implicit F: ApplicativeError[F, E]): SourcingRetryStrategy[F] =
+      strategy match {
+        case "exponential" =>
+          SourcingRetryStrategy.exponentialBackoff(initialDelay, maxRetries, factor)
+        case "once" =>
+          SourcingRetryStrategy.once
+        case _ =>
+          SourcingRetryStrategy.never
+      }
+  }
 
   /**
     * Sourcing configuration.
@@ -224,32 +239,36 @@ object AppConfig {
         passivation.lapsedSinceRecoveryCompleted,
         shouldPassivate
       )
-
-    /**
-      * Computes a retry strategy from the provided configuration.
-      */
-    def retryStrategy[F[_]: Timer, E](implicit F: ApplicativeError[F, E]): SourcingRetryStrategy[F] =
-      retry.strategy match {
-        case "exponential" =>
-          SourcingRetryStrategy.exponentialBackoff(
-            retry.initialDelay,
-            retry.maxRetries,
-            retry.factor
-          )
-        case "once" =>
-          SourcingRetryStrategy.once
-        case _ =>
-          SourcingRetryStrategy.never
-      }
   }
+
+  /**
+    * KeyValueStore configuration.
+    *
+    * @param askTimeout         the maximum duration to wait for the replicator to reply
+    * @param consistencyTimeout the maximum duration to wait for a consistent read or write across the cluster
+    * @param retry              the retry strategy configuration
+    */
+  final case class KeyValueStoreConfig(
+      askTimeout: FiniteDuration,
+      consistencyTimeout: FiniteDuration,
+      retry: RetryStrategyConfig,
+  )
 
   /**
     * Permissions configuration.
     *
-    * @param sourcing the permission sourcing configuration
+    * @param sourcing the permissions sourcing configuration
     * @param minimum  the minimum set of permissions
     */
   final case class PermissionsConfig(sourcing: SourcingConfig, minimum: Set[Permission])
+
+  /**
+    * Realms configuration.
+    *
+    * @param sourcing      the realms sourcing configuration
+    * @param keyValueStore the key value store configuration
+    */
+  final case class RealmsConfig(sourcing: SourcingConfig, keyValueStore: KeyValueStoreConfig)
 
   val orderedKeys = OrderedKeys(
     List(

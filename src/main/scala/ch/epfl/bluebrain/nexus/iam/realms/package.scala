@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam
 
+import _root_.io.circe.Json
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.index.KeyValueStore
 import ch.epfl.bluebrain.nexus.iam.types.{Label, Permission, ResourceF, ResourceMetadata}
@@ -22,6 +24,8 @@ package object realms {
   type OptResource = Option[Resource]
 
   type RealmIndex[F[_]] = KeyValueStore[F, Label, Resource]
+
+  type HttpJsonClient[F[_]] = HttpClient[F, Json]
 
   /**
     * The constant collection of realm types.

@@ -8,7 +8,7 @@ import akka.cluster.ddata.{DistributedData, LWWMap, LWWMapKey}
 import akka.pattern.ask
 import akka.util.Timeout
 import cats.Functor
-import cats.effect.{Async, IO, LiftIO}
+import cats.effect.{Async, IO}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{DistributedDataError, InternalError, ReadWriteConsistencyTimeout}
 import ch.epfl.bluebrain.nexus.sourcing.akka.RetryStrategy
@@ -85,7 +85,7 @@ object KeyValueStore {
     * @tparam K                 the key type
     * @tparam V                 the value type
     */
-  final def distributed[F[_]: LiftIO: Async, K, V](
+  final def distributed[F[_]: Async, K, V](
       id: String,
       clock: (Long, V) => Long,
       askTimeout: FiniteDuration,
@@ -94,7 +94,7 @@ object KeyValueStore {
   )(implicit as: ActorSystem): KeyValueStore[F, K, V] =
     new DDataKeyValueStore(id, clock, askTimeout, consistencyTimeout, retryStrategy)
 
-  private class DDataKeyValueStore[F[_]: LiftIO: Async, K, V](
+  private class DDataKeyValueStore[F[_]: Async, K, V](
       id: String,
       clock: (Long, V) => Long,
       askTimeout: FiniteDuration,

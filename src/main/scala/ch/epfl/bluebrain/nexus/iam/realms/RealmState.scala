@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.realms
 import java.time.Instant
 
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
@@ -11,7 +12,16 @@ import io.circe.Json
 /**
   * Enumeration of Realm states.
   */
-sealed trait RealmState extends Product with Serializable
+sealed trait RealmState extends Product with Serializable {
+
+  /**
+    * @return an optional resource representation for this tate
+    */
+  def optResource(implicit http: HttpConfig): OptResource = this match {
+    case Initial    => None
+    case c: Current => Some(c.resource)
+  }
+}
 
 object RealmState {
 
