@@ -1,6 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 
 import scala.util.matching.Regex
 
@@ -19,6 +19,12 @@ final case class Label private (value: String) {
     */
   def toIri(base: AbsoluteIri): AbsoluteIri =
     base + value
+
+  /**
+    * Builds an Path by suffixing the label to the /; for example, if the label has value "label" this returns "/label".
+    */
+  def toPath: Path =
+    Path./ + value
 }
 
 object Label {

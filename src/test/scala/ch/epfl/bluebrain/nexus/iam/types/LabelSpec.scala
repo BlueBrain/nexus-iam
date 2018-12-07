@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
 
 class LabelSpec extends WordSpecLike with Matchers with Randomness with Inspectors with EitherValues {
@@ -18,6 +19,16 @@ class LabelSpec extends WordSpecLike with Matchers with Randomness with Inspecto
       forAll(cases) { string =>
         intercept[IllegalArgumentException](Label.unsafe(string))
         Label(string).left.value shouldEqual s"Label '$string' does not match pattern '${Label.regex.regex}'"
+      }
+    }
+    "return its path representation" in {
+      Label.unsafe("abc").toPath shouldEqual Path("/abc").right.value
+    }
+    "return an iri representation" in {
+      forAll(List("http://localhost", "http://localhost/")) { str =>
+        val base  = Url(str).right.value
+        val label = Label.unsafe("abc")
+        label.toIri(base) shouldEqual Url("http://localhost/abc").right.value
       }
     }
   }
