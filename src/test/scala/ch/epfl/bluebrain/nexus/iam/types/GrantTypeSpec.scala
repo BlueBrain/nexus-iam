@@ -31,6 +31,10 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
             decoder.decodeJson(Json.fromString(gt)).right.value shouldEqual expected
         }
       }
+      "fail to decode for unknown string" in {
+        val decoder = implicitly[Decoder[GrantType]]
+        decoder.decodeJson(Json.fromString("incorrect")).left.value
+      }
     }
     "using Snake encoders" should {
       import GrantType.Snake._
@@ -55,6 +59,10 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
           case (expected, gtString) =>
             decoder.decodeJson(Json.fromString(gtString)).right.value shouldEqual expected
         }
+      }
+      "fail to decode for unknown string" in {
+        val decoder = implicitly[Decoder[GrantType]]
+        decoder.decodeJson(Json.fromString("incorrect")).left.value
       }
     }
   }

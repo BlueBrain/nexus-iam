@@ -54,7 +54,8 @@ lazy val serviceIndexing      = "ch.epfl.bluebrain.nexus" %% "service-indexing" 
 lazy val serviceKamon         = "ch.epfl.bluebrain.nexus" %% "service-kamon"              % serviceVersion
 lazy val serviceHttp          = "ch.epfl.bluebrain.nexus" %% "service-http"               % serviceVersion
 lazy val sourcingAkka         = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"              % sourcingVersion
-lazy val commonTest           = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
+lazy val commonsHttp          = "ch.epfl.bluebrain.nexus" %% "commons-http"               % commonsVersion
+lazy val commonsTest          = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
 lazy val serviceTest          = "ch.epfl.bluebrain.nexus" %% "service-test"               % serviceVersion
 lazy val akkaCluster          = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
 lazy val akkaClusterSharding  = "com.typesafe.akka"       %% "akka-cluster-sharding"      % akkaVersion
@@ -88,12 +89,15 @@ lazy val iam = project
     name       := "iam",
     moduleName := "iam",
     libraryDependencies ++= Seq(
+      commonsHttp,
       rdfAkka,
       rdfCirce,
       rdfJena,
       rdfNexus,
       serviceIndexing,
       sourcingAkka,
+      serviceHttp,
+      serviceKamon,
       akkaHttp,
       akkaHttpCors,
       akkaPersistence,
@@ -112,15 +116,13 @@ lazy val iam = project
       nimbusJoseJwt,
       logbackClassic,
       pureconfig,
-      serviceKamon,
-      serviceHttp,
+      serviceTest        % Test,
       akkaHttpTestKit    % Test,
       akkaStreamTestKit  % Test,
       akkaPersistenceMem % Test,
-      commonTest         % Test,
+      commonsTest        % Test,
       mockitoScala       % Test,
       scalaTest          % Test,
-      serviceTest        % Test,
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
   )

@@ -72,6 +72,7 @@ object GrantType {
       case "client_credentials" => Right(ClientCredentials)
       case "device_code"        => Right(DeviceCode)
       case "refresh_token"      => Right(RefreshToken)
+      case other                => Left(s"Unknown grant type '$other'")
     }
   }
 
@@ -92,6 +93,7 @@ object GrantType {
       case "clientCredentials" => Right(ClientCredentials)
       case "deviceCode"        => Right(DeviceCode)
       case "refreshToken"      => Right(RefreshToken)
+      case other               => Left(s"Unknown grant type '$other'")
     }
   }
 }
