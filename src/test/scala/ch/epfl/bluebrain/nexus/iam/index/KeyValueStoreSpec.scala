@@ -86,6 +86,4 @@ class KeyValueStoreSpec
 
 object KeyValueStoreSpec {
   final case class RevisionedValue[A](rev: Long, value: A)
-
-  // 24$ / month / TB active storage
 }
