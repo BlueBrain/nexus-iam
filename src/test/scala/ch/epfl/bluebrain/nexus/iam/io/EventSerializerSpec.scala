@@ -53,7 +53,6 @@ class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matc
        |  "@type": "RealmDeprecated"
        |}""".stripMargin
 
-
   private val data = Map[AnyRef, (String, String)](
     pd -> ("permissions-event" -> pdString),
     ad -> ("acl-event"         -> adString),

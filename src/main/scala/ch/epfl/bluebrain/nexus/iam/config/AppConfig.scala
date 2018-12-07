@@ -173,6 +173,7 @@ object AppConfig {
       maxRetries: Int,
       factor: Int
   ) {
+
     /**
       * Computes a retry strategy from the provided configuration.
       */

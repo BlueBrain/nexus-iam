@@ -15,8 +15,6 @@ class KeyValueStoreSpec
     with IOEitherValues
     with IOOptionValues {
 
-
-
   "A KeyValueStore" should {
 
     val store = KeyValueStore.distributed[IO, String, RevisionedValue[String]](
@@ -71,13 +69,15 @@ class KeyValueStoreSpec
     }
 
     "return empty entries" in {
-      KeyValueStore.distributed[IO, String, RevisionedValue[String]](
-        "empty",
-        { case (_, rv) => rv.rev },
-        3 seconds,
-        3 seconds,
-        RetryStrategy.never
-      ).entries().ioValue shouldEqual Map.empty[String, RevisionedValue[String]]
+      KeyValueStore
+        .distributed[IO, String, RevisionedValue[String]](
+          "empty", { case (_, rv) => rv.rev },
+          3 seconds,
+          3 seconds,
+          RetryStrategy.never
+        )
+        .entries()
+        .ioValue shouldEqual Map.empty[String, RevisionedValue[String]]
     }
 
   }

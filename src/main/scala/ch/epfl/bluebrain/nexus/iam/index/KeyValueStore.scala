@@ -134,7 +134,7 @@ object KeyValueStore {
         case g @ GetSuccess(`mapKey`, _) => F.pure(g.get(mapKey).entries)
         case _: NotFound[_]              => F.pure(Map.empty)
         // $COVERAGE-OFF$
-        case _: GetFailure[_]            => F.raiseError(InternalError(consistencyTimeoutError))
+        case _: GetFailure[_] => F.raiseError(InternalError(consistencyTimeoutError))
         // $COVERAGE-ON$
       }
       retryStrategy(mappedFA)
