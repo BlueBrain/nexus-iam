@@ -7,13 +7,13 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import io.circe.syntax._
 import org.scalatest.{EitherValues, Matchers, WordSpecLike}
 
+//noinspection TypeAnnotation,NameBooleanParameters
 class AccessControlListsSpec extends WordSpecLike with Matchers with Resources with EitherValues {
   private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
@@ -37,15 +37,32 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
       ResourceF(http.aclsIri + "id1",
                 1L,
                 tpes,
+                false,
                 instant,
                 user,
                 instant,
                 user2,
                 AccessControlList(user -> Set(read, write), group -> Set(other)))
     val acl2 =
-      ResourceF(http.aclsIri + "id2", 2L, tpes, instant, user, instant, user, AccessControlList(group -> Set(read)))
+      ResourceF(http.aclsIri + "id2",
+                2L,
+                tpes,
+                false,
+                instant,
+                user,
+                instant,
+                user,
+                AccessControlList(group -> Set(read)))
     val acl3 =
-      ResourceF(http.aclsIri + "id3", 3L, tpes, instant, user, instant, user2, AccessControlList(group -> Set(other)))
+      ResourceF(http.aclsIri + "id3",
+                3L,
+                tpes,
+                false,
+                instant,
+                user,
+                instant,
+                user2,
+                AccessControlList(group -> Set(other)))
 
     "merge two ACLs" in {
       AccessControlLists(/           -> acl) ++ AccessControlLists(/ -> acl2, "a" / "b" -> acl3) shouldEqual

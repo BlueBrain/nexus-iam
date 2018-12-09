@@ -1,73 +1,75 @@
 {
-  "@context" : [
+  "@context": [
     "https://bluebrain.github.io/nexus/contexts/resource.json",
     "https://bluebrain.github.io/nexus/contexts/iam.json",
     "https://bluebrain.github.io/nexus/contexts/search.json"
   ],
-  "_total" : 2,
-  "_results" : [
+  "_total": 2,
+  "_results": [
     {
-      "@id" : "http://nexus.example.com/v1/acls/id1",
-      "@type" : [
+      "@id": "http://nexus.example.com/v1/acls/id1",
+      "@type": [
         "AccessControlList"
       ],
-      "path" : "/one/two",
-      "acl" : [
+      "path": "/one/two",
+      "acl": [
         {
-          "identity" : {
-            "@id" : "http://nexus.example.com/v1/realms/realm/users/uuid",
-            "@type" : "User",
-            "realm" : "realm",
-            "subject" : "uuid"
+          "identity": {
+            "@id": "http://nexus.example.com/v1/realms/realm/users/uuid",
+            "@type": "User",
+            "realm": "realm",
+            "subject": "uuid"
           },
-          "permissions" : [
+          "permissions": [
             "acls/read",
             "acls/write"
           ]
         },
         {
-          "identity" : {
-            "@id" : "http://nexus.example.com/v1/realms/myrealm/groups/mygroup",
-            "@type" : "Group",
-            "group" : "mygroup",
-            "realm" : "myrealm"
+          "identity": {
+            "@id": "http://nexus.example.com/v1/realms/myrealm/groups/mygroup",
+            "@type": "Group",
+            "group": "mygroup",
+            "realm": "myrealm"
           },
-          "permissions" : [
+          "permissions": [
             "acls/manage"
           ]
         }
       ],
-      "_createdAt" : "1970-01-01T01:00:00Z",
-      "_createdBy" : "http://nexus.example.com/v1/realms/realm/users/uuid",
-      "_updatedAt" : "1970-01-01T01:00:00Z",
-      "_updatedBy" : "http://nexus.example.com/v1/realms/realm/users/uuid2",
-      "_rev" : 1
+      "_createdAt": "1970-01-01T01:00:00Z",
+      "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
+      "_updatedAt": "1970-01-01T01:00:00Z",
+      "_updatedBy": "http://nexus.example.com/v1/realms/realm/users/uuid2",
+      "_rev": 1,
+      "_deprecated": false
     },
     {
-      "@id" : "http://nexus.example.com/v1/acls/id2",
-      "@type" : [
+      "@id": "http://nexus.example.com/v1/acls/id2",
+      "@type": [
         "AccessControlList"
       ],
-      "path" : "/one",
-      "acl" : [
+      "path": "/one",
+      "acl": [
         {
-          "identity" : {
-            "@id" : "http://nexus.example.com/v1/realms/realm/users/uuid",
-            "@type" : "User",
-            "realm" : "realm",
-            "subject" : "uuid"
+          "identity": {
+            "@id": "http://nexus.example.com/v1/realms/realm/users/uuid",
+            "@type": "User",
+            "realm": "realm",
+            "subject": "uuid"
           },
-          "permissions" : [
+          "permissions": [
             "acls/read",
             "acls/write"
           ]
         }
       ],
-      "_createdAt" : "1970-01-01T01:00:00Z",
-      "_createdBy" : "http://nexus.example.com/v1/realms/realm/users/uuid",
-      "_updatedAt" : "1970-01-01T01:00:00Z",
-      "_updatedBy" : "http://nexus.example.com/v1/realms/realm/users/uuid",
-      "_rev" : 2
+      "_createdAt": "1970-01-01T01:00:00Z",
+      "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
+      "_updatedAt": "1970-01-01T01:00:00Z",
+      "_updatedBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
+      "_rev": 2,
+      "_deprecated": false
     }
   ]
 }

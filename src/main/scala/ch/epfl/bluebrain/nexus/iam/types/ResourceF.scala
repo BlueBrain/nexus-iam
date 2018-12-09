@@ -1,4 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.types
+
 import java.time.Instant
 
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
@@ -15,19 +16,21 @@ import io.circe.{Encoder, Json}
 /**
   * The metadata information for any resource in the service
   *
-  * @param id        the id of the resource
-  * @param rev       the revision
-  * @param types     the types of the resource
-  * @param createdAt the creation date of the resource
-  * @param createdBy the subject that created the resource
-  * @param updatedAt the last update date of the resource
-  * @param updatedBy the subject that performed the last update to the resource
-  * @param value     the resource value
+  * @param id         the id of the resource
+  * @param rev        the revision
+  * @param types      the types of the resource
+  * @param deprecated the resource deprecation status
+  * @param createdAt  the creation date of the resource
+  * @param createdBy  the subject that created the resource
+  * @param updatedAt  the last update date of the resource
+  * @param updatedBy  the subject that performed the last update to the resource
+  * @param value      the resource value
   */
 final case class ResourceF[A](
     id: AbsoluteIri,
     rev: Long,
     types: Set[AbsoluteIri],
+    deprecated: Boolean,
     createdAt: Instant,
     createdBy: Subject,
     updatedAt: Instant,
@@ -56,24 +59,26 @@ object ResourceF {
   /**
     * Constrcuts a [[ResourceF]] where the value is of type Unit
     *
-    * @param id        the identifier of the resource
-    * @param rev       the revision of the resource
-    * @param types     the types of the resource
-    * @param createdAt the instant when the resource was created
-    * @param createdBy the subject that created the resource
-    * @param updatedAt the instant when the resource was updated
-    * @param updatedBy the subject that updated the resource
+    * @param id         the identifier of the resource
+    * @param rev        the revision of the resource
+    * @param types      the types of the resource
+    * @param deprecated the resource deprecation status
+    * @param createdAt  the instant when the resource was created
+    * @param createdBy  the subject that created the resource
+    * @param updatedAt  the instant when the resource was updated
+    * @param updatedBy  the subject that updated the resource
     */
   def unit(
       id: AbsoluteIri,
       rev: Long,
       types: Set[AbsoluteIri],
+      deprecated: Boolean,
       createdAt: Instant,
       createdBy: Subject,
       updatedAt: Instant,
       updatedBy: Subject
   ): ResourceF[Unit] =
-    ResourceF(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, ())
+    ResourceF(id, rev, types, deprecated, createdAt, createdBy, updatedAt, updatedBy, ())
 
   implicit def resourceFencoder[A: Encoder](implicit http: HttpConfig): Encoder[ResourceF[A]] =
     Encoder.encodeJson.contramap { r =>
@@ -82,16 +87,17 @@ object ResourceF {
 
   implicit def resourceMetaEncoder(implicit http: HttpConfig): Encoder[ResourceMetadata] =
     Encoder.encodeJson.contramap {
-      case ResourceF(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, _: Unit) =>
+      case ResourceF(id, rev, types, deprecated, createdAt, createdBy, updatedAt, updatedBy, _: Unit) =>
         Json
           .obj(
-            "@id"                -> id.asJson,
-            "@type"              -> Json.arr(types.map(t => Json.fromString(t.lastSegment.getOrElse(t.asString))).toSeq: _*),
-            nxv.rev.prefix       -> Json.fromLong(rev),
-            nxv.createdBy.prefix -> createdBy.id.asJson,
-            nxv.updatedBy.prefix -> updatedBy.id.asJson,
-            nxv.createdAt.prefix -> Json.fromString(createdAt.toString),
-            nxv.updatedAt.prefix -> Json.fromString(updatedAt.toString)
+            "@id"                 -> id.asJson,
+            "@type"               -> Json.arr(types.map(t => Json.fromString(t.lastSegment.getOrElse(t.asString))).toSeq: _*),
+            nxv.rev.prefix        -> Json.fromLong(rev),
+            nxv.deprecated.prefix -> Json.fromBoolean(deprecated),
+            nxv.createdBy.prefix  -> createdBy.id.asJson,
+            nxv.updatedBy.prefix  -> updatedBy.id.asJson,
+            nxv.createdAt.prefix  -> Json.fromString(createdAt.toString),
+            nxv.updatedAt.prefix  -> Json.fromString(updatedAt.toString)
           )
           .addContext(resourceCtxUri)
           .addContext(iamCtxUri)

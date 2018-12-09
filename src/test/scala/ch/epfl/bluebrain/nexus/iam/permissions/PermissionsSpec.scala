@@ -5,6 +5,7 @@ import java.time.Instant
 import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
@@ -12,15 +13,15 @@ import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.iam.{ActorSystemFixture, IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.mockito.IdiomaticMockito
 import org.scalatest.Matchers
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-//noinspection TypeAnnotation
+//noinspection TypeAnnotation,NameBooleanParameters
 class PermissionsSpec
     extends ActorSystemFixture("PermissionsSpec", true)
     with Matchers
@@ -71,7 +72,7 @@ class PermissionsSpec
       perms.effectivePermissions.ioValue shouldEqual minimum
     }
     "return the minimum permissions resource" in {
-      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, epoch, Anonymous, epoch, Anonymous, minimum)
+      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, false, epoch, Anonymous, epoch, Anonymous, minimum)
     }
     "fail to delete minimum when initial" in {
       perms.delete(0L).rejected[CannotDeleteMinimumCollection.type]

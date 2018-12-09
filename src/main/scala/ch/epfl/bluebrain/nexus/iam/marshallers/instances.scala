@@ -24,10 +24,14 @@ import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.syntax._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.FiniteDuration
 
 object instances extends FailFastCirceSupport {
 
   private val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
+
+  implicit val finiteDurationEncoder: Encoder[FiniteDuration] =
+    Encoder.encodeString.contramap(fd => s"${fd.toMillis} ms")
 
   implicit val iamErrorEncoder: Encoder[IamError] = {
     implicit val config = rejectionConfig

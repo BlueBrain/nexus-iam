@@ -27,7 +27,7 @@ import scala.util.Random
   * listSmallAclProjectsOnOrg  thrpt   10  136503,019 ± 6442,895  ops/s
   * listSmallAllProjects       thrpt   10   49324,746 ± 1720,131  ops/s
   */
-//noinspection TypeAnnotation
+//noinspection TypeAnnotation,NameBooleanParameters
 @State(Scope.Thread)
 class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
   private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
@@ -60,6 +60,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
       val acl = ResourceF(http.aclsIri + "id3",
                           3L,
                           Set.empty,
+                          false,
                           instant,
                           user,
                           instant,
