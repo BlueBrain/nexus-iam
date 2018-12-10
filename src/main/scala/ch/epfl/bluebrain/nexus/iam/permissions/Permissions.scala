@@ -27,12 +27,18 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
   * @param http the application http configuration
   * @tparam F   the effect type
   */
-final class Permissions[F[_]: MonadThrowable](
+class Permissions[F[_]: MonadThrowable](
     agg: Agg[F],
     acls: Lazy[F, Acls]
 )(implicit http: HttpConfig, pc: PermissionsConfig) {
   private val F   = implicitly[MonadThrowable[F]]
   private val pid = "permissions"
+
+  /**
+    * @return the minimum set of permissions
+    */
+  def minimum: Set[Permission] =
+    pc.minimum
 
   /**
     * @return the current permissions as a resource

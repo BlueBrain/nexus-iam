@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import java.time.{Clock, Instant, ZoneId}
 
+import cats.Id
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
@@ -45,11 +46,11 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
   val projects1          = List.fill(100)(genString(length = 10))
   val users1: List[User] = List.fill(100)(User(genString(length = 10), "realm"))
 
-  val index1 = InMemoryAclsTree()
+  val index1 = InMemoryAclsTree[Id]()
 
   ingest(orgs1, projects1, users1, index1, 1000)
 
-  def ingest(orgs: List[String], projects: List[String], users: List[User], index: InMemoryAclsTree, total: Int): Unit =
+  def ingest(orgs: List[String], projects: List[String], users: List[User], index: InMemoryAclsTree[Id], total: Int): Unit =
     (0 until total).foreach { v =>
       val org     = orgs(genInt(max = orgs.size - 1))
       val project = projects(genInt(max = projects.size - 1))

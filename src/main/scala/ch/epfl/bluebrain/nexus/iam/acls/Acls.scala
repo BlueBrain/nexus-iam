@@ -1,34 +1,35 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import java.time.Clock
+import java.time.{Clock, Instant}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.MonadError
-import cats.effect.{Async, ConcurrentEffect}
+import cats.Applicative
+import cats.effect.{Async, Effect, Timer}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.acls.AclCommand._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent._
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.acls.AclState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl}
-import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig}
+import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
+import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, Lazy, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.sourcing.Aggregate
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, AkkaSourcingConfig, PassivationStrategy, RetryStrategy}
+import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 
 import scala.annotation.tailrec
 
 //noinspection RedundantDefaultArgument
-class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Throwable],
-                                                   clock: Clock,
-                                                   http: HttpConfig,
-                                                   initAcl: InitialAcl) {
+class Acls[F[_]](
+    agg: Agg[F],
+    perms: Lazy[F, Permissions],
+    index: AclsIndex[F],
+)(implicit F: MonadThrowable[F], clock: Clock, http: HttpConfig) {
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -110,7 +111,7 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
     index.get(path, ancestors, self)(caller.identities)
 
   private def fetchUnsafe(path: Path): F[ResourceOpt] =
-    agg.currentState(path.asString).map(stateToAcl(path, _))
+    agg.currentState(path.asString).flatMap(stateToAcl(path, _))
 
   private def fetchUnsafe(path: Path, rev: Long): F[ResourceOpt] =
     agg
@@ -118,13 +119,17 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
         case (state, event) if event.rev <= rev => next(state, event)
         case (state, _)                         => state
       }
-      .map(stateToAcl(path, _))
+      .flatMap(stateToAcl(path, _))
 
-  private def stateToAcl(path: Path, state: AclState): ResourceOpt =
+  private def stateToAcl(path: Path, state: AclState): F[ResourceOpt] =
     (state, path) match {
-      case (Initial, initAcl.path) => Some(initAcl.acl)
-      case (Initial, _)            => None
-      case (c: Current, _)         => Some(c.resource)
+      case (Initial, Path./) =>
+        perms().map { p =>
+          val acl = AccessControlList(Anonymous -> p.minimum)
+          Some(Current(Path./, acl, 0L, Instant.EPOCH, Instant.EPOCH, Anonymous, Anonymous).resource)
+        }
+      case (Initial, _)    => F.pure(None)
+      case (c: Current, _) => F.pure(Some(c.resource))
     }
 
   private def check(path: Path, permission: Permission)(implicit caller: Caller): F[Unit] =
@@ -167,35 +172,68 @@ class Acls[F[_]](agg: Agg[F], index: AclsIndex[F])(implicit F: MonadError[F, Thr
 object Acls {
 
   /**
-    * Construct an ''Acls'' wrapped on an ''F'' type based on akka clustered [[Aggregate]].
+    * Constructs a new acls aggregate.
     */
-  def apply[F[_]: ConcurrentEffect](index: AclsIndex[F])(implicit cl: Clock = Clock.systemUTC(),
-                                                         ac: AppConfig,
-                                                         sc: AkkaSourcingConfig,
-                                                         as: ActorSystem,
-                                                         mt: ActorMaterializer): F[Acls[F]] = {
-    val aggF: F[Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]] = AkkaAggregate.sharded(
+  def aggregate[F[_]: Effect: Timer](implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
+    AkkaAggregate.sharded[F](
       "acls",
       AclState.Initial,
       next,
       evaluate[F],
-      PassivationStrategy.immediately[AclState, AclCommand],
-      RetryStrategy.never,
-      sc,
-      ac.cluster.shards
+      ac.sourcing.passivationStrategy(),
+      ac.sourcing.retry.retryStrategy,
+      ac.sourcing.akkaSourcingConfig,
+      ac.sourcing.shards
     )
-    aggF.map(new Acls(_, index))
-  }
 
   /**
-    * Construct an ''Acls'' wrapped on an ''F'' type based on an in memory [[Aggregate]].
+    * Constructs an ACL index.
     */
-  def inMemory[F[_]: ConcurrentEffect](
-      index: AclsIndex[F])(implicit cl: Clock, http: HttpConfig, initAcl: InitialAcl): F[Acls[F]] = {
-    val aggF: F[Aggregate[F, String, AclEvent, AclState, AclCommand, AclRejection]] =
-      Aggregate.inMemory[F, String]("acls", Initial, next, evaluate[F])
-    aggF.map(new Acls(_, index))
-  }
+  def index[F[_]: Applicative]: AclsIndex[F] =
+    InMemoryAclsTree[F]()
+
+  /**
+    * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
+    *
+    * @param agg   the acl aggregate
+    * @param perms a lazy reference to the permissions api
+    * @param index an acl index
+    */
+  def apply[F[_]: MonadThrowable](
+      agg: Agg[F],
+      perms: Lazy[F, Permissions],
+      index: AclsIndex[F]
+  )(implicit http: HttpConfig, cl: Clock): Acls[F] =
+    new Acls(agg, perms, index)
+
+  /**
+    * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
+    *
+    * @param perms a lazy reference to the permissions api
+    */
+  def apply[F[_]: Effect: Timer](perms: Lazy[F, Permissions])(
+      implicit
+      as: ActorSystem,
+      mt: ActorMaterializer,
+      http: HttpConfig,
+      ac: AclsConfig,
+      cl: Clock = Clock.systemUTC()
+  ): F[Acls[F]] =
+    delay(aggregate, perms, index)
+
+  /**
+    * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
+    *
+    * @param agg   the acl aggregate
+    * @param perms a lazy reference to the permissions api
+    * @param index an acl index
+    */
+  def delay[F[_]: MonadThrowable](
+      agg: F[Agg[F]],
+      perms: Lazy[F, Permissions],
+      index: AclsIndex[F]
+  )(implicit http: HttpConfig, cl: Clock = Clock.systemUTC()): F[Acls[F]] =
+    agg.map(apply(_, perms, index))
 
   def next(state: AclState, ev: AclEvent): AclState = (state, ev) match {
 
