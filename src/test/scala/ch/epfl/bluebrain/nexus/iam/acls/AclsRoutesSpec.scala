@@ -9,6 +9,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import ch.epfl.bluebrain.nexus.commons.test
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.iam.ExpectedException
+import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
@@ -107,7 +108,7 @@ class AclsRoutesSpec
             quote("{updatedBy}") -> updatedBty.id.asString)
       ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
-    realms.caller(AuthToken(token.token)) shouldReturn Task(Option(caller))
+    realms.caller(AccessToken(token.token)) shouldReturn Task.pure(caller)
 
     val responseMeta =
       ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, clock.instant(), user, clock.instant(), user)

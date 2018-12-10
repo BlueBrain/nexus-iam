@@ -3,8 +3,9 @@ package ch.epfl.bluebrain.nexus.iam.directives
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.server.Directives.AsyncAuthenticator
 import akka.http.scaladsl.server.directives.Credentials
+import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.types.{AuthToken, Caller}
+import ch.epfl.bluebrain.nexus.iam.types.Caller
 import monix.eval.Task
 import monix.execution.Scheduler
 
@@ -22,6 +23,6 @@ object AuthDirectives {
     case Credentials.Missing => Future.successful(None)
     case Credentials.Provided(token) =>
       val cred = OAuth2BearerToken(token)
-      realms.caller(AuthToken(cred.token)).runToFuture
+      realms.caller(AccessToken(cred.token)).map(c => Some(c)).runToFuture
   }
 }

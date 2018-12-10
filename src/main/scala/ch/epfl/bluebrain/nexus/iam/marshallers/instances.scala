@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
+import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection
@@ -34,22 +35,27 @@ object instances extends FailFastCirceSupport {
     Encoder.encodeString.contramap(fd => s"${fd.toMillis} ms")
 
   implicit val iamErrorEncoder: Encoder[IamError] = {
-    implicit val config = rejectionConfig
+    implicit val config: Configuration = rejectionConfig
     deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
   }
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
-    implicit val config = rejectionConfig
+    implicit val config: Configuration = rejectionConfig
     deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
   }
 
+  implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
+    implicit val config: Configuration = rejectionConfig
+    deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
+  }
+
   implicit val resourceRejectionEncoder: Encoder[ResourceRejection] = {
-    implicit val config = rejectionConfig
+    implicit val config: Configuration = rejectionConfig
     deriveEncoder[ResourceRejection].mapJson(_ addContext errorCtxUri)
   }
 
   implicit val httpRejectionEncoder: Encoder[HttpRejection] = {
-    implicit val config = rejectionConfig
+    implicit val config: Configuration = rejectionConfig
     deriveEncoder[HttpRejection].mapJson(_ addContext errorCtxUri)
   }
 
