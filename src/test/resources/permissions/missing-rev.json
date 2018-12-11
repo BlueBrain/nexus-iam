@@ -1,0 +1,7 @@
+{
+  "@context": "https://bluebrain.github.io/nexus/contexts/error.json",
+  "code": "MissingParameters",
+  "missingParams": [
+    "rev"
+  ]
+}

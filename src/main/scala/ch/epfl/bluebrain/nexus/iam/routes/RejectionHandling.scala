@@ -28,11 +28,11 @@ object RejectionHandling {
         case MalformedQueryParamRejection(_, _, Some(e: HttpRejection)) =>
           complete(BadRequest -> e)
         case MalformedQueryParamRejection(_, _, Some(err)) =>
-          complete(IllegalParameter(err.getMessage): ResourceRejection)
+          complete(BadRequest -> (IllegalParameter(err.getMessage): ResourceRejection))
         case ValidationRejection(err, _) =>
-          complete(IllegalParameter(err): ResourceRejection)
+          complete(BadRequest -> (IllegalParameter(err): ResourceRejection))
         case MissingQueryParamRejection(param) =>
-          complete(MissingParameters(Seq(param)): HttpRejection)
+          complete(BadRequest -> (MissingParameters(Seq(param)): HttpRejection))
         case _: AuthorizationFailedRejection =>
           complete(Unauthorized -> (UnauthorizedAccess: HttpRejection))
       }

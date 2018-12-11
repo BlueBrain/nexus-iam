@@ -19,7 +19,7 @@ import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
+import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath, PermissionsRoutes}
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -99,10 +99,11 @@ object Main {
       case nonEmpty => nonEmpty
     }
 
-    val (perms@_, acls, realms) = bootstrap(as)
+    val (perms, acls, realms) = bootstrap(as)
 
     val aclRoutes   = new AclsRoutes(acls, realms).routes
-    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
+    val permsRoutes = new PermissionsRoutes(perms, realms).routes
+    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes ~ permsRoutes)
     val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)

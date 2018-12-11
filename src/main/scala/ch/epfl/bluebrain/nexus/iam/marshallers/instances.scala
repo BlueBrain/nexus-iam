@@ -13,6 +13,8 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
+import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection
+import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.{IllegalParameter, Unexpected}
 import ch.epfl.bluebrain.nexus.iam.types.IamError
@@ -42,6 +44,11 @@ object instances extends FailFastCirceSupport {
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val config: Configuration = rejectionConfig
     deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
+  }
+
+  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
+    implicit val config: Configuration = rejectionConfig
+    deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
   }
 
   implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
@@ -126,6 +133,20 @@ object instances extends FailFastCirceSupport {
         case _: AclNotFound                => StatusCodes.NotFound
         case _: AclIncorrectRev            => StatusCodes.Conflict
         case AclMissingSubject             => StatusCodes.Unauthorized
+      }
+    }
+
+  implicit val permissionsStatusCode: RejectionStatusCode[PermissionsRejection] =
+    new RejectionStatusCode[PermissionsRejection] {
+      override def apply(rej: PermissionsRejection): StatusCode = rej match {
+        case CannotSubtractEmptyCollection          => StatusCodes.BadRequest
+        case _: CannotSubtractFromMinimumCollection => StatusCodes.BadRequest
+        case CannotSubtractFromEmptyCollection      => StatusCodes.BadRequest
+        case _: CannotSubtractUndefinedPermissions  => StatusCodes.BadRequest
+        case CannotAppendEmptyCollection            => StatusCodes.BadRequest
+        case CannotReplaceWithEmptyCollection       => StatusCodes.BadRequest
+        case CannotDeleteMinimumCollection          => StatusCodes.BadRequest
+        case _: IncorrectRev                        => StatusCodes.BadRequest
       }
     }
 
