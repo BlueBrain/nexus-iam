@@ -1,9 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
+import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
-import io.circe.Json
+import io.circe.generic.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
 
 import scala.util.Try
 
@@ -35,4 +37,9 @@ final case class ActiveRealm(
     import scala.collection.JavaConverters._
     new JWKSet(jwks.toList.asJava)
   }
+}
+
+object ActiveRealm {
+  implicit val activeEncoder: Encoder[ActiveRealm] =
+    deriveEncoder[ActiveRealm].mapJson(json => json.removeKeys("keys", "id"))
 }

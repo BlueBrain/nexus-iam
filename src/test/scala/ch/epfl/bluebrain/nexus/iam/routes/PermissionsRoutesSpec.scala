@@ -11,11 +11,11 @@ import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.permissions._
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutesSpec._
+import ch.epfl.bluebrain.nexus.iam.testsyntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission, ResourceF}
 import com.typesafe.config.{Config, ConfigFactory}
-import io.circe.{Json, JsonObject}
+import io.circe.Json
 import monix.eval.Task
 import org.mockito.matchers.MacroBasedMatchers
 import org.mockito.{IdiomaticMockito, Mockito}
@@ -142,45 +142,6 @@ class PermissionsRoutesSpec
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
-    }
-  }
-
-}
-
-object PermissionsRoutesSpec {
-
-  implicit class RichJson(json: Json) {
-    private val keys = AppConfig.orderedKeys
-    def sort: Json = {
-      import _root_.io.circe.syntax._
-      implicit val ord: Ordering[String] = new Ordering[String] {
-        private val middlePos = keys.withPosition("")
-
-        private def position(key: String): Int = keys.withPosition.getOrElse(key, middlePos)
-
-        override def compare(x: String, y: String): Int = {
-          val posX = position(x)
-          val posY = position(y)
-          if (posX == middlePos && posY == middlePos) x compareTo y
-          else posX compareTo posY
-        }
-      }
-      def sortStrings(vector: Vector[Json]): Vector[Json] =
-        vector.sortWith { (left, right) =>
-          (left.asString, right.asString) match {
-            case (Some(lstr), Some(rstr)) => ord.lt(lstr, rstr)
-            case _                        => true
-          }
-        }
-      def canonicalJson(json: Json): Json =
-        json.arrayOrObject[Json](json,
-                                 arr => Json.fromValues(sortStrings(arr.map(canonicalJson))),
-                                 obj => sorted(obj).asJson)
-
-      def sorted(jObj: JsonObject): JsonObject =
-        JsonObject.fromIterable(jObj.toVector.sortBy(_._1).map { case (k, v) => k -> canonicalJson(v) })
-
-      canonicalJson(json)
     }
   }
 

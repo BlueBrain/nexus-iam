@@ -19,7 +19,7 @@ import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath, PermissionsRoutes}
+import ch.epfl.bluebrain.nexus.iam.routes._
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
@@ -53,15 +53,16 @@ object Main {
     Kamon.loadReportersFromConfig()
   }
 
-  def bootstrap(as: ActorSystem)(implicit cfg: AppConfig, mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
+  def bootstrap(as: ActorSystem)(implicit cfg: AppConfig,
+                                 mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
     import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
     implicit val system = as
-    implicit val pc = cfg.permissions
-    implicit val ac = cfg.acls
-    implicit val rc = cfg.realms
-    implicit val pm = CanBlock.permit
-    implicit val cl = HttpClient.untyped[Task]
+    implicit val pc     = cfg.permissions
+    implicit val ac     = cfg.acls
+    implicit val rc     = cfg.realms
+    implicit val pm     = CanBlock.permit
+    implicit val cl     = HttpClient.untyped[Task]
     import as.dispatcher
     implicit val jc = HttpClient.withUnmarshaller[Task, Json]
 
@@ -101,10 +102,11 @@ object Main {
 
     val (perms, acls, realms) = bootstrap(as)
 
-    val aclRoutes   = new AclsRoutes(acls, realms).routes
-    val permsRoutes = new PermissionsRoutes(perms, realms).routes
-    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes ~ permsRoutes)
-    val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
+    val aclsRoutes   = new AclsRoutes(acls, realms).routes
+    val permsRoutes  = new PermissionsRoutes(perms, realms).routes
+    val realmsRoutes = new RealmsRoutes(realms).routes
+    val apiRoutes    = uriPrefix(appConfig.http.publicUri)(aclsRoutes ~ permsRoutes ~ realmsRoutes)
+    val serviceDesc  = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")

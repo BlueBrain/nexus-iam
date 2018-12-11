@@ -2,6 +2,9 @@ package ch.epfl.bluebrain.nexus.iam.realms
 
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
+import _root_.io.circe.Encoder
+import _root_.io.circe.generic.semiauto._
 
 /**
   * A realm representation that has been deprecated.
@@ -17,3 +20,7 @@ final case class DeprecatedRealm(
     openIdConfig: Url,
     logo: Option[Url]
 )
+
+object DeprecatedRealm {
+  implicit val deprecatedEncoder: Encoder[DeprecatedRealm] = deriveEncoder
+}
