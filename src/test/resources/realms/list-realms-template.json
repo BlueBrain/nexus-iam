@@ -22,9 +22,7 @@
       "_createdBy": "{createdBy}",
       "_updatedAt": "1970-01-01T00:00:00Z",
       "_updatedBy": "{updatedBy}",
-      "_rev": {
-        rev
-      },
+      "_rev": 1,
       "_deprecated": false
     }
   ]

@@ -9,7 +9,7 @@ import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.realms.{ActiveRealm, Realms, _}
+import ch.epfl.bluebrain.nexus.iam.realms._
 import ch.epfl.bluebrain.nexus.iam.testsyntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, GrantType, Label, ResourceF}
@@ -57,13 +57,12 @@ class RealmsRoutesSpec
           quote("{updatedBy}") -> Anonymous.id.asString)
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
-  def listResponse(label: Label, rev: Long): Json =
+  def listResponse(label: Label): Json =
     jsonContentOf(
       "/realms/list-realms-template.json",
       Map(quote("{label}")     -> label.value,
           quote("{createdBy}") -> Anonymous.id.asString,
-          quote("{updatedBy}") -> Anonymous.id.asString,
-          quote("{rev}")       -> rev.toString)
+          quote("{updatedBy}") -> Anonymous.id.asString)
     )
 
   def resource(label: Label, rev: Long, realm: ActiveRealm): Resource =
@@ -136,7 +135,7 @@ class RealmsRoutesSpec
       realms.list(any[Caller]) shouldReturn Task.pure(List(resource(label, 1L, realm)))
       Get("/v1/realms") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
-        responseAs[Json].sort shouldEqual listResponse(label, 1L).sort
+        responseAs[Json].sort shouldEqual listResponse(label).sort
       }
     }
     "deprecate a realm" in {
