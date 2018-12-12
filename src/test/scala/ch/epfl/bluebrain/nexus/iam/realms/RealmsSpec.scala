@@ -289,11 +289,11 @@ class RealmsSpec
       }
       "the token is expired" in {
         val exp = Date.from(Instant.now().minusSeconds(3600))
-        realms.caller(token("sub", exp = exp))
+        realms.caller(token("sub", exp = exp)).failed[IamError.InvalidAccessToken]
       }
       "the token is not yet valid" in {
         val nbf = Date.from(Instant.now().plusSeconds(3600))
-        realms.caller(token("sub", nbf = nbf))
+        realms.caller(token("sub", nbf = nbf)).failed[IamError.InvalidAccessToken]
       }
       "the realm for which the issuer matches is deprecated" in {
         realms.create(depr, deprName, openIdUrl, None).accepted
