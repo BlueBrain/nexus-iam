@@ -81,12 +81,12 @@ class AclsSpec
 
     "performing get operations" should {
       "fetch initial ACLs" in new Context {
-        acls.fetch(/, self = true).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
+        acls.fetch(/, self = true).some.value shouldEqual AccessControlList(Anonymous  -> pc.minimum)
         acls.fetch(/, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
       }
 
       "fetch initial with revision" in new Context {
-        acls.fetch(/, 10L, self = true).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
+        acls.fetch(/, 10L, self = true).some.value shouldEqual AccessControlList(Anonymous  -> pc.minimum)
         acls.fetch(/, 10L, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
       }
 

@@ -78,7 +78,8 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
                   trace("subtractPermissions") {
                     complete(permissions.subtract(set, rev).runToFuture)
                   }
-                case _ => reject(validationRejection("Only @type 'Append' or 'Subtract' is permitted when using 'patch'."))
+                case _ =>
+                  reject(validationRejection("Only @type 'Append' or 'Subtract' is permitted when using 'patch'."))
               }
             }
           )

@@ -100,7 +100,7 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
             })
           case Some(children) =>
             children.foldLeft(AccessControlLists.empty) {
-              case (acc, Segment(head, _) ) =>
+              case (acc, Segment(head, _)) =>
                 val toConsumeNew = (consumed :+ head) ++ segments.takeRight(segments.size - 1 - consumed.size)
                 acc ++ inner(toConsumeNew)
               case (acc, _) => acc

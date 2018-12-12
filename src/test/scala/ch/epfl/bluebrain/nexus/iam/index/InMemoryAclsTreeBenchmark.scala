@@ -50,7 +50,11 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
 
   ingest(orgs1, projects1, users1, index1, 1000)
 
-  def ingest(orgs: List[String], projects: List[String], users: List[User], index: InMemoryAclsTree[Id], total: Int): Unit =
+  def ingest(orgs: List[String],
+             projects: List[String],
+             users: List[User],
+             index: InMemoryAclsTree[Id],
+             total: Int): Unit =
     (0 until total).foreach { v =>
       val org     = orgs(genInt(max = orgs.size - 1))
       val project = projects(genInt(max = projects.size - 1))
