@@ -26,7 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val rdfVersion                 = "0.2.28"
-val commonsVersion             = "0.10.40"
+val commonsVersion             = "0.10.41"
 val serviceVersion             = "0.10.21"
 val sourcingVersion            = "0.12.0"
 val akkaVersion                = "2.5.18"
@@ -136,16 +136,17 @@ lazy val client = project
     coverageFailOnMinimum := false,
     Test / testOptions    += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
     libraryDependencies ++= Seq(
-      rdfAkka,
-      rdfCirce,
       akkaHttp,
       akkaStream,
       catsCore,
       circeCore,
+      commonsHttp,
       logbackClassic,
+      rdfAkka,
+      rdfCirce,
       serviceHttp,
       akkaHttpTestKit % Test,
-      commonTest      % Test,
+      commonsTest     % Test,
       mockitoScala    % Test,
       scalaTest       % Test,
     )

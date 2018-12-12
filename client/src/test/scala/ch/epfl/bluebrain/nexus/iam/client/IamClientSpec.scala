@@ -7,6 +7,7 @@ import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.testkit.TestKit
+import cats.instances.future._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
@@ -19,8 +20,8 @@ import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class IamClientSpec
     extends TestKit(ActorSystem("IamClientSpec"))
@@ -32,12 +33,13 @@ class IamClientSpec
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(5 seconds, 200 milliseconds)
 
-  import system.dispatcher
+  implicit val ec: ExecutionContext = system.dispatcher
 
-  private val clock: Clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-
-  private implicit val aclsClient: HttpClient[Future, AccessControlLists] = mock[HttpClient[Future, AccessControlLists]]
-  private implicit val callerClient: HttpClient[Future, Caller]           = mock[HttpClient[Future, Caller]]
+  private val clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private val config       = IamClientConfig("v1", url"http://example.com/some/".value)
+  private val aclsClient   = mock[HttpClient[Future, AccessControlLists]]
+  private val callerClient = mock[HttpClient[Future, Caller]]
+  private val client       = new IamClient[Future](config, aclsClient, callerClient)
 
   before {
     Mockito.reset(aclsClient)
@@ -45,9 +47,6 @@ class IamClientSpec
   }
 
   "An IAM client" when {
-    implicit val config = IamClientConfig("v1", url"http://example.com/some/".value)
-
-    val client = IamClient.fromFuture
 
     "fetching ACLs and authorizing" should {
       val acl = AccessControlList(Anonymous -> Set(Permission.unsafe("create"), Permission.unsafe("read")))
