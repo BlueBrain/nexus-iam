@@ -34,7 +34,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object instances extends FailFastCirceSupport {
 
-  private val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
+  private implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
 
   implicit val finiteDurationEncoder: Encoder[FiniteDuration] =
     Encoder.encodeString.contramap(fd => s"${fd.toMillis} ms")
@@ -45,40 +45,26 @@ object instances extends FailFastCirceSupport {
   implicit val urlDecoder: Decoder[Url] =
     Decoder.decodeString.emap(Url.apply)
 
-  implicit val iamErrorEncoder: Encoder[IamError] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val iamErrorEncoder: Encoder[IamError] =
     deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val aclRejectionEncoder: Encoder[AclRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val aclRejectionEncoder: Encoder[AclRejection] =
     deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] =
     deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val realmRejectionEncoder: Encoder[RealmRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val realmRejectionEncoder: Encoder[RealmRejection] =
     deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val tokenRejectionEncoder: Encoder[TokenRejection] =
     deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val resourceRejectionEncoder: Encoder[ResourceRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val resourceRejectionEncoder: Encoder[ResourceRejection] =
     deriveEncoder[ResourceRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val httpRejectionEncoder: Encoder[HttpRejection] = {
-    implicit val config: Configuration = rejectionConfig
+  implicit val httpRejectionEncoder: Encoder[HttpRejection] =
     deriveEncoder[HttpRejection].mapJson(_ addContext errorCtxUri)
-  }
 
   override def unmarshallerContentTypes: Seq[ContentTypeRange] =
     List(`application/json`, `application/ld+json`, `application/sparql-results+json`)

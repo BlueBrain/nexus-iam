@@ -1,7 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
+import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
 import io.circe.generic.semiauto.deriveEncoder
