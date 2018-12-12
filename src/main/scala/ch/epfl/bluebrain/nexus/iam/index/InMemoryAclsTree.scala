@@ -2,14 +2,13 @@ package ch.epfl.bluebrain.nexus.iam.index
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiFunction
 
-import cats.Id
+import cats.Applicative
 import ch.epfl.bluebrain.nexus.iam.acls._
-import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
+import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path.Segment
-import monix.eval.Task
 
 import scala.annotation.tailrec
 
@@ -21,12 +20,13 @@ import scala.annotation.tailrec
   * @param tree the data structure used to build the tree with the parent paths and the children paths
   * @param acls a data structure used to store the ACLs for a path
   */
-class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]], acls: ConcurrentHashMap[Path, Resource])
-    extends AclsIndex[Id] {
+class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], acls: ConcurrentHashMap[Path, Resource])(
+    implicit F: Applicative[F])
+    extends AclsIndex[F] {
 
   private val any = "*"
 
-  override def replace(path: Path, aclResource: Resource): Id[Boolean] = {
+  override def replace(path: Path, aclResource: Resource): F[Boolean] = {
     @tailrec
     def inner(p: Path, children: Set[Path]): Unit = {
       tree.merge(p, children, (current, _) => current ++ children)
@@ -45,11 +45,11 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]], acls: 
 
     val update = updated == aclResource
     if (update) inner(path, Set.empty)
-    update
+    F.pure(update)
   }
 
   override def get(path: Path, ancestors: Boolean, self: Boolean)(
-      implicit identities: Set[Identity]): Id[AccessControlLists] = {
+      implicit identities: Set[Identity]): F[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
       def containsAclsWrite(acl: AccessControlList): Boolean =
@@ -64,15 +64,17 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]], acls: 
       result
     }
 
-    if (self) {
-      val result = if (ancestors) getWithAncestors(path) else get(path)
-      result.filter(identities).removeEmpty
-    } else {
-      val result = removeNotOwn(getWithAncestors(path))
-      if (ancestors)
-        result.removeEmpty
-      else
-        AccessControlLists(result.value.filterKeys(_.size == path.size)).removeEmpty
+    F.pure {
+      if (self) {
+        val result = if (ancestors) getWithAncestors(path) else get(path)
+        result.filter(identities).removeEmpty
+      } else {
+        val result = removeNotOwn(getWithAncestors(path))
+        if (ancestors)
+          result.removeEmpty
+        else
+          AccessControlLists(result.value.filterKeys(_.size == path.size)).removeEmpty
+      }
     }
   }
 
@@ -98,7 +100,7 @@ class InMemoryAclsTree private (tree: ConcurrentHashMap[Path, Set[Path]], acls: 
             })
           case Some(children) =>
             children.foldLeft(AccessControlLists.empty) {
-              case (acc, (Segment(head, _))) =>
+              case (acc, Segment(head, _)) =>
                 val toConsumeNew = (consumed :+ head) ++ segments.takeRight(segments.size - 1 - consumed.size)
                 acc ++ inner(toConsumeNew)
               case (acc, _) => acc
@@ -125,21 +127,6 @@ object InMemoryAclsTree {
     * Constructs an in memory implementation of [[AclsIndex]]
     *
     */
-  final def apply(): InMemoryAclsTree =
+  final def apply[F[_]: Applicative](): InMemoryAclsTree[F] =
     new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, Resource]())
-
-  /**
-    * Constructs an in memory implementation of [[AclsIndex]] using the [[Task]] effect type
-    *
-    */
-  final def task(): AclsIndex[Task] = new AclsIndex[Task] {
-    private val underlying = apply()
-
-    override def replace(path: Path, aclResource: Resource): Task[Boolean] =
-      Task.pure(underlying.replace(path, aclResource))
-
-    override def get(path: Path, ancestors: Boolean, self: Boolean)(
-        implicit identities: Set[Identity]): Task[AccessControlLists] =
-      Task.pure(underlying.get(path, ancestors, self))
-  }
 }

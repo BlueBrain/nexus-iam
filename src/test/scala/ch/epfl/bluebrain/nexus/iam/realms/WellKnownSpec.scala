@@ -9,6 +9,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
 import ch.epfl.bluebrain.nexus.iam.types.GrantType._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import io.circe.Json
 import io.circe.parser._
 import org.mockito.IdiomaticMockito
@@ -31,7 +32,7 @@ class WellKnownSpec extends WordSpecLike with Matchers with EitherValues with IO
       val wk          = WellKnown[IO](openIdUrl).accepted
       wk.issuer shouldEqual issuer
       wk.grantTypes shouldEqual grantTypes
-      wk.keys shouldEqual Set(validKeyJson)
+      wk.keys shouldEqual Set(publicKeyJson)
     }
 
     "fail to construct" when {
@@ -127,6 +128,7 @@ object WellKnownSpec {
   val jwksUrlString   = "https://localhost/auth/realms/master/protocol/openid-connect/certs"
   val jwksUrl         = Url(jwksUrlString).right.value
   val issuer          = "https://localhost/auth/realms/master"
+  val deprUrlString   = "https://localhost/auth/realms/deprecated/.well-known/openid-configuration"
 
   val validOpenIdConfigString =
     s"""
@@ -144,24 +146,36 @@ object WellKnownSpec {
     """.stripMargin
   val validOpenIdConfig = parse(validOpenIdConfigString).right.value
 
-  val validKey =
-    """
-      | {
-      |   "kid": "AlALVuZlTj0NoBS4T1HOolEPeCmH0QnmqtXBtoqIxyc",
-      |   "kty": "RSA",
-      |   "alg": "RS256",
-      |   "use": "sig",
-      |   "n": "hqdh70sbz5WcdqJm8RiLGR0rhybItynHbbS9lB7kG1WJohqxnKxBZeH-mGUDCKKNsZYTX7eH3tN5UnwahnYNN1NaMabI2w3x4Sazc7nyYaEWHClvnv5p8SY_esVWXLbcMOrzvEzlTASZxgzrjbmHJDtarZikYNqDdXYk6U_xeZHnTnzOCT3wk4c0RhYrCCEjrXADu5jCZrjxj6nvF3WMLGJGMdifL6IhOxphtXyeG0OxwV4RavHfnknjvl6cgcLm82zwugnjCjD8P_gK7hkpBYk5EIfY4j8T2zjWnnGUQawYHr4L3hOm7o6WfxmhipaVDyOVAohJLZPCDiPP6qHFJw",
-      |   "e": "AQAB"
-      | }
+  val deprecatedOpenIdConfigString =
+    s"""
+       | {
+       |   "issuer": "deprecated",
+       |   "jwks_uri": "$jwksUrlString",
+       |   "grant_types_supported": [
+       |     "authorization_code",
+       |     "implicit",
+       |     "refresh_token",
+       |     "password",
+       |     "client_credentials"
+       |   ]
+       | }
     """.stripMargin
-  val validKeyJson = parse(validKey).right.value
+  val deprecatedOpenIdConfig = parse(deprecatedOpenIdConfigString).right.value
+
+  val (kid, privateKey, publicKey) = {
+    val rsaJWK = new RSAKeyGenerator(2048)
+      .keyID("123")
+      .generate()
+    (rsaJWK.getKeyID, rsaJWK.toRSAPrivateKey, rsaJWK.toPublicJWK.toJSONString)
+  }
+
+  val publicKeyJson = parse(publicKey).right.value
 
   val validJwksString =
     s"""
     | {
     |   "keys": [
-    |     $validKey
+    |     $publicKey
     |   ]
     | }
   """.stripMargin

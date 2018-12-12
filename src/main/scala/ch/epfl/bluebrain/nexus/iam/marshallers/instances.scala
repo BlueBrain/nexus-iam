@@ -10,11 +10,17 @@ import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
+import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Contexts._
+import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection
+import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection._
+import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection
+import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection.{IncorrectRev => _, _}
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.{IllegalParameter, Unexpected}
 import ch.epfl.bluebrain.nexus.iam.types.IamError
+import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
@@ -28,30 +34,37 @@ import scala.concurrent.duration.FiniteDuration
 
 object instances extends FailFastCirceSupport {
 
-  private val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
+  private implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
 
   implicit val finiteDurationEncoder: Encoder[FiniteDuration] =
     Encoder.encodeString.contramap(fd => s"${fd.toMillis} ms")
 
-  implicit val iamErrorEncoder: Encoder[IamError] = {
-    implicit val config = rejectionConfig
+  implicit val urlEncoder: Encoder[Url] =
+    Encoder.encodeString.contramap(url => url.asUri)
+
+  implicit val urlDecoder: Decoder[Url] =
+    Decoder.decodeString.emap(Url.apply)
+
+  implicit val iamErrorEncoder: Encoder[IamError] =
     deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val aclRejectionEncoder: Encoder[AclRejection] = {
-    implicit val config = rejectionConfig
+  implicit val aclRejectionEncoder: Encoder[AclRejection] =
     deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val resourceRejectionEncoder: Encoder[ResourceRejection] = {
-    implicit val config = rejectionConfig
+  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] =
+    deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+
+  implicit val realmRejectionEncoder: Encoder[RealmRejection] =
+    deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
+
+  implicit val tokenRejectionEncoder: Encoder[TokenRejection] =
+    deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
+
+  implicit val resourceRejectionEncoder: Encoder[ResourceRejection] =
     deriveEncoder[ResourceRejection].mapJson(_ addContext errorCtxUri)
-  }
 
-  implicit val httpRejectionEncoder: Encoder[HttpRejection] = {
-    implicit val config = rejectionConfig
+  implicit val httpRejectionEncoder: Encoder[HttpRejection] =
     deriveEncoder[HttpRejection].mapJson(_ addContext errorCtxUri)
-  }
 
   override def unmarshallerContentTypes: Seq[ContentTypeRange] =
     List(`application/json`, `application/ld+json`, `application/sparql-results+json`)
@@ -120,6 +133,37 @@ object instances extends FailFastCirceSupport {
         case _: AclNotFound                => StatusCodes.NotFound
         case _: AclIncorrectRev            => StatusCodes.Conflict
         case AclMissingSubject             => StatusCodes.Unauthorized
+      }
+    }
+
+  implicit val permissionsStatusCode: RejectionStatusCode[PermissionsRejection] =
+    new RejectionStatusCode[PermissionsRejection] {
+      override def apply(rej: PermissionsRejection): StatusCode = rej match {
+        case CannotSubtractEmptyCollection          => StatusCodes.BadRequest
+        case _: CannotSubtractFromMinimumCollection => StatusCodes.BadRequest
+        case CannotSubtractFromEmptyCollection      => StatusCodes.BadRequest
+        case _: CannotSubtractUndefinedPermissions  => StatusCodes.BadRequest
+        case CannotAppendEmptyCollection            => StatusCodes.BadRequest
+        case CannotReplaceWithEmptyCollection       => StatusCodes.BadRequest
+        case CannotDeleteMinimumCollection          => StatusCodes.BadRequest
+        case _: IncorrectRev                        => StatusCodes.Conflict
+      }
+    }
+
+  implicit val realmsStatusCode: RejectionStatusCode[RealmRejection] =
+    new RejectionStatusCode[RealmRejection] {
+      override def apply(rej: RealmRejection): StatusCode = rej match {
+        case _: RealmAlreadyExists               => StatusCodes.BadRequest
+        case _: RealmNotFound                    => StatusCodes.BadRequest
+        case _: RealmAlreadyDeprecated           => StatusCodes.BadRequest
+        case _: RealmRejection.IncorrectRev      => StatusCodes.Conflict
+        case _: IllegalGrantTypeFormat           => StatusCodes.BadRequest
+        case _: IllegalIssuerFormat              => StatusCodes.BadRequest
+        case _: IllegalJwksUriFormat             => StatusCodes.BadRequest
+        case _: IllegalJwkFormat                 => StatusCodes.BadRequest
+        case _: UnsuccessfulJwksResponse         => StatusCodes.BadRequest
+        case _: UnsuccessfulOpenIdConfigResponse => StatusCodes.BadRequest
+        case _: NoValidKeysFound                 => StatusCodes.BadRequest
       }
     }
 

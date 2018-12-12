@@ -1,6 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import java.time.Instant
+import java.util.Date
 
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.stream.ActorMaterializer
@@ -8,15 +9,20 @@ import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
+import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
-import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Label, ResourceF}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Label, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
+import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.nimbusds.jose.{JWSAlgorithm, JWSHeader}
+import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import org.mockito.ArgumentMatchersSugar._
 import org.mockito.IdiomaticMockito
 import org.scalatest.Matchers
@@ -24,7 +30,7 @@ import org.scalatest.Matchers
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.MILLISECONDS
 
-//noinspection TypeAnnotation,NameBooleanParameters
+//noinspection TypeAnnotation,NameBooleanParameters,RedundantDefaultArgument
 class RealmsSpec
     extends ActorSystemFixture("RealmsSpec", true)
     with Matchers
@@ -53,6 +59,7 @@ class RealmsSpec
     val m = mock[HttpJsonClient[IO]]
     m.apply(Get(openIdUrlString)) shouldReturn IO.pure(validOpenIdConfig)
     m.apply(Get(jwksUrlString)) shouldReturn IO.pure(validJwks)
+    m.apply(Get(deprUrlString)) shouldReturn IO.pure(deprecatedOpenIdConfig)
     m
   }
 
@@ -68,6 +75,32 @@ class RealmsSpec
   val logoUrl    = Url("http://localhost/some/logo").right.value
   val second     = Label.unsafe("second")
   val secondName = "The Second"
+  val depr       = Label.unsafe("deprecated")
+  val deprName   = "The deprecated realm"
+
+  def token(
+      subject: String,
+      exp: Date = Date.from(Instant.now().plusSeconds(3600)),
+      nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
+      groups: Option[Set[String]] = None,
+      useCommas: Boolean = false
+  ): AccessToken = {
+    val signer = new RSASSASigner(privateKey)
+    val csb = new JWTClaimsSet.Builder()
+      .issuer(issuer)
+      .subject(subject)
+      .expirationTime(exp)
+      .notBeforeTime(nbf)
+
+    groups.map { set =>
+      if (useCommas) csb.claim("groups", set.mkString(","))
+      else csb.claim("groups", set.toArray)
+    }
+
+    val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+    jwt.sign(signer)
+    AccessToken(jwt.serialize())
+  }
 
   "The Realms API" should {
     val realms = Realms[IO](acls).ioValue
@@ -82,7 +115,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(firstName, openIdUrl, issuer, grantTypes, None, Set(validKeyJson)))
+        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
       )
     }
 
@@ -101,7 +134,7 @@ class RealmsSpec
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(firstName, openIdUrl, issuer, grantTypes, None, Set(validKeyJson)))
+          Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
         ),
         ResourceF(
           second.toIri(http.realmsIri),
@@ -112,7 +145,7 @@ class RealmsSpec
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(secondName, openIdUrl, issuer, grantTypes, None, Set(validKeyJson)))
+          Right(ActiveRealm(second, secondName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
         )
       )
     }
@@ -127,7 +160,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(firstName + "x", openIdUrl, issuer, grantTypes, Some(logoUrl), Set(validKeyJson)))
+        Right(ActiveRealm(first, firstName + "x", openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
       )
     }
     // TODO: find out why the in memory implementation doesn't return the events
@@ -141,7 +174,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(firstName, openIdUrl, issuer, grantTypes, None, Set(validKeyJson)))
+        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
       )
     }
     "deprecate an existing realm" in {
@@ -155,7 +188,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Left(DeprecatedRealm(firstName + "x", openIdUrl, Some(logoUrl)))
+        Left(DeprecatedRealm(first, firstName + "x", openIdUrl, Some(logoUrl)))
       )
     }
     "fail to deprecate twice a realm" in {
@@ -172,7 +205,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(validKeyJson)))
+        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
       )
     }
     "update a realm with no changes" in {
@@ -186,7 +219,7 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(validKeyJson)))
+        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
       )
     }
     "fail to update a realm with incorrect revision" in {
@@ -200,6 +233,96 @@ class RealmsSpec
     }
     "fail to deprecate a realm that does not exist" in {
       realms.deprecate(Label.unsafe("blah"), 10L).rejected[RealmNotFound]
+    }
+
+    "correctly extract the caller" when {
+      val subject      = "sub"
+      val user         = User(subject, first.value)
+      val groupStrings = Set("g1", "g2")
+      val groups       = groupStrings.map(str => Group(str, first.value))
+      "the claimset contains no groups" in {
+        val user = User(subject, first.value)
+        realms.caller(token(subject)).ioValue shouldEqual Caller(user, Set(user, Anonymous))
+      }
+      "the claimset contains comma separated group values" in {
+        val expected = Caller(user, Set(user, Anonymous) ++ groups)
+        realms.caller(token(subject, groups = Some(groupStrings), useCommas = true)).ioValue shouldEqual expected
+      }
+      "the claimset contains array group values" in {
+        val expected = Caller(user, Set(user, Anonymous) ++ groups)
+        realms.caller(token(subject, groups = Some(groupStrings), useCommas = false)).ioValue shouldEqual expected
+      }
+    }
+
+    "fail to extract the caller" when {
+      val signer = new RSASSASigner(privateKey)
+      "the token is invalid" in {
+        realms.caller(AccessToken("blah")).failed[IamError.InvalidAccessToken]
+      }
+      "the token doesn't contain an issuer" in {
+        val csb = new JWTClaimsSet.Builder()
+          .subject("sub")
+          .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+
+        val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+        jwt.sign(signer)
+        realms.caller(AccessToken(jwt.serialize())).failed[IamError.InvalidAccessToken]
+      }
+      "the token contains an unknown issuer" in {
+        val csb = new JWTClaimsSet.Builder()
+          .subject("sub")
+          .issuer("blah")
+          .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+
+        val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+        jwt.sign(signer)
+        realms.caller(AccessToken(jwt.serialize())).failed[IamError.InvalidAccessToken]
+      }
+      "the token doesn't contain a subject" in {
+        val csb = new JWTClaimsSet.Builder()
+          .issuer(issuer)
+          .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+
+        val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+        jwt.sign(signer)
+        realms.caller(AccessToken(jwt.serialize())).failed[IamError.InvalidAccessToken]
+      }
+      "the token is expired" in {
+        val exp = Date.from(Instant.now().minusSeconds(3600))
+        realms.caller(token("sub", exp = exp)).failed[IamError.InvalidAccessToken]
+      }
+      "the token is not yet valid" in {
+        val nbf = Date.from(Instant.now().plusSeconds(3600))
+        realms.caller(token("sub", nbf = nbf)).failed[IamError.InvalidAccessToken]
+      }
+      "the realm for which the issuer matches is deprecated" in {
+        realms.create(depr, deprName, openIdUrl, None).accepted
+        realms.deprecate(depr, 1L).accepted
+        val csb = new JWTClaimsSet.Builder()
+          .subject("sub")
+          .issuer("deprecated")
+          .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+
+        val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+        jwt.sign(signer)
+        realms.caller(AccessToken(jwt.serialize())).failed[IamError.InvalidAccessToken]
+      }
+      "the signature is invalid" in {
+        val (otherkid, otherprivateKey) = {
+          val rsaJWK = new RSAKeyGenerator(2048)
+            .keyID("123")
+            .generate()
+          (rsaJWK.getKeyID, rsaJWK.toRSAPrivateKey)
+        }
+        val csb = new JWTClaimsSet.Builder()
+          .subject("sub")
+          .issuer(issuer)
+          .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+        val jwt    = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(otherkid).build(), csb.build())
+        val signer = new RSASSASigner(otherprivateKey)
+        jwt.sign(signer)
+        realms.caller(AccessToken(jwt.serialize())).failed[IamError.InvalidAccessToken]
+      }
     }
 
     // NO PERMISSIONS BEYOND THIS LINE

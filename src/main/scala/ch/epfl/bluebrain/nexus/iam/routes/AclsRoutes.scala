@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{Route, Rejection => AkkaRejection}
 import ch.epfl.bluebrain.nexus.iam.acls._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives._
@@ -15,12 +15,11 @@ import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes.PatchAcl.{AppendAcl, Subtra
 import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import com.github.ghik.silencer.silent
 import io.circe.{Decoder, DecodingFailure}
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
-class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config: AppConfig) {
+class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit http: HttpConfig) {
 
   private val any = "*"
 
@@ -32,7 +31,7 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit @silent config
 
   def routes: Route =
     (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling())) {
-      pathPrefix(config.http.prefix / "acls") {
+      pathPrefix(http.prefix / "acls") {
         authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
           extractResourcePath { path =>
             parameter("rev" ? 0L) { rev =>

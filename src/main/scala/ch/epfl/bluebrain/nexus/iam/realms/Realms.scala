@@ -6,10 +6,13 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.Monad
+import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
+import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
+import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
 import ch.epfl.bluebrain.nexus.iam.index.KeyValueStore
 import ch.epfl.bluebrain.nexus.iam.realms.RealmCommand.{CreateRealm, DeprecateRealm, UpdateRealm}
@@ -18,10 +21,19 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet
+import com.nimbusds.jose.proc.{JWSVerificationKeySelector, SecurityContext}
+import com.nimbusds.jwt.proc.DefaultJWTProcessor
+import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import io.circe.Json
+
+import scala.util.Try
 
 /**
   * Realms API.
@@ -105,13 +117,71 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
     check(read) *> index.values().map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
 
   /**
-    * Attempts to compute the token from the given [[AuthToken]]
+    * Attempts to compute the caller from the given [[AccessToken]].
     *
     * @param token the provided token
-    * @return Some(caller) when the token is valid and a [[Caller]] can be linked to it,
-    *         None otherwise. The result is wrapped on an ''F'' effect type.
+    * @return a caller reference if the token is valid, or an error in the F context otherwise
     */
-  def caller(token: AuthToken): F[Option[Caller]] = ???
+  def caller(token: AccessToken): F[Caller] = {
+    def jwt: Either[TokenRejection, SignedJWT] =
+      Either
+        .catchNonFatal(SignedJWT.parse(token.value))
+        .leftMap(_ => InvalidAccessTokenFormat)
+    def claims(jwt: SignedJWT): Either[TokenRejection, JWTClaimsSet] =
+      Try(jwt.getJWTClaimsSet).filter(_ != null).toEither.leftMap(_ => InvalidAccessTokenFormat)
+    def issuer(claimsSet: JWTClaimsSet): Either[TokenRejection, String] =
+      Option(claimsSet.getIssuer).map(Right.apply).getOrElse(Left(AccessTokenDoesNotContainAnIssuer))
+    def activeRealm(issuer: String): F[Either[TokenRejection, ActiveRealm]] =
+      index
+        .values()
+        .map {
+          _.foldLeft(None: Option[ActiveRealm]) {
+            case (s @ Some(_), _) => s
+            case (acc, e)         => e.value.fold(_ => acc, ar => if (ar.issuer == issuer) Some(ar) else acc)
+          }.toRight(UnknownAccessTokenIssuer)
+        }
+    def valid(jwt: SignedJWT, jwks: JWKSet): Either[TokenRejection, JWTClaimsSet] = {
+      val proc        = new DefaultJWTProcessor[SecurityContext]
+      val keySelector = new JWSVerificationKeySelector(JWSAlgorithm.RS256, new ImmutableJWKSet[SecurityContext](jwks))
+      proc.setJWSKeySelector(keySelector)
+      Either
+        .catchNonFatal(proc.process(jwt, null))
+        .leftMap(_ => TokenRejection.InvalidAccessToken)
+    }
+    def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
+      val subject = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
+      val groups = Try(claimsSet.getStringArrayClaim("groups"))
+        .filter(_ != null)
+        .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }
+        .toOption
+        .map(_.toSet)
+        .getOrElse(Set.empty)
+      subject.map { sub =>
+        val user                    = User(sub, realmId.value)
+        val groupSet: Set[Identity] = groups.map(g => Group(g, realmId.value))
+        Caller(user, groupSet + Anonymous + user)
+      }
+    }
+
+    val triple: Either[TokenRejection, (SignedJWT, JWTClaimsSet, String)] = for {
+      signed <- jwt
+      cs     <- claims(signed)
+      iss    <- issuer(cs)
+    } yield (signed, cs, iss)
+
+    val eitherCaller = for {
+      t <- EitherT.fromEither[F](triple)
+      (signed, cs, iss) = t
+      realm  <- EitherT(activeRealm(iss))
+      _      <- EitherT.fromEither[F](valid(signed, realm.keySet))
+      result <- EitherT.fromEither[F](caller(cs, realm.id))
+    } yield result
+
+    eitherCaller.value.flatMap {
+      case Right(c) => F.pure(c)
+      case Left(tr) => F.raiseError(IamError.InvalidAccessToken(tr))
+    }
+  }
 
   private def fetchUnsafe(id: Label, optRev: Option[Long] = None): F[OptResource] =
     stateOf(id, optRev).map(_.optResource)

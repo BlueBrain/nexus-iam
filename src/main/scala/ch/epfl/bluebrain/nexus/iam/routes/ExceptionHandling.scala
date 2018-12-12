@@ -38,5 +38,6 @@ object ExceptionHandling {
     case _: IamError.ReadWriteConsistencyTimeout => StatusCodes.InternalServerError
     case _: IamError.DistributedDataError        => StatusCodes.InternalServerError
     case _: IamError.InternalError               => StatusCodes.InternalServerError
+    case _: IamError.InvalidAccessToken          => StatusCodes.Unauthorized
   }
 }

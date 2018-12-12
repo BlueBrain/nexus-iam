@@ -1,8 +1,8 @@
 package ch.epfl.bluebrain.nexus.iam
 
 import java.nio.file.Paths
-import java.time.Clock
 
+import _root_.io.circe.Json
 import akka.actor.{ActorSystem, Address, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
@@ -12,13 +12,15 @@ import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{Route, RouteResult}
 import akka.stream.ActorMaterializer
-import akka.util.Timeout
+import cats.effect.Effect
+import cats.effect.concurrent.Deferred
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls._
-import ch.epfl.bluebrain.nexus.iam.config.Settings
-import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
-import ch.epfl.bluebrain.nexus.iam.routes.{AclsRoutes, AppInfoRoutes, CassandraHeath}
+import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
+import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
+import ch.epfl.bluebrain.nexus.iam.realms.Realms
+import ch.epfl.bluebrain.nexus.iam.routes._
 import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaSourcingConfig
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.github.jsonldjava.core.DocumentLoader
@@ -51,6 +53,33 @@ object Main {
     Kamon.loadReportersFromConfig()
   }
 
+  def bootstrap(as: ActorSystem)(implicit cfg: AppConfig,
+                                 mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
+    implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
+    import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+    implicit val system = as
+    implicit val pc     = cfg.permissions
+    implicit val ac     = cfg.acls
+    implicit val rc     = cfg.realms
+    implicit val pm     = CanBlock.permit
+    implicit val cl     = HttpClient.untyped[Task]
+    import as.dispatcher
+    implicit val jc = HttpClient.withUnmarshaller[Task, Json]
+
+    val deferred = for {
+      ps <- Deferred[Task, Permissions[Task]]
+      as <- Deferred[Task, Acls[Task]]
+      rs <- Deferred[Task, Realms[Task]]
+      pt <- Permissions[Task](() => as.get)
+      at <- Acls[Task](() => ps.get)
+      rt <- Realms[Task](() => as.get)
+      _  <- ps.complete(pt)
+      _  <- as.complete(at)
+      _  <- rs.complete(rt)
+    } yield (pt, at, rt)
+    deferred.runSyncUnsafe()(Scheduler.global, pm)
+  }
+
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
     val config = loadConfig()
@@ -58,11 +87,10 @@ object Main {
 
     implicit val appConfig = Settings(config).appConfig
 
+    implicit val hc = appConfig.http
     implicit val as = ActorSystem(appConfig.description.fullName, config)
     implicit val ec = as.dispatcher
     implicit val mt = ActorMaterializer()
-    implicit val pm = CanBlock.permit
-    implicit val cl = Clock.systemUTC()
 
     val cluster = Cluster(as)
     val seeds: List[Address] = appConfig.cluster.seeds.toList
@@ -72,24 +100,13 @@ object Main {
       case nonEmpty => nonEmpty
     }
 
-    //TODO: Take this from the AppConfig
-    implicit val aclsSourcingConfig: AkkaSourcingConfig = AkkaSourcingConfig(
-      Timeout(3 seconds),
-      appConfig.persistence.queryJournalPlugin,
-      3 seconds,
-      as.dispatcher
-    )
+    val (perms, acls, realms) = bootstrap(as)
 
-    val aclsIndex: AclsIndex[Task] = InMemoryAclsTree.task()
-
-    val acls: Acls[Task] = {
-      implicit val sc = Scheduler.global
-      Acls[Task](aclsIndex).runSyncUnsafe()
-    }
-
-    val aclRoutes   = new AclsRoutes(acls, null).routes
-    val apiRoutes   = uriPrefix(appConfig.http.publicUri)(aclRoutes)
-    val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
+    val aclsRoutes   = new AclsRoutes(acls, realms).routes
+    val permsRoutes  = new PermissionsRoutes(perms, realms).routes
+    val realmsRoutes = new RealmsRoutes(realms).routes
+    val apiRoutes    = uriPrefix(appConfig.http.publicUri)(aclsRoutes ~ permsRoutes ~ realmsRoutes)
+    val serviceDesc  = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")

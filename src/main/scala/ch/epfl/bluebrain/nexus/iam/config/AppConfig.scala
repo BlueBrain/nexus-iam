@@ -1,20 +1,15 @@
 package ch.epfl.bluebrain.nexus.iam.config
 
-import java.time.Clock
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import akka.util.Timeout
 import cats.ApplicativeError
 import cats.effect.Timer
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
-import ch.epfl.bluebrain.nexus.iam.acls
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, Resource}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group}
-import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import ch.epfl.bluebrain.nexus.iam.types.Permission
+import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
@@ -36,7 +31,7 @@ import scala.concurrent.duration._
   * @param cluster     akka cluster configuration
   * @param persistence persistence configuration
   * @param indexing    indexing configuration
-  * @param initialAcl  initial acl configuration (to be considered when the service is first booted)
+  * @param acls        configuration for acls
   * @param permissions configuration for permissions
   * @param realms      configuration for realms
   */
@@ -45,7 +40,7 @@ final case class AppConfig(description: Description,
                            cluster: ClusterConfig,
                            persistence: PersistenceConfig,
                            indexing: IndexingConfig,
-                           initialAcl: InitialAcl,
+                           acls: AclsConfig,
                            permissions: PermissionsConfig,
                            realms: RealmsConfig)
 
@@ -126,24 +121,6 @@ object AppConfig {
     * @param retry        the retry configuration when indexing failures
     */
   final case class IndexingConfig(batch: Int, batchTimeout: FiniteDuration, retry: Retry)
-
-  final case class InitialAcl(path: Path, identities: InitialIdentities, permissions: Set[Permission]) {
-    private val map: Map[Identity, Set[Permission]] =
-      identities.groups.map(Group(_, identities.realm) -> permissions).toMap
-
-    def acl(implicit c: Clock, http: HttpConfig): Resource =
-      ResourceF(http.aclsIri + path.asString,
-                1L,
-                acls.types,
-                deprecated = false,
-                c.instant(),
-                Anonymous,
-                c.instant(),
-                Anonymous,
-                AccessControlList(map))
-  }
-
-  final case class InitialIdentities(realm: String, groups: Set[String])
 
   /**
     * Partial configuration for aggregate passivation strategy.
@@ -256,6 +233,13 @@ object AppConfig {
   )
 
   /**
+    * ACLs configuration
+    *
+    * @param sourcing the acls sourcing configuration
+    */
+  final case class AclsConfig(sourcing: SourcingConfig)
+
+  /**
     * Permissions configuration.
     *
     * @param sourcing the permissions sourcing configuration
@@ -301,5 +285,4 @@ object AppConfig {
   implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig = appConfig.persistence
   implicit def toHttp(implicit appConfig: AppConfig): HttpConfig               = appConfig.http
   implicit def toIndexing(implicit appConfig: AppConfig): IndexingConfig       = appConfig.indexing
-  implicit def inInitialAcl(implicit appConfig: AppConfig): InitialAcl         = appConfig.initialAcl
 }

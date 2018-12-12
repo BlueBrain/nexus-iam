@@ -2,13 +2,15 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.{Clock, Instant, ZoneId}
 
-import cats.effect.{ContextShift, IO}
+import akka.stream.ActorMaterializer
+import cats.effect.{ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, InitialAcl, InitialIdentities}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
-import ch.epfl.bluebrain.nexus.iam.index.AclsIndex
+import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
+import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
@@ -17,31 +19,39 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
+import org.mockito.IdiomaticMockito
 import org.scalatest._
-import org.scalatest.mockito.MockitoSugar
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 //noinspection TypeAnnotation,NameBooleanParameters
 class AclsSpec
-    extends ActorSystemFixture("AclsSpec")
+    extends ActorSystemFixture("AclsSpec", true)
     with Matchers
     with IOEitherValues
     with IOOptionValues
     with Randomness
     with Inspectors
-    with MockitoSugar {
+    with IdiomaticMockito {
 
-  private implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  val appConfig: AppConfig      = Settings(system).appConfig
+  val pc: PermissionsConfig     = appConfig.permissions
+  implicit val http: HttpConfig = appConfig.http
+  implicit val ac: AclsConfig   = appConfig.acls
 
-  private implicit val initAcl = InitialAcl(/, InitialIdentities("realm", Set("admin")), Set(write))
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)
+  implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
 
-  private val index: AclsIndex[IO] = mock[AclsIndex[IO]]
+  val (mperms, perms) = {
+    val m = mock[Permissions[IO]]
+    m.minimum shouldReturn appConfig.permissions.minimum
+    (m, () => IO.pure(m))
+  }
 
   private implicit val clock: Clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private implicit val http                = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
-  private val acls                         = Acls.inMemory[IO](index).ioValue
+  private val acls                         = Acls[IO](perms).ioValue
   private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
   private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
   private val instant                      = clock.instant()
@@ -51,9 +61,9 @@ class AclsSpec
 
   trait Context {
     val createdBy: Subject = User("sub", "realm")
-    implicit val caller    = Caller(createdBy, Set[Identity](Group("admin", "realm")))
+    implicit val caller    = Caller(createdBy, Set[Identity](Group("admin", "realm"), Anonymous))
     val path: Path         = genString(length = 4) / genString(length = 4)
-    val id: AbsoluteIri    = Iri.absolute(s"http://nexus.example.com/v1/acls/").right.value + path.asString
+    val id: AbsoluteIri    = Iri.absolute("http://127.0.0.1:8080/v1/acls/").right.value + path.asString
     val user1              = identities(genInt(max = 1))
     val user2              = identities.filterNot(_ == user1).head
     val permsUser1         = Random.shuffle(permissions).take(1 + genInt(max = 299))
@@ -71,13 +81,13 @@ class AclsSpec
 
     "performing get operations" should {
       "fetch initial ACLs" in new Context {
-        acls.fetch(/, self = true).some shouldEqual initAcl.acl
-        acls.fetch(/, self = false).some shouldEqual initAcl.acl
+        acls.fetch(/, self = true).some.value shouldEqual AccessControlList(Anonymous  -> pc.minimum)
+        acls.fetch(/, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
       }
 
       "fetch initial with revision" in new Context {
-        acls.fetch(/, 10L, self = true).some shouldEqual initAcl.acl
-        acls.fetch(/, 10L, self = false).some shouldEqual initAcl.acl
+        acls.fetch(/, 10L, self = true).some.value shouldEqual AccessControlList(Anonymous  -> pc.minimum)
+        acls.fetch(/, 10L, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
       }
 
       "fetch other non existing ACLs" in new Context {
@@ -133,7 +143,7 @@ class AclsSpec
           ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
         val replaced         = AccessControlList(user1 -> permsUser1)
         val updatedBy        = User(genString(), genString())
-        val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy))
+        val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy, Anonymous))
         val metadata =
           ResourceMetadata(id, 2L, Set(nxv.AccessControlList), false, instant, createdBy, instant, updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).accepted shouldEqual metadata

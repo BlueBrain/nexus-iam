@@ -1,4 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.types
+
+import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 
 import scala.concurrent.duration.FiniteDuration
@@ -54,5 +56,12 @@ object IamError {
     * @param error the underlying error
     */
   final case class InternalError(error: IamError) extends IamError("An internal server error occurred.")
+
+  /**
+    * Signals that an error occurred while attempting to perform an operation with an invalid access token.
+    *
+    * @param reason a reason for why the token is considered invalid
+    */
+  final case class InvalidAccessToken(reason: TokenRejection) extends IamError("The provided access token is invalid.")
 
 }

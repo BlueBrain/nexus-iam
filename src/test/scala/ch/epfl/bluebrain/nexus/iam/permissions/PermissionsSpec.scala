@@ -57,6 +57,8 @@ class PermissionsSpec
     Permission.unsafe("acls/write"),
     Permission.unsafe("permissions/read"),
     Permission.unsafe("permissions/write"),
+    Permission.unsafe("realms/read"),
+    Permission.unsafe("realms/write"),
   )
 
   val perm1: Permission = Permission.unsafe(genString())

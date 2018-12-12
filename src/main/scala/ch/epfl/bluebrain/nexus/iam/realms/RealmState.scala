@@ -150,7 +150,7 @@ object RealmState {
       * @return the current state in an [[ActiveRealm]] representation
       */
     def activeRealm: ActiveRealm =
-      ActiveRealm(name, openIdConfig, issuer, grantTypes, logo, keys)
+      ActiveRealm(id, name, openIdConfig, issuer, grantTypes, logo, keys)
 
     /**
       * @return the current state in a [[ResourceF]] representation
@@ -190,7 +190,7 @@ object RealmState {
       * @return the current state in a [[DeprecatedRealm]] representation
       */
     def deprecatedRealm: DeprecatedRealm =
-      DeprecatedRealm(name, openIdConfig, logo)
+      DeprecatedRealm(id, name, openIdConfig, logo)
 
     /**
       * @return the current state in a [[ResourceF]] representation

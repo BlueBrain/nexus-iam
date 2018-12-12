@@ -10,6 +10,7 @@ import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
+import ch.epfl.bluebrain.nexus.iam.permissions.Permissions._
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsCommand._
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent._
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsRejection._
@@ -27,7 +28,7 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
   * @param http the application http configuration
   * @tparam F   the effect type
   */
-final class Permissions[F[_]: MonadThrowable](
+class Permissions[F[_]: MonadThrowable](
     agg: Agg[F],
     acls: Lazy[F, Acls]
 )(implicit http: HttpConfig, pc: PermissionsConfig) {
@@ -35,10 +36,23 @@ final class Permissions[F[_]: MonadThrowable](
   private val pid = "permissions"
 
   /**
+    * @return the minimum set of permissions
+    */
+  def minimum: Set[Permission] =
+    pc.minimum
+
+  /**
     * @return the current permissions as a resource
     */
   def fetch(implicit caller: Caller): F[Resource] =
-    check(read) *> agg.currentState(pid).map(_.resource)
+    check(read) *> stateOf(None).map(_.resource)
+
+  /**
+    * @param rev the permissions revision
+    * @return the permissions as a resource at the specified revision
+    */
+  def fetchAt(rev: Long)(implicit caller: Caller): F[Resource] =
+    check(read) *> stateOf(Some(rev)).map(_.resource)
 
   /**
     * @return the current permissions collection
@@ -100,6 +114,16 @@ final class Permissions[F[_]: MonadThrowable](
     acls()
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(id, permission)))
+
+  private def stateOf(optRev: Option[Long]): F[State] =
+    optRev
+      .map { rev =>
+        agg.foldLeft[State](pid, Initial) {
+          case (state, event) if event.rev <= rev => next(pc)(state, event)
+          case (state, _)                         => state
+        }
+      }
+      .getOrElse(agg.currentState(pid))
 }
 
 object Permissions {
