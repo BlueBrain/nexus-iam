@@ -26,7 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val rdfVersion                 = "0.2.28"
-val commonsVersion             = "0.10.40"
+val commonsVersion             = "0.10.41"
 val serviceVersion             = "0.10.21"
 val sourcingVersion            = "0.12.0"
 val akkaVersion                = "2.5.18"
@@ -85,6 +85,7 @@ lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
   .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin, JmhPlugin)
+  .aggregate(client)
   .settings(
     name       := "iam",
     moduleName := "iam",
@@ -125,6 +126,30 @@ lazy val iam = project
       scalaTest          % Test,
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
+  )
+
+lazy val client = project
+  .in(file("client"))
+  .settings(
+    name                  := "iam-client",
+    moduleName            := "iam-client",
+    coverageFailOnMinimum := false,
+    Test / testOptions    += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
+    libraryDependencies ++= Seq(
+      akkaHttp,
+      akkaStream,
+      catsCore,
+      circeCore,
+      commonsHttp,
+      logbackClassic,
+      rdfAkka,
+      rdfCirce,
+      serviceHttp,
+      akkaHttpTestKit % Test,
+      commonsTest     % Test,
+      mockitoScala    % Test,
+      scalaTest       % Test,
+    )
   )
 
 lazy val testSettings = Seq(

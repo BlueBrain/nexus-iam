@@ -22,8 +22,6 @@ import ch.epfl.bluebrain.nexus.iam.types.{Caller, Lazy, MonadThrowable, Permissi
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 
-import scala.annotation.tailrec
-
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     agg: Agg[F],
@@ -140,31 +138,12 @@ class Acls[F[_]](
     opt.map(_.map(acl => acl.filter(caller.identities)))
 
   def hasPermission(path: Path, perm: Permission, ancestors: Boolean = true)(implicit caller: Caller): F[Boolean] = {
-    def hasPermission(p: Path): F[Boolean] =
-      fetchUnsafe(p).map {
-        case Some(res) => res.value.hasPermission(caller.identities, perm)
-        case None      => false
-      }
-    if (!ancestors) hasPermission(path)
-    else
-      ancestorsOf(path).foldLeftM(false) {
-        case (true, _)  => F.pure(true)
-        case (false, p) => hasPermission(p)
-      }
-  }
-
-  private def ancestorsOf(path: Path): List[Path] = {
-    @tailrec
-    def inner(current: Path, ancestors: List[Path]): List[Path] = current match {
-      case p @ Path./                                  => p :: ancestors
-      case Path.Empty                                  => ancestors
-      case Path.Slash(rest)                            => inner(rest, ancestors)
-      case p @ Path.Segment(_, Path.Slash(Path.Empty)) => inner(Path./, p :: ancestors)
-      case p @ Path.Segment(_, Path.Slash(rest))       => inner(rest, p :: ancestors)
-      case p @ Path.Segment(_, Path.Empty)             => p :: ancestors
-      case Path.Segment(_, Path.Segment(_, _))         => ancestors
+    fetchUnsafe(path).flatMap {
+      case Some(res) if res.value.hasPermission(caller.identities, perm) => F.pure(true)
+      case _ if path == Path./                                           => F.pure(false)
+      case _ if ancestors                                                => hasPermission(path.parent, perm)
+      case _                                                             => F.pure(false)
     }
-    inner(path, Nil).reverse
   }
 
 }
