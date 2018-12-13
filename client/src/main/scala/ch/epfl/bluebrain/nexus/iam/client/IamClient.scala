@@ -29,19 +29,16 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
                                        aclsClient: HttpClient[F, AccessControlLists],
                                        callerClient: HttpClient[F, Caller])(implicit F: MonadError[F, Throwable]) {
 
-  private val filterGroupsKey = "filterGroups"
-  private val log             = Logger[this.type]
+  private val log = Logger[this.type]
 
   /**
     * Retrieve the ''caller'' from the implicitly optional [[AuthToken]]
     *
-    * @param filterGroups   if true, will only return groups currently in use in IAM
-    *
     */
-  def getCaller(filterGroups: Boolean = false)(implicit credentials: Option[AuthToken]): F[Caller] =
+  def getCaller(implicit credentials: Option[AuthToken]): F[Caller] =
     credentials
       .map { _ =>
-        callerClient(requestFrom(config.prefix / "oauth2" / "user", Query(filterGroupsKey -> filterGroups.toString)))
+        callerClient(requestFrom(config.prefix / "oauth2" / "user"))
           .recoverWith { case e => recover(e, config.prefix / "oauth2" / "user") }
       }
       .getOrElse(F.pure(Caller.anonymous))
@@ -89,7 +86,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
       F.raiseError(err)
   }
 
-  private def requestFrom(path: Path, query: Query)(implicit credentials: Option[AuthToken]) = {
+  private def requestFrom(path: Path, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
     val request = Get((config.publicIri + path).toAkkaUri.withQuery(query))
     credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
   }

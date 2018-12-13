@@ -107,23 +107,23 @@ class IamClientSpec
         val user              = User("mysubject", "myrealm")
         val expected          = Caller(user, Set(user, Anonymous))
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user?filterGroups=false").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
           Future(expected)
-        client.getCaller(filterGroups = false).futureValue shouldEqual expected
+        client.getCaller.futureValue shouldEqual expected
       }
 
       "succeed without token" in {
         implicit val tokenOpt = None
-        client.getCaller(filterGroups = false).futureValue shouldEqual Caller.anonymous
+        client.getCaller.futureValue shouldEqual Caller.anonymous
       }
 
       "fail with UnauthorizedAccess" in {
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user?filterGroups=true").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        client.getCaller(filterGroups = true).failed.futureValue shouldEqual UnauthorizedAccess
+        client.getCaller.failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "fail with other error" in {
@@ -131,9 +131,9 @@ class IamClientSpec
         val token             = OAuth2BearerToken("token")
         val expected          = new RuntimeException()
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user?filterGroups=true").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
           Future.failed(expected)
-        client.getCaller(filterGroups = true).failed.futureValue shouldEqual expected
+        client.getCaller.failed.futureValue shouldEqual expected
       }
     }
   }
