@@ -95,7 +95,7 @@ object AclEvent {
 
     implicit def aclEventEncoder(implicit httpConfig: HttpConfig): Encoder[AclEvent] = {
       implicit val arrayEncoder: Encoder[AccessControlList] = AccessControlList.aclArrayEncoder
-      implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
+      implicit val subjectEncoder: Encoder[Subject]         = Identity.subjectIdEncoder
       deriveEncoder[AclEvent]
         .mapJson { json =>
           json
