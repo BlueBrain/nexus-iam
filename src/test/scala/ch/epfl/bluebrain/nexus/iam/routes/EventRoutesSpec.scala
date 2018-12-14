@@ -16,12 +16,7 @@ import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, Acls}
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PersistenceConfig}
 import ch.epfl.bluebrain.nexus.iam.config.Settings
-import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.{
-  PermissionsAppended,
-  PermissionsDeleted,
-  PermissionsReplaced,
-  PermissionsSubtracted
-}
+import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.{RealmCreated, RealmDeprecated, RealmUpdated}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.EventRoutesSpec.TestableEventRoutes
@@ -193,9 +188,11 @@ object EventRoutesSpec {
         EventEnvelope(Sequence(idx.toLong), "persistenceid", 1l, ev)
     }
 
-    override protected def source(tag: String,
-                                  offset: Offset,
-                                  toSse: EventEnvelope => Option[ServerSentEvent]): Source[ServerSentEvent, NotUsed] = {
+    override protected def source(
+        tag: String,
+        offset: Offset,
+        toSse: EventEnvelope => Option[ServerSentEvent]
+    ): Source[ServerSentEvent, NotUsed] = {
       val toDrop = offset match {
         case NoOffset    => 0
         case Sequence(v) => v + 1

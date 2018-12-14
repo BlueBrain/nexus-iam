@@ -80,7 +80,7 @@ object Main {
     deferred.runSyncUnsafe()(Scheduler.global, pm)
   }
 
-  def bootstrapIndexers(acls: Acls[Task],realms: Realms[Task])(implicit as: ActorSystem, cfg: AppConfig): Unit = {
+  def bootstrapIndexers(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSystem, cfg: AppConfig): Unit = {
     implicit val ac                = cfg.acls
     implicit val rc                = cfg.realms
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)

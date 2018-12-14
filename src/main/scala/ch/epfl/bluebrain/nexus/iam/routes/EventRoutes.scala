@@ -51,25 +51,22 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
   private implicit val implAcls: Acls[Task] = acls
 
   def routes: Route = {
-    (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling())) {
-      pathPrefix(hc.prefix) {
-        concat(
-          routesFor("acls" / "events", permissionsEventTag, aclsp.write, typedEventToSse[AclEvent]),
-          routesFor("permissions" / "events",
-                    permissionsEventTag,
-                    permissionsp.read,
-                    typedEventToSse[PermissionsEvent]),
-          routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
-          routesFor("events", eventTag, eventsRead, eventToSse),
-        )
-      }
+    (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling()) & pathPrefix(hc.prefix)) {
+      concat(
+        routesFor("acls" / "events", permissionsEventTag, aclsp.write, typedEventToSse[AclEvent]),
+        routesFor("permissions" / "events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
+        routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
+        routesFor("events", eventTag, eventsRead, eventToSse),
+      )
     }
   }
 
-  private def routesFor(pm: PathMatcher0,
-                        tag: String,
-                        permission: Permission,
-                        toSse: EventEnvelope => Option[ServerSentEvent]): Route =
+  private def routesFor(
+      pm: PathMatcher0,
+      tag: String,
+      permission: Permission,
+      toSse: EventEnvelope => Option[ServerSentEvent]
+  ): Route =
     path(pm) {
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         authorizeFor(permission).apply {
