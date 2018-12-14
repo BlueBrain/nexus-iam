@@ -5,7 +5,6 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.instances._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.extras.Configuration
@@ -33,7 +32,7 @@ object Identity {
     */
   final case object Anonymous extends Anonymous {
     def id(implicit http: HttpConfig): AbsoluteIri =
-      url"${http.publicUri}".value + (http.prefix / "anonymous")
+      http.publicIri + (http.prefix / "anonymous")
   }
 
   /**
@@ -44,7 +43,7 @@ object Identity {
     */
   final case class User(subject: String, realm: String) extends Subject {
     def id(implicit http: HttpConfig): AbsoluteIri =
-      url"${http.publicUri}".value + (http.prefix / "realms" / realm / "users" / subject)
+      http.publicIri + (http.prefix / "realms" / realm / "users" / subject)
 
   }
 
@@ -56,7 +55,7 @@ object Identity {
     */
   final case class Group(group: String, realm: String) extends Identity {
     def id(implicit http: HttpConfig): AbsoluteIri =
-      url"${http.publicUri}".value + (http.prefix / "realms" / realm / "groups" / group)
+      http.publicIri + (http.prefix / "realms" / realm / "groups" / group)
   }
 
   /**
@@ -66,7 +65,7 @@ object Identity {
     */
   final case class Authenticated(realm: String) extends Identity {
     def id(implicit http: HttpConfig): AbsoluteIri =
-      url"${http.publicUri}".value + (http.prefix / "realms" / realm / "authenticated")
+      http.publicIri + (http.prefix / "realms" / realm / "authenticated")
   }
 
   private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
