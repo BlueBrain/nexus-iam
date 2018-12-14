@@ -88,13 +88,19 @@ object AccessControlList {
   def apply(acl: (Identity, Set[Permission])*): AccessControlList =
     AccessControlList(acl.toMap)
 
-  implicit def aclEncoder(implicit http: HttpConfig): Encoder[AccessControlList] = Encoder.encodeJson.contramap {
-    case AccessControlList(value) =>
-      val acl = value.map {
-        case (identity, perms) => Json.obj("identity" -> identity.asJson, "permissions" -> perms.asJson)
-      }
-      Json.obj("acl" -> Json.arr(acl.toSeq: _*))
-  }
+  def aclArrayEncoder(implicit http: HttpConfig): Encoder[AccessControlList] =
+    Encoder.encodeJson.contramap {
+      case AccessControlList(value) =>
+        val acl = value.map {
+          case (identity, perms) => Json.obj("identity" -> identity.asJson, "permissions" -> perms.asJson)
+        }
+        Json.arr(acl.toSeq: _*)
+    }
+
+  implicit def aclEncoder(implicit http: HttpConfig): Encoder[AccessControlList] =
+    aclArrayEncoder.mapJson { array =>
+      Json.obj("acl" -> array)
+    }
 
   implicit val aclDecoder: Decoder[AccessControlList] = {
     def inner(hcc: HCursor): Decoder.Result[(Identity, Set[Permission])] =

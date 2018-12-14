@@ -12,7 +12,8 @@
     "permissions/read",
     "permissions/write",
     "realms/read",
-    "realms/write"
+    "realms/write",
+    "events/read"
   ],
   "_createdAt": "1970-01-01T00:00:00Z",
   "_createdBy": "{createdBy}",

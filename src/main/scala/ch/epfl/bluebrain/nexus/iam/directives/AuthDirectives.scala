@@ -1,11 +1,18 @@
 package ch.epfl.bluebrain.nexus.iam.directives
 
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.server.Directives.AsyncAuthenticator
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.Credentials
+import akka.http.scaladsl.server.{Directive0, Directive1}
+import cats.implicits._
+import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
-import ch.epfl.bluebrain.nexus.iam.types.Caller
+import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import monix.eval.Task
 import monix.execution.Scheduler
 
@@ -25,4 +32,31 @@ object AuthDirectives {
       val cred = OAuth2BearerToken(token)
       realms.caller(AccessToken(cred.token)).map(c => Some(c)).runToFuture
   }
+
+  /**
+    * Extracts the current selected resource address.
+    */
+  def extractResourceAddress(implicit hc: HttpConfig): Directive1[AbsoluteIri] =
+    extractMatchedPath.map(p => hc.prefixIri + p.toIriPath)
+
+  /**
+    * Tests whether the caller has the argument permission positioned at the root level '/'.
+    *
+    * @param permission the permission to test for
+    */
+  def authorizeFor(permission: Permission)(
+      implicit
+      acls: Acls[Task],
+      s: Scheduler,
+      c: Caller,
+      hc: HttpConfig
+  ): Directive0 =
+    extractResourceAddress.flatMap { address =>
+      onSuccess {
+        acls
+          .hasPermission(Path./, permission, ancestors = false)
+          .ifM(Task.unit, Task.raiseError(AccessDenied(address, permission)))
+          .runToFuture
+      }
+    }
 }

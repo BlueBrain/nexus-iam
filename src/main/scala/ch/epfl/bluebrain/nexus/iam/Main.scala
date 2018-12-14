@@ -80,6 +80,14 @@ object Main {
     deferred.runSyncUnsafe()(Scheduler.global, pm)
   }
 
+  def bootstrapIndexers(acls: Acls[Task],realms: Realms[Task])(implicit as: ActorSystem, cfg: AppConfig): Unit = {
+    implicit val ac                = cfg.acls
+    implicit val rc                = cfg.realms
+    implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
+    Acls.indexer[Task](acls).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
+    Realms.indexer[Task](realms).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
+  }
+
   @SuppressWarnings(Array("UnusedMethodParameter"))
   def main(args: Array[String]): Unit = {
     val config = loadConfig()
@@ -88,6 +96,7 @@ object Main {
     implicit val appConfig = Settings(config).appConfig
 
     implicit val hc = appConfig.http
+    implicit val pc = appConfig.persistence
     implicit val as = ActorSystem(appConfig.description.fullName, config)
     implicit val ec = as.dispatcher
     implicit val mt = ActorMaterializer()
@@ -102,10 +111,11 @@ object Main {
 
     val (perms, acls, realms) = bootstrap(as)
 
+    val eventRoutes  = new EventRoutes(acls, realms).routes
     val aclsRoutes   = new AclsRoutes(acls, realms).routes
     val permsRoutes  = new PermissionsRoutes(perms, realms).routes
     val realmsRoutes = new RealmsRoutes(realms).routes
-    val apiRoutes    = uriPrefix(appConfig.http.publicUri)(aclsRoutes ~ permsRoutes ~ realmsRoutes)
+    val apiRoutes    = uriPrefix(appConfig.http.publicUri)(eventRoutes ~ aclsRoutes ~ permsRoutes ~ realmsRoutes)
     val serviceDesc  = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
@@ -117,6 +127,7 @@ object Main {
 
     cluster.registerOnMemberUp {
       logger.info("==== Cluster is Live ====")
+      bootstrapIndexers(acls, realms)
 
       val routes: Route =
         handleRejections(corsRejectionHandler)(cors(corsSettings)(apiRoutes ~ serviceDesc))

@@ -2,8 +2,9 @@ package ch.epfl.bluebrain.nexus.iam.permissions
 
 import java.time.Instant
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
-import ch.epfl.bluebrain.nexus.iam.types.Permission
+import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission}
 
 /**
   * Enumeration of Permissions event types.
@@ -85,4 +86,25 @@ object PermissionsEvent {
       instant: Instant,
       subject: Subject
   ) extends PermissionsEvent
+
+  object JsonLd {
+    import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
+    import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+    import io.circe.Encoder
+    import io.circe.generic.extras.Configuration
+    import io.circe.generic.extras.semiauto._
+    import io.circe.java8.time._
+
+    private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+
+    implicit def permissionsEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
+      implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
+      deriveEncoder[Event]
+        .mapJson { json =>
+          json
+            .addContext(iamCtxUri)
+            .addContext(resourceCtxUri)
+        }
+    }
+  }
 }
