@@ -8,6 +8,7 @@ import akka.stream.ActorMaterializer
 import cats.Monad
 import cats.data.EitherT
 import cats.effect._
+import cats.effect.syntax.all._
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
@@ -15,6 +16,7 @@ import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
 import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
 import ch.epfl.bluebrain.nexus.iam.index.KeyValueStore
+import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.realms.RealmCommand.{CreateRealm, DeprecateRealm, UpdateRealm}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.{RealmCreated, RealmDeprecated, RealmUpdated}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
@@ -24,6 +26,8 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedIniti
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
@@ -217,7 +221,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
       }
       .getOrElse(agg.currentState(id.value))
 
-  private def updateIndex(id: Label): F[Unit] =
+  private[realms] def updateIndex(id: Label): F[Unit] =
     fetchUnsafe(id).flatMap {
       case Some(res) => index.put(id, res)
       case None      => F.unit
@@ -300,6 +304,28 @@ object Realms {
       index: RealmIndex[F]
   )(implicit http: HttpConfig): F[Realms[F]] =
     agg.map(apply(_, acls, index))
+
+  /**
+    * Builds a process for automatically updating the realm index with the latest events logged.
+    *
+    * @param realms the realms API
+    */
+  def indexer[F[_]](realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig): F[Unit] = {
+    val indexFn = (events: List[Event]) => {
+      val value = events.traverse(e => realms.updateIndex(e.id)) *> F.unit
+      value.toIO.unsafeToFuture()
+    }
+    val cfg = IndexerConfig.builder
+      .name("realm-index")
+      .batch(rc.indexing.batch, rc.indexing.batchTimeout)
+      .plugin(rc.sourcing.queryJournalPlugin)
+      .tag(TaggingAdapter.realmEventTag)
+      .retry(rc.indexing.retry.maxCount, rc.indexing.retry.strategy)
+      .index[Event](indexFn)
+      .build
+      .asInstanceOf[IndexerConfig[Event, Volatile]]
+    F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
+  }
 
   private[realms] def next(state: State, event: Event): State = {
     // format: off
