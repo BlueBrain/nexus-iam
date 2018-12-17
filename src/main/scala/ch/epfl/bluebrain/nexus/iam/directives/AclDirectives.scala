@@ -15,8 +15,8 @@ trait AclDirectives {
     path.toIriPath match {
       case p if p.asString.contains("//") =>
         reject(validationRejection(s"path '${p.asString}' cannot contain double slash"))
-      case p =>
-        provide(p)
+      case p if p.isEmpty => provide(Path./)
+      case p              => provide(p)
     }
   }
 }

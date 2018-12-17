@@ -113,6 +113,9 @@ object Identity {
     identityEncoder.apply(_: Identity)
   }
 
+  def subjectIdEncoder(implicit http: HttpConfig): Encoder[Subject] =
+    Encoder.encodeJson.contramap(_.id.asJson)
+
   implicit val subjectDecoder: Decoder[Subject] = Decoder.instance { hc =>
     attemptsSubject.foldLeft(Left(DecodingFailure("Unexpected", hc.history)): Result[Subject]) {
       case (acc @ Right(_), _) => acc

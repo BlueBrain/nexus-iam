@@ -2,6 +2,8 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.Instant
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.types.Identity
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
@@ -79,4 +81,27 @@ object AclEvent {
     * @param subject the subject which generated this event
     */
   final case class AclDeleted(path: Path, rev: Long, instant: Instant, subject: Subject) extends AclEvent
+
+  object JsonLd {
+    import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
+    import ch.epfl.bluebrain.nexus.rdf.instances._
+    import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+    import io.circe.Encoder
+    import io.circe.generic.extras.Configuration
+    import io.circe.generic.extras.semiauto._
+    import io.circe.java8.time._
+
+    private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+
+    implicit def aclEventEncoder(implicit httpConfig: HttpConfig): Encoder[AclEvent] = {
+      implicit val arrayEncoder: Encoder[AccessControlList] = AccessControlList.aclArrayEncoder
+      implicit val subjectEncoder: Encoder[Subject]         = Identity.subjectIdEncoder
+      deriveEncoder[AclEvent]
+        .mapJson { json =>
+          json
+            .addContext(iamCtxUri)
+            .addContext(resourceCtxUri)
+        }
+    }
+  }
 }

@@ -18,9 +18,9 @@ class TaggingAdapterSpec extends WordSpecLike with Matchers with Inspectors with
   private val rd = RealmDeprecated(Label.unsafe("blah"), 2L, Instant.EPOCH, Anonymous)
 
   private val data = Map[AnyRef, (String, AnyRef)](
-    pd  -> ("permissions-event" -> Tagged(pd, Set("permissions"))),
-    ad  -> ("acl-event"         -> Tagged(ad, Set("acl"))),
-    rd  -> ("realm-event"       -> Tagged(rd, Set("realm"))),
+    pd  -> ("permissions-event" -> Tagged(pd, Set("permissions", "event"))),
+    ad  -> ("acl-event"         -> Tagged(ad, Set("acl", "event"))),
+    rd  -> ("realm-event"       -> Tagged(rd, Set("realm", "event"))),
     "a" -> (""                  -> "a")
   )
 

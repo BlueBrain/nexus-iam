@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.Applicative
 import cats.effect.{Async, Effect, Timer}
+import cats.effect.syntax.all._
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.acls.AclCommand._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent._
@@ -14,12 +15,15 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig}
 import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
+import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Lazy, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 
 //noinspection RedundantDefaultArgument
@@ -36,7 +40,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to replace
     */
   def replace(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> evaluate(path, ReplaceAcl(path, acl, rev, clock.instant(), caller.subject))
+    check(path, write) *> eval(path, ReplaceAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
 
   /**
     * Appends ''acl'' on a ''path''.
@@ -45,7 +49,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to append
     */
   def append(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> evaluate(path, AppendAcl(path, acl, rev, clock.instant(), caller.subject))
+    check(path, write) *> eval(path, AppendAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
 
   /**
     * Subtracts ''acl'' on a ''path''.
@@ -54,7 +58,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to subtract
     */
   def subtract(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> evaluate(path, SubtractAcl(path, acl, rev, clock.instant(), caller.subject))
+    check(path, write) *> eval(path, SubtractAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
 
   /**
     * Delete all ACL on a ''path''.
@@ -62,10 +66,10 @@ class Acls[F[_]](
     * @param path the target path for the ACL
     */
   def delete(path: Path, rev: Long)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> evaluate(path, DeleteAcl(path, rev, clock.instant(), caller.subject))
+    check(path, write) *> eval(path, DeleteAcl(path, rev, clock.instant(), caller.subject)) <* updateIndex(path)
 
   //TODO: When permissions surface API is ready, this method should also check that the permissions provided on the ACLs are valid ones.
-  private def evaluate(path: Path, cmd: AclCommand): F[AclMetaOrRejection] =
+  private def eval(path: Path, cmd: AclCommand): F[AclMetaOrRejection] =
     agg
       .evaluateS(path.asString, cmd)
       .flatMap {
@@ -146,6 +150,13 @@ class Acls[F[_]](
     }
   }
 
+  private[acls] def updateIndex(path: Path): F[Unit] = {
+    fetchUnsafe(path).flatMap {
+      case Some(res) => index.replace(path, res) *> F.unit
+      case None      => F.unit
+    }
+  }
+
 }
 
 object Acls {
@@ -213,6 +224,28 @@ object Acls {
       index: AclsIndex[F]
   )(implicit http: HttpConfig, cl: Clock = Clock.systemUTC()): F[Acls[F]] =
     agg.map(apply(_, perms, index))
+
+  /**
+    * Builds a process for automatically updating the acl index with the latest events logged.
+    *
+    * @param acls the acls API
+    */
+  def indexer[F[_]](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
+    val indexFn = (events: List[AclEvent]) => {
+      val value = events.traverse(e => acls.updateIndex(e.path)) *> F.unit
+      value.toIO.unsafeToFuture()
+    }
+    val cfg = IndexerConfig.builder
+      .name("acl-index")
+      .batch(ac.indexing.batch, ac.indexing.batchTimeout)
+      .plugin(ac.sourcing.queryJournalPlugin)
+      .tag(TaggingAdapter.aclEventTag)
+      .retry(ac.indexing.retry.maxCount, ac.indexing.retry.strategy)
+      .index[AclEvent](indexFn)
+      .build
+      .asInstanceOf[IndexerConfig[AclEvent, Volatile]]
+    F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
+  }
 
   def next(state: AclState, ev: AclEvent): AclState = (state, ev) match {
 

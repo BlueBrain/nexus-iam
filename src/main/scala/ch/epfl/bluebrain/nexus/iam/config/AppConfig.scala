@@ -75,6 +75,7 @@ object AppConfig {
     */
   final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri) {
     lazy val publicIri: AbsoluteIri      = url"$publicUri".value
+    lazy val prefixIri: AbsoluteIri      = url"$publicUri/$prefix".value
     lazy val aclsIri: AbsoluteIri        = url"$publicUri/$prefix/acls".value
     lazy val permissionsIri: AbsoluteIri = url"$publicUri/$prefix/permissions".value
     lazy val realmsIri: AbsoluteIri      = url"$publicUri/$prefix/realms".value
@@ -236,8 +237,9 @@ object AppConfig {
     * ACLs configuration
     *
     * @param sourcing the acls sourcing configuration
+    * @param indexing the indexing configuration
     */
-  final case class AclsConfig(sourcing: SourcingConfig)
+  final case class AclsConfig(sourcing: SourcingConfig, indexing: IndexingConfig)
 
   /**
     * Permissions configuration.
@@ -252,8 +254,9 @@ object AppConfig {
     *
     * @param sourcing      the realms sourcing configuration
     * @param keyValueStore the key value store configuration
+    * @param indexing      the indexing configuration
     */
-  final case class RealmsConfig(sourcing: SourcingConfig, keyValueStore: KeyValueStoreConfig)
+  final case class RealmsConfig(sourcing: SourcingConfig, keyValueStore: KeyValueStoreConfig, indexing: IndexingConfig)
 
   val orderedKeys = OrderedKeys(
     List(

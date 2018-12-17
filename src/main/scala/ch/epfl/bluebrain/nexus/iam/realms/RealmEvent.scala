@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.realms
 import java.time.Instant
 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
-import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
+import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Identity, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import io.circe.Json
 
@@ -103,4 +103,35 @@ object RealmEvent {
       instant: Instant,
       subject: Subject
   ) extends RealmEvent
+
+  object JsonLd {
+    import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+    import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+    import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
+    import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
+    import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
+    import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+    import io.circe.generic.extras.Configuration
+    import io.circe.generic.extras.semiauto._
+    import io.circe.java8.time._
+    import io.circe.{Encoder, Json}
+
+    private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+
+    implicit def realmEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
+      Encoder.encodeJson.contramap[Event] { ev =>
+        implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
+        deriveEncoder[Event]
+          .mapJson { json =>
+            val id = Json.obj("@id" -> Json.fromString((http.realmsIri + ev.id.value).asUri))
+            json
+              .removeKeys("id")
+              .deepMerge(id)
+              .addContext(iamCtxUri)
+              .addContext(resourceCtxUri)
+          }
+          .apply(ev)
+      }
+    }
+  }
 }

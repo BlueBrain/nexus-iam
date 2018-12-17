@@ -163,8 +163,7 @@ class RealmsSpec
         Right(ActiveRealm(first, firstName + "x", openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
       )
     }
-    // TODO: find out why the in memory implementation doesn't return the events
-    "fetch a realm at revision" ignore {
+    "fetch a realm at revision" in {
       realms.fetch(first, 1L).some shouldEqual ResourceF(
         first.toIri(http.realmsIri),
         1L,
