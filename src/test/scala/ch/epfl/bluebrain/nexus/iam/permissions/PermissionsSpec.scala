@@ -50,10 +50,11 @@ class PermissionsSpec
     val m = mock[Acls[IO]]
     m.hasPermission(Path./, read, ancestors = false)(caller) shouldReturn IO.pure(true)
     m.hasPermission(Path./, write, ancestors = false)(caller) shouldReturn IO.pure(true)
-    (m, () => IO.pure(m))
+    (m, IO.pure(m))
   }
 
   val minimum = Set(
+    Permission.unsafe("acls/read"),
     Permission.unsafe("acls/write"),
     Permission.unsafe("permissions/read"),
     Permission.unsafe("permissions/write"),

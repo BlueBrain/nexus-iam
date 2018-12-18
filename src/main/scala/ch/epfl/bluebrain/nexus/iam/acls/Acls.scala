@@ -1,13 +1,15 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import java.time.{Clock, Instant}
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.Applicative
-import cats.effect.{Async, Effect, Timer}
+import cats.{Applicative, Monad}
+import cats.effect.{Clock, Effect, Timer}
 import cats.effect.syntax.all._
 import cats.implicits._
+import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList.empty
 import ch.epfl.bluebrain.nexus.iam.acls.AclCommand._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent._
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
@@ -20,7 +22,7 @@ import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Lazy, MonadThrowable, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
@@ -29,9 +31,9 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     agg: Agg[F],
-    perms: Lazy[F, Permissions],
+    perms: F[Permissions[F]],
     index: AclsIndex[F],
-)(implicit F: MonadThrowable[F], clock: Clock, http: HttpConfig) {
+)(implicit F: MonadThrowable[F], http: HttpConfig) {
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -39,8 +41,8 @@ class Acls[F[_]](
     * @param path the target path for the ACL
     * @param acl  the identity to permissions mapping to replace
     */
-  def replace(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> eval(path, ReplaceAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
+  def replace(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
+    check(path, write) *> eval(path, ReplaceAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Appends ''acl'' on a ''path''.
@@ -48,8 +50,8 @@ class Acls[F[_]](
     * @param path the target path for the ACL
     * @param acl  the identity to permissions mapping to append
     */
-  def append(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> eval(path, AppendAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
+  def append(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
+    check(path, write) *> eval(path, AppendAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Subtracts ''acl'' on a ''path''.
@@ -57,19 +59,18 @@ class Acls[F[_]](
     * @param path the target path for the ACL
     * @param acl  the identity to permissions mapping to subtract
     */
-  def subtract(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> eval(path, SubtractAcl(path, acl, rev, clock.instant(), caller.subject)) <* updateIndex(path)
+  def subtract(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
+    check(path, write) *> eval(path, SubtractAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Delete all ACL on a ''path''.
     *
     * @param path the target path for the ACL
     */
-  def delete(path: Path, rev: Long)(implicit caller: Caller): F[AclMetaOrRejection] =
-    check(path, write) *> eval(path, DeleteAcl(path, rev, clock.instant(), caller.subject)) <* updateIndex(path)
+  def delete(path: Path, rev: Long)(implicit caller: Caller): F[MetaOrRejection] =
+    check(path, write) *> eval(path, DeleteAcl(path, rev, caller.subject)) <* updateIndex(path)
 
-  //TODO: When permissions surface API is ready, this method should also check that the permissions provided on the ACLs are valid ones.
-  private def eval(path: Path, cmd: AclCommand): F[AclMetaOrRejection] =
+  private def eval(path: Path, cmd: AclCommand): F[MetaOrRejection] =
     agg
       .evaluateS(path.asString, cmd)
       .flatMap {
@@ -88,7 +89,7 @@ class Acls[F[_]](
     */
   def fetch(path: Path, rev: Long, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path, rev).map(filterSelf)
-    else check(path, write) *> fetchUnsafe(path, rev)
+    else check(path, read) *> fetchUnsafe(path, rev)
 
   /**
     * Fetches the entire ACL for a ''path''.
@@ -99,7 +100,7 @@ class Acls[F[_]](
     */
   def fetch(path: Path, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path).map(filterSelf)
-    else check(path, write) *> fetchUnsafe(path)
+    else check(path, read) *> fetchUnsafe(path)
 
   /**
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.
@@ -126,7 +127,7 @@ class Acls[F[_]](
   private def stateToAcl(path: Path, state: AclState): F[ResourceOpt] =
     (state, path) match {
       case (Initial, Path./) =>
-        perms().map { p =>
+        perms.map { p =>
           val acl = AccessControlList(Anonymous -> p.minimum)
           Some(Current(Path./, acl, 0L, Instant.EPOCH, Instant.EPOCH, Anonymous, Anonymous).resource)
         }
@@ -164,12 +165,13 @@ object Acls {
   /**
     * Constructs a new acls aggregate.
     */
-  def aggregate[F[_]: Effect: Timer](implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
+  def aggregate[F[_]: Effect: Timer: Clock](
+      perms: F[Permissions[F]])(implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
     AkkaAggregate.sharded[F](
       "acls",
       AclState.Initial,
       next,
-      evaluate[F],
+      evaluate[F](perms),
       ac.sourcing.passivationStrategy(),
       ac.sourcing.retry.retryStrategy,
       ac.sourcing.akkaSourcingConfig,
@@ -191,9 +193,9 @@ object Acls {
     */
   def apply[F[_]: MonadThrowable](
       agg: Agg[F],
-      perms: Lazy[F, Permissions],
+      perms: F[Permissions[F]],
       index: AclsIndex[F]
-  )(implicit http: HttpConfig, cl: Clock): Acls[F] =
+  )(implicit http: HttpConfig): Acls[F] =
     new Acls(agg, perms, index)
 
   /**
@@ -201,15 +203,14 @@ object Acls {
     *
     * @param perms a lazy reference to the permissions api
     */
-  def apply[F[_]: Effect: Timer](perms: Lazy[F, Permissions])(
+  def apply[F[_]: Effect: Timer: Clock](perms: F[Permissions[F]])(
       implicit
       as: ActorSystem,
       mt: ActorMaterializer,
       http: HttpConfig,
-      ac: AclsConfig,
-      cl: Clock = Clock.systemUTC()
+      ac: AclsConfig
   ): F[Acls[F]] =
-    delay(aggregate, perms, index)
+    delay(aggregate(perms), perms, index)
 
   /**
     * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
@@ -220,9 +221,9 @@ object Acls {
     */
   def delay[F[_]: MonadThrowable](
       agg: F[Agg[F]],
-      perms: Lazy[F, Permissions],
+      perms: F[Permissions[F]],
       index: AclsIndex[F]
-  )(implicit http: HttpConfig, cl: Clock = Clock.systemUTC()): F[Acls[F]] =
+  )(implicit http: HttpConfig): F[Acls[F]] =
     agg.map(apply(_, perms, index))
 
   /**
@@ -231,7 +232,7 @@ object Acls {
     * @param acls the acls API
     */
   def indexer[F[_]](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
-    val indexFn = (events: List[AclEvent]) => {
+    val indexFn = (events: List[Event]) => {
       val value = events.traverse(e => acls.updateIndex(e.path)) *> F.unit
       value.toIO.unsafeToFuture()
     }
@@ -243,69 +244,83 @@ object Acls {
       .retry(ac.indexing.retry.maxCount, ac.indexing.retry.strategy)
       .index[AclEvent](indexFn)
       .build
-      .asInstanceOf[IndexerConfig[AclEvent, Volatile]]
+      .asInstanceOf[IndexerConfig[Event, Volatile]]
     F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
   }
 
-  def next(state: AclState, ev: AclEvent): AclState = (state, ev) match {
-
-    case (Initial, AclReplaced(p, acl, 1L, instant, identity)) =>
-      Current(p, acl, 1L, instant, instant, identity, identity)
-
-    case (Initial, _) => Initial
-
-    case (c: Current, AclReplaced(p, acl, rev, instant, identity)) =>
-      c.copy(p, acl, rev, updatedAt = instant, updatedBy = identity)
-
-    case (c: Current, AclAppended(p, acl, rev, instant, identity)) =>
-      c.copy(p, c.acl ++ acl, rev, updatedAt = instant, updatedBy = identity)
-
-    case (c: Current, AclSubtracted(p, acl, rev, instant, identity)) =>
-      c.copy(p, c.acl -- acl, rev, updatedAt = instant, updatedBy = identity)
-
-    case (c: Current, AclDeleted(p, rev, instant, identity)) =>
-      c.copy(p, AccessControlList.empty, rev, updatedAt = instant, updatedBy = identity)
+  private[acls] def next(state: State, event: Event): AclState = {
+    def replaced(e: AclReplaced): State = state match {
+      case Initial    => Current(e.path, e.acl, 1L, e.instant, e.instant, e.subject, e.subject)
+      case c: Current => c.copy(acl = e.acl, rev = e.rev, updatedAt = e.instant, updatedBy = e.subject)
+    }
+    def appended(e: AclAppended): State = state match {
+      case Initial    => Current(e.path, e.acl, 1L, e.instant, e.instant, e.subject, e.subject)
+      case c: Current => c.copy(acl = c.acl ++ e.acl, rev = e.rev, updatedAt = e.instant, updatedBy = e.subject)
+    }
+    def subtracted(e: AclSubtracted): State = state match {
+      case Initial    => Current(e.path, e.acl, 1L, e.instant, e.instant, e.subject, e.subject)
+      case c: Current => c.copy(acl = c.acl -- e.acl, rev = e.rev, updatedAt = e.instant, updatedBy = e.subject)
+    }
+    def deleted(e: AclDeleted): State = state match {
+      case Initial    => Initial
+      case c: Current => c.copy(acl = empty, rev = e.rev, updatedAt = e.instant, updatedBy = e.subject)
+    }
+    event match {
+      case ev: AclReplaced   => replaced(ev)
+      case ev: AclAppended   => appended(ev)
+      case ev: AclSubtracted => subtracted(ev)
+      case ev: AclDeleted    => deleted(ev)
+    }
   }
 
-  def evaluate[F[_]: Async](state: AclState, command: AclCommand): F[EventOrRejection] = {
-    val F = implicitly[Async[F]]
+  private def evaluate[F[_]: Monad: Clock](perms: F[Permissions[F]])(state: State,
+                                                                     cmd: Command): F[EventOrRejection] = {
+    val F = implicitly[Monad[F]]
+    val C = implicitly[Clock[F]]
+    def accept(f: Instant => Event): F[EventOrRejection] =
+      C.realTime(TimeUnit.MILLISECONDS).map(rtl => Right(f(Instant.ofEpochMilli(rtl))))
+    def reject(rejection: Rejection): F[EventOrRejection] =
+      F.pure(Left(rejection))
+    def acceptChecking(acl: AccessControlList)(f: Instant => Event): F[EventOrRejection] =
+      perms.flatMap(_.effectivePermissionsUnsafe.flatMap {
+        case ps if acl.permissions.subsetOf(ps) => accept(f)
+        case ps                                 => reject(UnknownPermissions(acl.permissions -- ps))
+      })
 
-    def replaced(c: ReplaceAcl): EventOrRejection = state match {
-      case _ if c.acl.hasVoidPermissions  => Left(AclInvalidEmptyPermissions(c.path))
-      case Initial if c.rev == 0          => Right(AclReplaced(c.path, c.acl, 1L, c.instant, c.subject))
-      case Initial                        => Left(AclIncorrectRev(c.path, c.rev))
-      case ss: Current if c.rev != ss.rev => Left(AclIncorrectRev(c.path, c.rev))
-      case _: Current                     => Right(AclReplaced(c.path, c.acl, c.rev + 1, c.instant, c.subject))
+    def replaced(c: ReplaceAcl): F[EventOrRejection] = state match {
+      case _ if c.acl.hasVoidPermissions  => reject(AclCannotContainEmptyPermissionCollection(c.path))
+      case Initial if c.rev == 0L         => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, 1L, _, c.subject))
+      case Initial                        => reject(IncorrectRev(c.path, c.rev))
+      case ss: Current if c.rev != ss.rev => reject(IncorrectRev(c.path, c.rev))
+      case _: Current                     => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, c.rev + 1, _, c.subject))
+    }
+    def append(c: AppendAcl): F[EventOrRejection] = state match {
+      case Initial if c.rev == 0L                 => acceptChecking(c.acl)(AclAppended(c.path, c.acl, c.rev + 1, _, c.subject))
+      case Initial                                => reject(IncorrectRev(c.path, c.rev))
+      case s: Current if c.rev != s.rev           => reject(IncorrectRev(c.path, c.rev))
+      case _: Current if c.acl.hasVoidPermissions => reject(AclCannotContainEmptyPermissionCollection(c.path))
+      case s: Current if s.acl ++ c.acl == s.acl  => reject(NothingToBeUpdated(c.path))
+      case _: Current                             => acceptChecking(c.acl)(AclAppended(c.path, c.acl, c.rev + 1, _, c.subject))
+    }
+    def subtract(c: SubtractAcl): F[EventOrRejection] = state match {
+      case Initial                                => reject(AclNotFound(c.path))
+      case s: Current if c.rev != s.rev           => reject(IncorrectRev(c.path, c.rev))
+      case _: Current if c.acl.hasVoidPermissions => reject(AclCannotContainEmptyPermissionCollection(c.path))
+      case s: Current if s.acl -- c.acl == s.acl  => reject(NothingToBeUpdated(c.path))
+      case _: Current                             => acceptChecking(c.acl)(AclSubtracted(c.path, c.acl, c.rev + 1, _, c.subject))
+    }
+    def delete(c: DeleteAcl): F[EventOrRejection] = state match {
+      case Initial                      => reject(AclNotFound(c.path))
+      case s: Current if c.rev != s.rev => reject(IncorrectRev(c.path, c.rev))
+      case s: Current if s.acl == empty => reject(AclIsEmpty(c.path))
+      case _: Current                   => accept(AclDeleted(c.path, c.rev + 1, _, c.subject))
     }
 
-    def append(c: AppendAcl): EventOrRejection = state match {
-      case Initial                                  => Left(AclNotFound(c.path))
-      case ss: Current if c.rev != ss.rev           => Left(AclIncorrectRev(c.path, c.rev))
-      case _: Current if c.acl.hasVoidPermissions   => Left(AclInvalidEmptyPermissions(c.path))
-      case ss: Current if ss.acl ++ c.acl == ss.acl => Left(NothingToBeUpdated(c.path))
-      case _: Current                               => Right(AclAppended(c.path, c.acl, c.rev + 1, c.instant, c.subject))
-    }
-
-    def subtract(c: SubtractAcl): EventOrRejection = state match {
-      case Initial                                  => Left(AclNotFound(c.path))
-      case ss: Current if c.rev != ss.rev           => Left(AclIncorrectRev(c.path, c.rev))
-      case _: Current if c.acl.hasVoidPermissions   => Left(AclInvalidEmptyPermissions(c.path))
-      case ss: Current if ss.acl -- c.acl == ss.acl => Left(NothingToBeUpdated(c.path))
-      case _: Current                               => Right(AclSubtracted(c.path, c.acl, c.rev + 1, c.instant, c.subject))
-    }
-
-    def delete(c: DeleteAcl): EventOrRejection = state match {
-      case Initial                                          => Left(AclNotFound(c.path))
-      case ss: Current if c.rev != ss.rev                   => Left(AclIncorrectRev(c.path, c.rev))
-      case ss: Current if ss.acl == AccessControlList.empty => Left(AclIsEmpty(c.path))
-      case _: Current                                       => Right(AclDeleted(c.path, c.rev + 1, c.instant, c.subject))
-    }
-
-    command match {
-      case c: ReplaceAcl  => F.pure(replaced(c))
-      case c: AppendAcl   => F.pure(append(c))
-      case c: SubtractAcl => F.pure(subtract(c))
-      case c: DeleteAcl   => F.pure(delete(c))
+    cmd match {
+      case c: ReplaceAcl  => replaced(c)
+      case c: AppendAcl   => append(c)
+      case c: SubtractAcl => subtract(c)
+      case c: DeleteAcl   => delete(c)
     }
   }
 }

@@ -32,14 +32,15 @@ object AclState {
     * @param updatedBy the identity that last updated the resource
     */
 //noinspection NameBooleanParameters
-  final case class Current(path: Path,
-                           acl: AccessControlList,
-                           rev: Long,
-                           createdAt: Instant,
-                           updatedAt: Instant,
-                           createdBy: Subject,
-                           updatedBy: Subject)
-      extends AclState {
+  final case class Current(
+      path: Path,
+      acl: AccessControlList,
+      rev: Long,
+      createdAt: Instant,
+      updatedAt: Instant,
+      createdBy: Subject,
+      updatedBy: Subject
+  ) extends AclState {
 
     /**
       * @return the current state in a [[Resource]] representation

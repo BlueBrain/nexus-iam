@@ -67,7 +67,7 @@ class RealmsSpec
     val m = mock[Acls[IO]]
     m.hasPermission(isA[Path], read, isA[Boolean])(caller) shouldReturn IO.pure(true)
     m.hasPermission(isA[Path], write, isA[Boolean])(caller) shouldReturn IO.pure(true)
-    (m, () => IO.pure(m))
+    (m, IO.pure(m))
   }
 
   val first      = Label.unsafe("first")

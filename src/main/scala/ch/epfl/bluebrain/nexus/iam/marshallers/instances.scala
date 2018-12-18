@@ -127,12 +127,12 @@ object instances extends FailFastCirceSupport {
   implicit val aclStatusCode: RejectionStatusCode[AclRejection] =
     new RejectionStatusCode[AclRejection] {
       override def apply(rej: AclRejection): StatusCode = rej match {
-        case _: NothingToBeUpdated         => StatusCodes.BadRequest
-        case _: AclIsEmpty                 => StatusCodes.BadRequest
-        case _: AclInvalidEmptyPermissions => StatusCodes.BadRequest
-        case _: AclNotFound                => StatusCodes.NotFound
-        case _: AclIncorrectRev            => StatusCodes.Conflict
-        case AclMissingSubject             => StatusCodes.Unauthorized
+        case _: NothingToBeUpdated                        => StatusCodes.BadRequest
+        case _: AclIsEmpty                                => StatusCodes.BadRequest
+        case _: AclCannotContainEmptyPermissionCollection => StatusCodes.BadRequest
+        case _: AclNotFound                               => StatusCodes.NotFound
+        case _: AclRejection.IncorrectRev                 => StatusCodes.Conflict
+        case _: UnknownPermissions                        => StatusCodes.BadRequest
       }
     }
 
@@ -146,7 +146,7 @@ object instances extends FailFastCirceSupport {
         case CannotAppendEmptyCollection            => StatusCodes.BadRequest
         case CannotReplaceWithEmptyCollection       => StatusCodes.BadRequest
         case CannotDeleteMinimumCollection          => StatusCodes.BadRequest
-        case _: IncorrectRev                        => StatusCodes.Conflict
+        case _: PermissionsRejection.IncorrectRev   => StatusCodes.Conflict
       }
     }
 

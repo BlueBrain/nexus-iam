@@ -45,10 +45,9 @@ import scala.util.Try
   * @param agg   the realms aggregate
   * @param acls  a lazy acls api
   * @param index an index implementation for realms
-  * @param http  the application http configurations
   * @tparam F    the effect type
   */
-class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: RealmIndex[F])(implicit http: HttpConfig) {
+class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F])(implicit http: HttpConfig) {
 
   private val F = implicitly[MonadThrowable[F]]
 
@@ -191,12 +190,12 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
     stateOf(id, optRev).map(_.optResource)
 
   private def check(id: Label, permission: Permission)(implicit caller: Caller): F[Unit] =
-    acls()
+    acls
       .flatMap(_.hasPermission(id.toPath, permission))
       .ifM(F.unit, F.raiseError(AccessDenied(id.toIri(http.realmsIri), permission)))
 
   private def check(permission: Permission)(implicit caller: Caller): F[Unit] =
-    acls()
+    acls
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(http.realmsIri, permission)))
 
@@ -271,7 +270,7 @@ object Realms {
     */
   def apply[F[_]: MonadThrowable](
       agg: Agg[F],
-      acls: Lazy[F, Acls],
+      acls: F[Acls[F]],
       index: RealmIndex[F]
   )(implicit http: HttpConfig): Realms[F] =
     new Realms(agg, acls, index)
@@ -281,7 +280,7 @@ object Realms {
     *
     * @param acls a lazy reference to the ACL api
     */
-  def apply[F[_]: Effect: Timer: Clock](acls: Lazy[F, Acls])(
+  def apply[F[_]: Effect: Timer: Clock](acls: F[Acls[F]])(
       implicit
       as: ActorSystem,
       mt: ActorMaterializer,
@@ -300,7 +299,7 @@ object Realms {
     */
   def delay[F[_]: MonadThrowable](
       agg: F[Agg[F]],
-      acls: Lazy[F, Acls],
+      acls: F[Acls[F]],
       index: RealmIndex[F]
   )(implicit http: HttpConfig): F[Realms[F]] =
     agg.map(apply(_, acls, index))

@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import java.time.{Clock, Instant, ZoneId}
 
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, write => writeAcls}
+import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, read => readAcls}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
@@ -56,7 +56,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user,
                 instant,
                 user2,
-                AccessControlList(user2 -> Set(read, other), group -> Set(write, writeAcls)))
+                AccessControlList(user2 -> Set(read, other), group -> Set(write, readAcls)))
     val aclOrg2 =
       ResourceF(http.aclsIri + "id4",
                 4L,
@@ -66,7 +66,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user,
                 instant,
                 user2,
-                AccessControlList(user -> Set(other, writeAcls)))
+                AccessControlList(user -> Set(other, readAcls)))
     val aclProject1_org2 =
       ResourceF(http.aclsIri + "id5",
                 5L,
@@ -96,7 +96,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                 user,
                 instant,
                 user2,
-                AccessControlList(user2 -> Set(other, writeAcls), group -> Set(read)))
+                AccessControlList(user2 -> Set(other, readAcls), group -> Set(read)))
 
     val options = List(true -> true, false -> false, true -> false, false -> true)
 
@@ -150,7 +150,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
 
       index.get(Path("/org1").right.value, ancestors = true, self = true)(Set(group)) shouldEqual
         AccessControlLists(
-          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, writeAcls))))
+          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, readAcls))))
     }
 
     "replace ACLs on /org1/proj1" in {
@@ -172,7 +172,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
 
       index.get("org1" / "proj1", ancestors = true, self = true)(Set(group)) shouldEqual
         AccessControlLists(
-          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group           -> Set(write, writeAcls))),
+          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group           -> Set(write, readAcls))),
           "org1" / "proj1"          -> aclProject1_org1.map(_ => AccessControlList(group -> Set(read)))
         )
     }
@@ -219,7 +219,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
 
     "fetch ACLs on /*" in {
       index.get(Path("/*").right.value, ancestors = true, self = true)(Set(user2)) shouldEqual
-        AccessControlLists(/                         -> aclRoot.map(_ => AccessControlList(user2 -> Set(other, writeAcls))),
+        AccessControlLists(/                         -> aclRoot.map(_ => AccessControlList(user2 -> Set(other, readAcls))),
                            Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(user2  -> Set(read, other))))
 
       index.get(Path("/*").right.value, ancestors = true, self = false)(Set(user2)) shouldEqual
@@ -282,7 +282,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
       index.get("org1" / "proj2", ancestors = true, self = true)(Set(user, group)) shouldEqual
         AccessControlLists(
           /                         -> aclRoot.map(_ => AccessControlList(group -> Set(read))),
-          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, writeAcls))),
+          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, readAcls))),
           "org1" / "proj2"          -> aclProject2_org1
         )
 
@@ -322,7 +322,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
         AccessControlLists(
           "org1" / "proj1"          -> aclProject1_org1.map(_ => AccessControlList(group -> Set(read))),
           "org2" / "proj1"          -> aclProject1_org2,
-          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, writeAcls))),
+          Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(group -> Set(write, readAcls))),
           /                         -> aclRoot.map(_ => AccessControlList(group -> Set(read)))
         )
 
@@ -375,7 +375,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
                            /                         -> aclRoot)
 
       index.get("org1" / "*", ancestors = true, self = true)(Set(user2)) shouldEqual
-        AccessControlLists(/                         -> aclRoot.map(_ => AccessControlList(user2 -> Set(other, writeAcls))),
+        AccessControlLists(/                         -> aclRoot.map(_ => AccessControlList(user2 -> Set(other, readAcls))),
                            Path("/org1").right.value -> aclOrg.map(_ => AccessControlList(user2  -> Set(read, other))))
 
     }
@@ -385,7 +385,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
         AccessControlLists(
           "org1" / "proj1"          -> aclProject1_org1.map(_ => AccessControlList(user -> Set(read))),
           "org1" / "proj2"          -> aclProject2_org1.map(_ => AccessControlList(user -> Set(write))),
-          Path("/org2").right.value -> aclOrg2.map(_ => AccessControlList(user          -> Set(other, writeAcls)))
+          Path("/org2").right.value -> aclOrg2.map(_ => AccessControlList(user          -> Set(other, readAcls)))
         )
 
       index.get("*" / "*", ancestors = false, self = true)(Set(user)) shouldEqual
@@ -399,7 +399,7 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
           "org1" / "proj1"          -> aclProject1_org1.map(_ => AccessControlList(user -> Set(read))),
           "org1" / "proj2"          -> aclProject2_org1.map(_ => AccessControlList(user -> Set(write))),
           "org2" / "proj1"          -> aclProject1_org2,
-          Path("/org2").right.value -> aclOrg2.map(_ => AccessControlList(user -> Set(other, writeAcls)))
+          Path("/org2").right.value -> aclOrg2.map(_ => AccessControlList(user -> Set(other, readAcls)))
         )
 
       index.get("*" / "*", ancestors = false, self = false)(Set(user)) shouldEqual

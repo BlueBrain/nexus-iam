@@ -52,14 +52,14 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
       implicit identities: Set[Identity]): F[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
-      def containsAclsWrite(acl: AccessControlList): Boolean =
-        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(write) }
+      def containsAclsRead(acl: AccessControlList): Boolean =
+        acl.value.exists { case (ident, perms) => identities.contains(ident) && perms.contains(read) }
 
       val (_, result) = currentAcls.sorted.value
         .foldLeft(Set.empty[Path] -> AccessControlLists.empty) {
-          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith)  => ownPaths     -> (acc + entry)
-          case ((ownPaths, acc), entry @ (p, acl)) if containsAclsWrite(acl.value) => ownPaths + p -> (acc + entry)
-          case ((ownPaths, acc), (p, acl))                                         => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
+          case ((ownPaths, acc), entry @ (p, _)) if ownPaths.exists(p.startsWith) => ownPaths     -> (acc + entry)
+          case ((ownPaths, acc), entry @ (p, acl)) if containsAclsRead(acl.value) => ownPaths + p -> (acc + entry)
+          case ((ownPaths, acc), (p, acl))                                        => ownPaths     -> (acc + (p -> acl.map(_.filter(identities))))
         }
       result
     }

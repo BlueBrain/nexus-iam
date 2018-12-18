@@ -114,7 +114,7 @@ class AclsRoutesSpec
       ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, clock.instant(), user, clock.instant(), user)
 
     "create ACL" in {
-      acls.replace(path, 0L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
+      acls.replace(path, 0L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
 
       Put(s"/v1/acls/myorg/myproj", aclJson) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -123,7 +123,7 @@ class AclsRoutesSpec
     }
 
     "append ACL" in {
-      acls.append(path, 1L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
+      acls.append(path, 1L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Append"))
       Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -132,7 +132,7 @@ class AclsRoutesSpec
     }
 
     "subtract ACL" in {
-      acls.subtract(path, 1L, acl) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
+      acls.subtract(path, 1L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Subtract"))
       Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
@@ -141,7 +141,7 @@ class AclsRoutesSpec
     }
 
     "delete ACL" in {
-      acls.delete(path, 1L) shouldReturn Task.pure[AclMetaOrRejection](Right(responseMeta))
+      acls.delete(path, 1L) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
       Delete(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.OK

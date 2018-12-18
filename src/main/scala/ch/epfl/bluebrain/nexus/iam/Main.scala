@@ -70,9 +70,9 @@ object Main {
       ps <- Deferred[Task, Permissions[Task]]
       as <- Deferred[Task, Acls[Task]]
       rs <- Deferred[Task, Realms[Task]]
-      pt <- Permissions[Task](() => as.get)
-      at <- Acls[Task](() => ps.get)
-      rt <- Realms[Task](() => as.get)
+      pt <- Permissions[Task](as.get)
+      at <- Acls[Task](ps.get)
+      rt <- Realms[Task](as.get)
       _  <- ps.complete(pt)
       _  <- as.complete(at)
       _  <- rs.complete(rt)
