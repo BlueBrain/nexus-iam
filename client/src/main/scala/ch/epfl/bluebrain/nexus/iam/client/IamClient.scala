@@ -47,20 +47,6 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
         requestFrom(path :: (config.prefix / "acls"), Query("ancestors" -> ancestors.toString, "self" -> self.toString))
       aclsClient(req).recoverWith { case e => recover(e, path) }
     }
-
-    /**
-      * Checks the presence of a specific ''permission'' on a particular ''path''.
-      *
-      * @param path        the target resource
-      * @param permission  the permission to check
-      * @param credentials an optionally available token
-      */
-    def authorizeOn(path: Path, permission: Permission)(implicit credentials: Option[AuthToken]): F[Unit] =
-      list(path, ancestors = true, self = true).flatMap { acls =>
-        val found = acls.value.exists { case (_, acl) => acl.value.permissions.contains(permission) }
-        if (found) F.unit
-        else F.raiseError(UnauthorizedAccess)
-      }
   }
 
   object identities {
@@ -76,6 +62,20 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
         .getOrElse(F.pure(Caller.anonymous))
     }
   }
+
+  /**
+    * Checks the presence of a specific ''permission'' on a particular ''path''.
+    *
+    * @param path        the target resource
+    * @param permission  the permission to check
+    * @param credentials an optionally available token
+    */
+  def authorizeOn(path: Path, permission: Permission)(implicit credentials: Option[AuthToken]): F[Unit] =
+    acls.list(path, ancestors = true, self = true).flatMap { acls =>
+      val found = acls.value.exists { case (_, acl) => acl.value.permissions.contains(permission) }
+      if (found) F.unit
+      else F.raiseError(UnauthorizedAccess)
+    }
 
   private def recover[A](th: Throwable, path: Path): F[A] = th match {
     case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
