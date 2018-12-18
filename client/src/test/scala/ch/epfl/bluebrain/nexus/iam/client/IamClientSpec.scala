@@ -66,7 +66,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true").addCredentials(token)) shouldReturn
           Future(expected)
-        client.getAcls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.acls.list("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
         client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
         client.authorizeOn("a" / "b", Permission.unsafe("write")).failed.futureValue shouldEqual UnauthorizedAccess
       }
@@ -76,7 +76,7 @@ class IamClientSpec
         val expected                             = AccessControlLists(/ -> aclWithMeta)
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn Future(expected)
-        client.getAcls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.acls.list("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
         client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
       }
 
@@ -85,7 +85,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        client.getAcls("a" / "b", ancestors = true, self = true).failed.futureValue shouldEqual UnauthorizedAccess
+        client.acls.list("a" / "b", ancestors = true, self = true).failed.futureValue shouldEqual UnauthorizedAccess
         client.authorizeOn("a" / "b", Permission.unsafe("read")).failed.futureValue shouldEqual UnauthorizedAccess
       }
 
@@ -95,11 +95,11 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
           Future.failed(expected)
-        client.getAcls("a" / "b", ancestors = false, self = true).failed.futureValue shouldEqual expected
+        client.acls.list("a" / "b", ancestors = false, self = true).failed.futureValue shouldEqual expected
       }
     }
 
-    "fetching caller" should {
+    "fetching identities" should {
 
       "succeed with token" in {
         implicit val tokenOpt = Option(AuthToken("token"))
@@ -107,23 +107,23 @@ class IamClientSpec
         val user              = User("mysubject", "myrealm")
         val expected          = Caller(user, Set(user, Anonymous))
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future(expected)
-        client.getCaller.futureValue shouldEqual expected
+        client.identities.fetch.futureValue shouldEqual expected
       }
 
       "succeed without token" in {
         implicit val tokenOpt = None
-        client.getCaller.futureValue shouldEqual Caller.anonymous
+        client.identities.fetch.futureValue shouldEqual Caller.anonymous
       }
 
       "fail with UnauthorizedAccess" in {
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        client.getCaller.failed.futureValue shouldEqual UnauthorizedAccess
+        client.identities.fetch.failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "fail with other error" in {
@@ -131,9 +131,9 @@ class IamClientSpec
         val token             = OAuth2BearerToken("token")
         val expected          = new RuntimeException()
 
-        callerClient(Get("http://example.com/some/v1/oauth2/user").addCredentials(token)) shouldReturn
+        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future.failed(expected)
-        client.getCaller.failed.futureValue shouldEqual expected
+        client.identities.fetch.failed.futureValue shouldEqual expected
       }
     }
   }
