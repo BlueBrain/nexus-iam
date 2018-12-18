@@ -154,7 +154,7 @@ object Permissions {
       next(pc),
       evaluate[F](pc),
       pc.sourcing.passivationStrategy(),
-      pc.sourcing.retry.retryStrategy,
+      pc.sourcing.retryStrategy,
       pc.sourcing.akkaSourcingConfig,
       pc.sourcing.shards
     )

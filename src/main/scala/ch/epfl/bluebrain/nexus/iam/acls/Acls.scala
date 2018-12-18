@@ -173,7 +173,7 @@ object Acls {
       next,
       evaluate[F](perms),
       ac.sourcing.passivationStrategy(),
-      ac.sourcing.retry.retryStrategy,
+      ac.sourcing.retryStrategy,
       ac.sourcing.akkaSourcingConfig,
       ac.sourcing.shards
     )

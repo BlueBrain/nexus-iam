@@ -238,7 +238,7 @@ object Realms {
       (_, resource) => resource.rev,
       rc.keyValueStore.askTimeout,
       rc.keyValueStore.consistencyTimeout,
-      rc.keyValueStore.retry.retryStrategy
+      rc.keyValueStore.retryStrategy
     )
 
   /**
@@ -256,7 +256,7 @@ object Realms {
       next,
       evaluate[F],
       rc.sourcing.passivationStrategy(),
-      rc.sourcing.retry.retryStrategy,
+      rc.sourcing.retryStrategy,
       rc.sourcing.akkaSourcingConfig,
       rc.sourcing.shards
     )

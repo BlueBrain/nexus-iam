@@ -1,8 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.config
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
-import akka.util.Timeout
 import cats.ApplicativeError
 import cats.effect.Timer
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
@@ -14,13 +12,9 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
 import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
-import ch.epfl.bluebrain.nexus.sourcing.akka.{
-  AkkaSourcingConfig,
-  PassivationStrategy,
-  RetryStrategy => SourcingRetryStrategy
-}
+import ch.epfl.bluebrain.nexus.sourcing.akka.{RetryStrategy => SourcingRetryStrategy, SourcingConfig}
+import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig.RetryStrategyConfig
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 /**
@@ -124,103 +118,6 @@ object AppConfig {
   final case class IndexingConfig(batch: Int, batchTimeout: FiniteDuration, retry: Retry)
 
   /**
-    * Partial configuration for aggregate passivation strategy.
-    *
-    * @param lapsedSinceLastInteraction   duration since last interaction with the aggregate after which the passivation
-    *                                     should occur
-    * @param lapsedSinceRecoveryCompleted duration since the aggregate recovered after which the passivation should
-    *                                     occur
-    */
-  final case class PassivationStrategyConfig(
-      lapsedSinceLastInteraction: Option[FiniteDuration],
-      lapsedSinceRecoveryCompleted: Option[FiniteDuration],
-  )
-
-  /**
-    * Retry strategy configuration.
-    *
-    * @param strategy     the type of strategy; possible options are "never", "once" and "exponential"
-    * @param initialDelay the initial delay before retrying that will be multiplied with the 'factor' for each attempt
-    *                     (applicable only for strategy "exponential")
-    * @param maxRetries   maximum number of retries in case of failure (applicable only for strategy "exponential")
-    * @param factor       the exponential factor (applicable only for strategy "exponential")
-    */
-  final case class RetryStrategyConfig(
-      strategy: String,
-      initialDelay: FiniteDuration,
-      maxRetries: Int,
-      factor: Int
-  ) {
-
-    /**
-      * Computes a retry strategy from the provided configuration.
-      */
-    def retryStrategy[F[_]: Timer, E](implicit F: ApplicativeError[F, E]): SourcingRetryStrategy[F] =
-      strategy match {
-        case "exponential" =>
-          SourcingRetryStrategy.exponentialBackoff(initialDelay, maxRetries, factor)
-        case "once" =>
-          SourcingRetryStrategy.once
-        case _ =>
-          SourcingRetryStrategy.never
-      }
-  }
-
-  /**
-    * Sourcing configuration.
-    *
-    * @param askTimeout                        timeout for the message exchange with the aggregate actor
-    * @param queryJournalPlugin                the query (read) plugin journal id
-    * @param commandEvaluationTimeout          timeout for evaluating commands
-    * @param commandEvaluationExecutionContext the execution context where commands are to be evaluated
-    * @param shards                            the number of shards for the aggregate
-    * @param passivation                       the passivation strategy configuration
-    * @param retry                             the retry strategy configuration
-    */
-  final case class SourcingConfig(
-      askTimeout: FiniteDuration,
-      queryJournalPlugin: String,
-      commandEvaluationTimeout: FiniteDuration,
-      commandEvaluationExecutionContext: String,
-      shards: Int,
-      passivation: PassivationStrategyConfig,
-      retry: RetryStrategyConfig,
-  ) {
-
-    /**
-      * Computes an [[AkkaSourcingConfig]] using an implicitly available actor system.
-      *
-      * @param as the underlying actor system
-      */
-    def akkaSourcingConfig(implicit as: ActorSystem): AkkaSourcingConfig =
-      AkkaSourcingConfig(
-        askTimeout = Timeout(askTimeout),
-        readJournalPluginId = queryJournalPlugin,
-        commandEvaluationMaxDuration = commandEvaluationTimeout,
-        commandEvaluationExecutionContext =
-          if (commandEvaluationExecutionContext == "akka") as.dispatcher
-          else ExecutionContext.global
-      )
-
-    /**
-      * Computes a passivation strategy from the provided configuration and the passivation evaluation function.
-      *
-      * @param shouldPassivate whether aggregate should passivate after a message exchange
-      * @tparam State   the type of the aggregate state
-      * @tparam Command the type of the aggregate command
-      */
-    def passivationStrategy[State, Command](
-        shouldPassivate: (String, String, State, Option[Command]) => Boolean =
-          (_: String, _: String, _: State, _: Option[Command]) => false
-    ): PassivationStrategy[State, Command] =
-      PassivationStrategy(
-        passivation.lapsedSinceLastInteraction,
-        passivation.lapsedSinceRecoveryCompleted,
-        shouldPassivate
-      )
-  }
-
-  /**
     * KeyValueStore configuration.
     *
     * @param askTimeout         the maximum duration to wait for the replicator to reply
@@ -231,7 +128,20 @@ object AppConfig {
       askTimeout: FiniteDuration,
       consistencyTimeout: FiniteDuration,
       retry: RetryStrategyConfig,
-  )
+  ) {
+    /**
+      * Computes a retry strategy from the provided configuration.
+      */
+    def retryStrategy[F[_]: Timer, E](implicit F: ApplicativeError[F, E]): SourcingRetryStrategy[F] =
+      retry.strategy match {
+        case "exponential" =>
+          SourcingRetryStrategy.exponentialBackoff(retry.initialDelay, retry.maxRetries, retry.factor)
+        case "once" =>
+          SourcingRetryStrategy.once
+        case _ =>
+          SourcingRetryStrategy.never
+      }
+  }
 
   /**
     * ACLs configuration
