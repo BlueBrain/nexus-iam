@@ -129,6 +129,7 @@ object AppConfig {
       consistencyTimeout: FiniteDuration,
       retry: RetryStrategyConfig,
   ) {
+
     /**
       * Computes a retry strategy from the provided configuration.
       */
