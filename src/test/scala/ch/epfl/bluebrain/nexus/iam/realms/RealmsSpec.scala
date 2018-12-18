@@ -15,7 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Label, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
@@ -239,16 +239,17 @@ class RealmsSpec
       val user         = User(subject, first.value)
       val groupStrings = Set("g1", "g2")
       val groups       = groupStrings.map(str => Group(str, first.value))
+      val auth         = Authenticated(first.value)
       "the claimset contains no groups" in {
         val user = User(subject, first.value)
-        realms.caller(token(subject)).ioValue shouldEqual Caller(user, Set(user, Anonymous))
+        realms.caller(token(subject)).ioValue shouldEqual Caller(user, Set(user, Anonymous, auth))
       }
       "the claimset contains comma separated group values" in {
-        val expected = Caller(user, Set(user, Anonymous) ++ groups)
+        val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
         realms.caller(token(subject, groups = Some(groupStrings), useCommas = true)).ioValue shouldEqual expected
       }
       "the claimset contains array group values" in {
-        val expected = Caller(user, Set(user, Anonymous) ++ groups)
+        val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
         realms.caller(token(subject, groups = Some(groupStrings), useCommas = false)).ioValue shouldEqual expected
       }
     }

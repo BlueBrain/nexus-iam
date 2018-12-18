@@ -23,7 +23,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
@@ -152,7 +152,8 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
     def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
-      val subject = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
+      val authenticated = Authenticated(realmId.value)
+      val subject       = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
       val groups = Try(claimsSet.getStringArrayClaim("groups"))
         .filter(_ != null)
         .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }
@@ -162,7 +163,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
       subject.map { sub =>
         val user                    = User(sub, realmId.value)
         val groupSet: Set[Identity] = groups.map(g => Group(g, realmId.value))
-        Caller(user, groupSet + Anonymous + user)
+        Caller(user, groupSet + Anonymous + user + authenticated)
       }
     }
 
