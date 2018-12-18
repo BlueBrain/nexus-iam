@@ -1,5 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
+import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 
 @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
@@ -14,21 +15,21 @@ object AclRejection {
     * @param path the target path for the ACL
     */
   final case class NothingToBeUpdated(path: Path)
-      extends AclRejection(s"ACL on path '$path' will not change after applying the provided update.")
+      extends AclRejection(s"The ACL on path '$path' will not change after applying the provided update.")
 
   /**
     * Signals an attempt to modify ACLs that do not exists.
     *
     * @param path the target path for the ACL
     */
-  final case class AclNotFound(path: Path) extends AclRejection(s"ACL on path '$path' does not exists.")
+  final case class AclNotFound(path: Path) extends AclRejection(s"The ACL on path '$path' does not exists.")
 
   /**
     * Signals an attempt to delete ACLs that are already empty.
     *
     * @param path the target path for the ACL
     */
-  final case class AclIsEmpty(path: Path) extends AclRejection(s"ACL on path '$path' is empty.")
+  final case class AclIsEmpty(path: Path) extends AclRejection(s"The ACL on path '$path' is empty.")
 
   /**
     * Signals an attempt to interact with an ACL collection with an incorrect revision.
@@ -36,7 +37,7 @@ object AclRejection {
     * @param path the target path for the ACL
     * @param rev the revision provided
     */
-  final case class AclIncorrectRev(path: Path, rev: Long)
+  final case class IncorrectRev(path: Path, rev: Long)
       extends AclRejection(s"ACL on path '$path' with incorrect revision '$rev' provided.")
 
   /**
@@ -44,14 +45,15 @@ object AclRejection {
     *
     * @param path the target path for the ACL
     */
-  final case class AclInvalidEmptyPermissions(path: Path)
-      extends AclRejection(s"ACL on path '$path' cannot contain void permissions.")
+  final case class AclCannotContainEmptyPermissionCollection(path: Path)
+      extends AclRejection(s"The ACL for path '$path' cannot contain an empty permission collection.")
 
   /**
-    * Signals an attempt to interact with an ACL collection without having a subject identity.
+    * Signals that an acl operation could not be performed because of unknown referenced permissions.
     *
+    * @param permissions the unknown permissions
     */
-  final case object AclMissingSubject
-      extends AclRejection("You don't have a valid subject to interact with the ACL API.")
-
+  final case class UnknownPermissions(permissions: Set[Permission])
+      extends AclRejection(
+        s"Some of the permissions specified are not known: '${permissions.mkString("\"", ", ", "\"")}'")
 }

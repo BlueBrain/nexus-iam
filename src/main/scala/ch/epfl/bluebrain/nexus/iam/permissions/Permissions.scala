@@ -30,7 +30,7 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
   */
 class Permissions[F[_]: MonadThrowable](
     agg: Agg[F],
-    acls: Lazy[F, Acls]
+    acls: F[Acls[F]]
 )(implicit http: HttpConfig, pc: PermissionsConfig) {
   private val F   = implicitly[MonadThrowable[F]]
   private val pid = "permissions"
@@ -45,7 +45,7 @@ class Permissions[F[_]: MonadThrowable](
     * @return the current permissions as a resource
     */
   def fetch(implicit caller: Caller): F[Resource] =
-    check(read) *> stateOf(None).map(_.resource)
+    check(read) *> fetchUnsafe
 
   /**
     * @param rev the permissions revision
@@ -59,6 +59,18 @@ class Permissions[F[_]: MonadThrowable](
     */
   def effectivePermissions(implicit caller: Caller): F[Set[Permission]] =
     fetch.map(_.value)
+
+  /**
+    * @return the current permissions as a resource without checking permissions
+    */
+  def fetchUnsafe: F[Resource] =
+    stateOf(None).map(_.resource)
+
+  /**
+    * @return the current permissions collection without checking permissions
+    */
+  def effectivePermissionsUnsafe: F[Set[Permission]] =
+    fetchUnsafe.map(_.value)
 
   /**
     * Replaces the current collection of permissions with the provided collection.
@@ -111,7 +123,7 @@ class Permissions[F[_]: MonadThrowable](
       }
 
   private def check(permission: Permission)(implicit caller: Caller): F[Unit] =
-    acls()
+    acls
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(id, permission)))
 
@@ -142,7 +154,7 @@ object Permissions {
       next(pc),
       evaluate[F](pc),
       pc.sourcing.passivationStrategy(),
-      pc.sourcing.retry.retryStrategy,
+      pc.sourcing.retryStrategy,
       pc.sourcing.akkaSourcingConfig,
       pc.sourcing.shards
     )
@@ -153,7 +165,7 @@ object Permissions {
     * @param agg  the permissions aggregate
     * @param acls a lazy reference to the ACL api
     */
-  def apply[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls])(
+  def apply[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]])(
       implicit
       http: HttpConfig,
       pc: PermissionsConfig
@@ -165,7 +177,7 @@ object Permissions {
     *
     * @param acls a lazy reference to the ACL api
     */
-  def apply[F[_]: Effect: Timer](acls: Lazy[F, Acls])(
+  def apply[F[_]: Effect: Timer](acls: F[Acls[F]])(
       implicit
       as: ActorSystem,
       mt: ActorMaterializer,
@@ -180,7 +192,7 @@ object Permissions {
     * @param agg  a lazy reference to the permissions aggregate
     * @param acls a lazy reference to the ACL api
     */
-  def delay[F[_]: MonadThrowable](agg: F[Agg[F]], acls: Lazy[F, Acls])(
+  def delay[F[_]: MonadThrowable](agg: F[Agg[F]], acls: F[Acls[F]])(
       implicit
       http: HttpConfig,
       pc: PermissionsConfig

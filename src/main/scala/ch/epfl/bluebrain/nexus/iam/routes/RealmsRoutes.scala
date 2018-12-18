@@ -50,7 +50,7 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
       pathPrefix(http.prefix / "realms") {
         authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
           concat(
-            (get & pathEnd) {
+            (get & pathEndOrSingleSlash) {
               trace("listRealms") {
                 complete(realms.list.runToFuture)
               }

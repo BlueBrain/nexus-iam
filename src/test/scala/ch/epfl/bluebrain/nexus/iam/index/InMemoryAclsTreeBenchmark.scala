@@ -4,7 +4,7 @@ import java.time.{Clock, Instant, ZoneId}
 
 import cats.Id
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import ch.epfl.bluebrain.nexus.iam.acls._
+import ch.epfl.bluebrain.nexus.iam.acls.{State => _, _}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}

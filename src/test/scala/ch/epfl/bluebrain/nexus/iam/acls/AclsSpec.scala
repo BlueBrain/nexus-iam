@@ -1,9 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import java.time.{Clock, Instant, ZoneId}
+import java.time.Instant
 
 import akka.stream.ActorMaterializer
-import cats.effect.{ContextShift, IO, Timer}
+import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
@@ -23,6 +23,7 @@ import org.mockito.IdiomaticMockito
 import org.scalatest._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.MILLISECONDS
 import scala.util.Random
 
 //noinspection TypeAnnotation,NameBooleanParameters
@@ -44,17 +45,24 @@ class AclsSpec
   implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)
   implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
 
+  private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
+  private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
+
   val (mperms, perms) = {
     val m = mock[Permissions[IO]]
     m.minimum shouldReturn appConfig.permissions.minimum
-    (m, () => IO.pure(m))
+    m.effectivePermissionsUnsafe shouldReturn IO.pure(permissions)
+    (m, IO.pure(m))
   }
 
-  private implicit val clock: Clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private val acls                         = Acls[IO](perms).ioValue
-  private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
-  private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet
-  private val instant                      = clock.instant()
+  val instant: Instant = Instant.ofEpochSecond(3600)
+  implicit val clock: Clock[IO] = {
+    val m = mock[Clock[IO]]
+    m.realTime(MILLISECONDS) shouldReturn IO.pure(instant.toEpochMilli)
+    m
+  }
+
+  private val acls = Acls[IO](perms).ioValue
 
   private def pathIriString(path: Path): String =
     s"${http.publicIri.asUri}/${http.prefix}/acls${path.asString}"
@@ -69,6 +77,8 @@ class AclsSpec
     val permsUser1         = Random.shuffle(permissions).take(1 + genInt(max = 299))
     val permsUser2         = Random.shuffle(permissions).take(1 + genInt(max = 299))
     val acl                = AccessControlList(user1 -> permsUser1, user2 -> permsUser2)
+    val unknownPerm        = Permission(genString(length = 8)).value
+    val unknownAcl         = AccessControlList(user1 -> (permsUser1 + unknownPerm))
   }
 
   trait AppendCtx extends Context {
@@ -95,20 +105,20 @@ class AclsSpec
         acls.fetch(path, 10L, self = false).ioValue shouldEqual None
       }
 
-      "fail to fetch by revision when using self=false without write permissions" in new Context {
+      "fail to fetch by revision when using self=false without read permissions" in new Context {
         val failed = acls
           .fetch(path, 1L, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
         failed.resource.asString shouldEqual pathIriString(path)
-        failed.permission shouldEqual write
+        failed.permission shouldEqual read
       }
 
-      "fail to fetch when using self=false without write permissions" in new Context {
+      "fail to fetch when using self=false without read permissions" in new Context {
         val failed = acls
           .fetch(path, self = false)(Caller(createdBy, Set(createdBy, Group("admin", genString()))))
           .failed[AccessDenied]
         failed.resource.asString shouldEqual pathIriString(path)
-        failed.permission shouldEqual write
+        failed.permission shouldEqual read
       }
     }
 
@@ -123,12 +133,12 @@ class AclsSpec
       }
 
       "reject when wrong revision" in new Context {
-        acls.replace(path, 1L, acl).ioValue shouldEqual Left(AclIncorrectRev(path, 1L))
+        acls.replace(path, 1L, acl).ioValue shouldEqual Left(IncorrectRev(path, 1L))
       }
 
       "reject when empty permissions" in new Context {
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.replace(path, 0L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
+        acls.replace(path, 0L, emptyAcls).rejected[AclCannotContainEmptyPermissionCollection].path shouldEqual path
       }
 
       "successfully be created" in new Context {
@@ -156,8 +166,12 @@ class AclsSpec
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.replace(path, rev, replaced).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
+          acls.replace(path, rev, replaced).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
         }
+      }
+
+      "reject changes with unknown permissions" in new Context {
+        acls.replace(path, 0L, unknownAcl).rejected[UnknownPermissions].permissions shouldEqual Set(unknownPerm)
       }
     }
 
@@ -189,7 +203,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          val rej = acls.append(path, rev, aclAppend).rejected[AclIncorrectRev]
+          val rej = acls.append(path, rev, aclAppend).rejected[IncorrectRev]
           rej.path shouldEqual path
           rej.rev shouldEqual rev
         }
@@ -199,7 +213,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.append(path, 1L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
+        acls.append(path, 1L, emptyAcls).rejected[AclCannotContainEmptyPermissionCollection].path shouldEqual path
       }
 
       "successfully be appended" in new AppendCtx {
@@ -211,6 +225,10 @@ class AclsSpec
 
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => aclAppend ++ acl)
 
+      }
+
+      "reject changes with unknown permissions" in new AppendCtx {
+        acls.append(path, 0L, unknownAcl).rejected[UnknownPermissions].permissions shouldEqual Set(unknownPerm)
       }
     }
 
@@ -237,7 +255,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.subtract(path, rev, acl).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
+          acls.subtract(path, rev, acl).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
         }
       }
 
@@ -245,7 +263,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         val emptyAcls = AccessControlList(user1 -> Set.empty, user2 -> permsUser2)
-        acls.subtract(path, 1L, emptyAcls).rejected[AclInvalidEmptyPermissions].path shouldEqual path
+        acls.subtract(path, 1L, emptyAcls).rejected[AclCannotContainEmptyPermissionCollection].path shouldEqual path
       }
 
       "successfully be subtracted" in new Context {
@@ -256,6 +274,11 @@ class AclsSpec
         acls.subtract(path, 1L, acl).accepted shouldEqual metadata
 
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => AccessControlList.empty)
+      }
+
+      "reject changes with unknown permissions" in new AppendCtx {
+        acls.replace(path, 0L, acl).accepted
+        acls.subtract(path, 1L, unknownAcl).rejected[UnknownPermissions].permissions shouldEqual Set(unknownPerm)
       }
     }
 
@@ -281,7 +304,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.delete(path, rev).rejected[AclIncorrectRev] shouldEqual AclIncorrectRev(path, rev)
+          acls.delete(path, rev).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
         }
       }
 

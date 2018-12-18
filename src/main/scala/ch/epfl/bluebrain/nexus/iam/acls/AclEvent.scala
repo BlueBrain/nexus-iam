@@ -45,8 +45,13 @@ object AclEvent {
     * @param instant the instant when this event was recorded
     * @param subject the subject which generated this event
     */
-  final case class AclReplaced(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
-      extends AclEvent
+  final case class AclReplaced(
+      path: Path,
+      acl: AccessControlList,
+      rev: Long,
+      instant: Instant,
+      subject: Subject
+  ) extends AclEvent
 
   /**
     * A witness to ACL append.
@@ -57,8 +62,13 @@ object AclEvent {
     * @param instant the instant when this event was recorded
     * @param subject the subject which generated this event
     */
-  final case class AclAppended(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
-      extends AclEvent
+  final case class AclAppended(
+      path: Path,
+      acl: AccessControlList,
+      rev: Long,
+      instant: Instant,
+      subject: Subject
+  ) extends AclEvent
 
   /**
     * A witness to ACL subtraction.
@@ -69,8 +79,13 @@ object AclEvent {
     * @param instant the instant when this event was recorded
     * @param subject the subject which generated this event
     */
-  final case class AclSubtracted(path: Path, acl: AccessControlList, rev: Long, instant: Instant, subject: Subject)
-      extends AclEvent
+  final case class AclSubtracted(
+      path: Path,
+      acl: AccessControlList,
+      rev: Long,
+      instant: Instant,
+      subject: Subject
+  ) extends AclEvent
 
   /**
     * A witness to ACL deletion.
@@ -80,7 +95,12 @@ object AclEvent {
     * @param instant the instant when this event was recorded
     * @param subject the subject which generated this event
     */
-  final case class AclDeleted(path: Path, rev: Long, instant: Instant, subject: Subject) extends AclEvent
+  final case class AclDeleted(
+      path: Path,
+      rev: Long,
+      instant: Instant,
+      subject: Subject
+  ) extends AclEvent
 
   object JsonLd {
     import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}

@@ -23,7 +23,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
@@ -45,10 +45,9 @@ import scala.util.Try
   * @param agg   the realms aggregate
   * @param acls  a lazy acls api
   * @param index an index implementation for realms
-  * @param http  the application http configurations
   * @tparam F    the effect type
   */
-class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: RealmIndex[F])(implicit http: HttpConfig) {
+class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F])(implicit http: HttpConfig) {
 
   private val F = implicitly[MonadThrowable[F]]
 
@@ -153,7 +152,8 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
     def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
-      val subject = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
+      val authenticated = Authenticated(realmId.value)
+      val subject       = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
       val groups = Try(claimsSet.getStringArrayClaim("groups"))
         .filter(_ != null)
         .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }
@@ -163,7 +163,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
       subject.map { sub =>
         val user                    = User(sub, realmId.value)
         val groupSet: Set[Identity] = groups.map(g => Group(g, realmId.value))
-        Caller(user, groupSet + Anonymous + user)
+        Caller(user, groupSet + Anonymous + user + authenticated)
       }
     }
 
@@ -191,12 +191,12 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: Lazy[F, Acls], index: Real
     stateOf(id, optRev).map(_.optResource)
 
   private def check(id: Label, permission: Permission)(implicit caller: Caller): F[Unit] =
-    acls()
+    acls
       .flatMap(_.hasPermission(id.toPath, permission))
       .ifM(F.unit, F.raiseError(AccessDenied(id.toIri(http.realmsIri), permission)))
 
   private def check(permission: Permission)(implicit caller: Caller): F[Unit] =
-    acls()
+    acls
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(http.realmsIri, permission)))
 
@@ -239,7 +239,7 @@ object Realms {
       (_, resource) => resource.rev,
       rc.keyValueStore.askTimeout,
       rc.keyValueStore.consistencyTimeout,
-      rc.keyValueStore.retry.retryStrategy
+      rc.keyValueStore.retryStrategy
     )
 
   /**
@@ -257,7 +257,7 @@ object Realms {
       next,
       evaluate[F],
       rc.sourcing.passivationStrategy(),
-      rc.sourcing.retry.retryStrategy,
+      rc.sourcing.retryStrategy,
       rc.sourcing.akkaSourcingConfig,
       rc.sourcing.shards
     )
@@ -271,7 +271,7 @@ object Realms {
     */
   def apply[F[_]: MonadThrowable](
       agg: Agg[F],
-      acls: Lazy[F, Acls],
+      acls: F[Acls[F]],
       index: RealmIndex[F]
   )(implicit http: HttpConfig): Realms[F] =
     new Realms(agg, acls, index)
@@ -281,7 +281,7 @@ object Realms {
     *
     * @param acls a lazy reference to the ACL api
     */
-  def apply[F[_]: Effect: Timer: Clock](acls: Lazy[F, Acls])(
+  def apply[F[_]: Effect: Timer: Clock](acls: F[Acls[F]])(
       implicit
       as: ActorSystem,
       mt: ActorMaterializer,
@@ -300,7 +300,7 @@ object Realms {
     */
   def delay[F[_]: MonadThrowable](
       agg: F[Agg[F]],
-      acls: Lazy[F, Acls],
+      acls: F[Acls[F]],
       index: RealmIndex[F]
   )(implicit http: HttpConfig): F[Realms[F]] =
     agg.map(apply(_, acls, index))

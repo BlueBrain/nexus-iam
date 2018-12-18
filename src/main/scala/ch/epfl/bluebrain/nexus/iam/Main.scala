@@ -70,9 +70,9 @@ object Main {
       ps <- Deferred[Task, Permissions[Task]]
       as <- Deferred[Task, Acls[Task]]
       rs <- Deferred[Task, Realms[Task]]
-      pt <- Permissions[Task](() => as.get)
-      at <- Acls[Task](() => ps.get)
-      rt <- Realms[Task](() => as.get)
+      pt <- Permissions[Task](as.get)
+      at <- Acls[Task](ps.get)
+      rt <- Realms[Task](as.get)
       _  <- ps.complete(pt)
       _  <- as.complete(at)
       _  <- rs.complete(rt)
@@ -115,8 +115,11 @@ object Main {
     val aclsRoutes   = new AclsRoutes(acls, realms).routes
     val permsRoutes  = new PermissionsRoutes(perms, realms).routes
     val realmsRoutes = new RealmsRoutes(realms).routes
-    val apiRoutes    = uriPrefix(appConfig.http.publicUri)(eventRoutes ~ aclsRoutes ~ permsRoutes ~ realmsRoutes)
-    val serviceDesc  = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
+    val idsRoutes    = new IdentitiesRoutes(realms).routes
+    val apiRoutes = uriPrefix(appConfig.http.publicUri)(
+      eventRoutes ~ aclsRoutes ~ permsRoutes ~ realmsRoutes ~ idsRoutes
+    )
+    val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
 
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")
