@@ -1,3 +1,4 @@
+-Xss16m
 -Dfile.encoding=UTF8
 -Xms1G
 -Xmx6G

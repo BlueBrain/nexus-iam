@@ -31,36 +31,30 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
 
   private val log = Logger[this.type]
 
-  object acls {
-
-    /**
-      * Retrieve the current ''acls'' for some particular ''path''.
-      *
-      * @param path        the target resource
-      * @param ancestors   matches only the exact ''path'' (false) or its ancestors also (true)
-      * @param self        matches only the caller identities
-      * @param credentials an optionally available token
-      */
-    def list(path: Path, ancestors: Boolean = false, self: Boolean = false)(
-        implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
-      val req =
-        requestFrom(path :: (config.prefix / "acls"), Query("ancestors" -> ancestors.toString, "self" -> self.toString))
-      aclsClient(req).recoverWith { case e => recover(e, path) }
-    }
+  /**
+    * Retrieve the current ''acls'' for some particular ''path''.
+    *
+    * @param path        the target resource
+    * @param ancestors   matches only the exact ''path'' (false) or its ancestors also (true)
+    * @param self        matches only the caller identities
+    * @param credentials an optionally available token
+    */
+  def acls(path: Path, ancestors: Boolean = false, self: Boolean = false)(
+      implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
+    val req =
+      requestFrom(path :: (config.prefix / "acls"), Query("ancestors" -> ancestors.toString, "self" -> self.toString))
+    aclsClient(req).recoverWith { case e => recover(e, path) }
   }
 
-  object identities {
-
-    /**
-      * Retrieve the identities on a [[Caller]] object from the implicitly optional [[AuthToken]]
-      *
-      */
-    def fetch(implicit credentials: Option[AuthToken]): F[Caller] = {
-      val path = config.prefix / "identities"
-      credentials
-        .map(_ => callerClient(requestFrom(path)).recoverWith { case e => recover(e, path) })
-        .getOrElse(F.pure(Caller.anonymous))
-    }
+  /**
+    * Retrieve the identities on a [[Caller]] object from the implicitly optional [[AuthToken]]
+    *
+    */
+  def identities(implicit credentials: Option[AuthToken]): F[Caller] = {
+    val path = config.prefix / "identities"
+    credentials
+      .map(_ => callerClient(requestFrom(path)).recoverWith { case e => recover(e, path) })
+      .getOrElse(F.pure(Caller.anonymous))
   }
 
   /**
@@ -71,7 +65,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     * @param credentials an optionally available token
     */
   def authorizeOn(path: Path, permission: Permission)(implicit credentials: Option[AuthToken]): F[Unit] =
-    acls.list(path, ancestors = true, self = true).flatMap { acls =>
+    acls(path, ancestors = true, self = true).flatMap { acls =>
       val found = acls.value.exists { case (_, acl) => acl.value.permissions.contains(permission) }
       if (found) F.unit
       else F.raiseError(UnauthorizedAccess)
