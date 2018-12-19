@@ -66,7 +66,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true").addCredentials(token)) shouldReturn
           Future(expected)
-        client.acls.list("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.acls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
         client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
         client.authorizeOn("a" / "b", Permission.unsafe("write")).failed.futureValue shouldEqual UnauthorizedAccess
       }
@@ -76,7 +76,7 @@ class IamClientSpec
         val expected                             = AccessControlLists(/ -> aclWithMeta)
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn Future(expected)
-        client.acls.list("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
+        client.acls("a" / "b", ancestors = true, self = true).futureValue shouldEqual expected
         client.authorizeOn("a" / "b", Permission.unsafe("read")).futureValue shouldEqual (())
       }
 
@@ -85,7 +85,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        client.acls.list("a" / "b", ancestors = true, self = true).failed.futureValue shouldEqual UnauthorizedAccess
+        client.acls("a" / "b", ancestors = true, self = true).failed.futureValue shouldEqual UnauthorizedAccess
         client.authorizeOn("a" / "b", Permission.unsafe("read")).failed.futureValue shouldEqual UnauthorizedAccess
       }
 
@@ -95,7 +95,7 @@ class IamClientSpec
 
         aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
           Future.failed(expected)
-        client.acls.list("a" / "b", ancestors = false, self = true).failed.futureValue shouldEqual expected
+        client.acls("a" / "b", ancestors = false, self = true).failed.futureValue shouldEqual expected
       }
     }
 
@@ -109,12 +109,12 @@ class IamClientSpec
 
         callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future(expected)
-        client.identities.fetch.futureValue shouldEqual expected
+        client.identities.futureValue shouldEqual expected
       }
 
       "succeed without token" in {
         implicit val tokenOpt = None
-        client.identities.fetch.futureValue shouldEqual Caller.anonymous
+        client.identities.futureValue shouldEqual Caller.anonymous
       }
 
       "fail with UnauthorizedAccess" in {
@@ -123,7 +123,7 @@ class IamClientSpec
 
         callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
-        client.identities.fetch.failed.futureValue shouldEqual UnauthorizedAccess
+        client.identities.failed.futureValue shouldEqual UnauthorizedAccess
       }
 
       "fail with other error" in {
@@ -133,7 +133,7 @@ class IamClientSpec
 
         callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future.failed(expected)
-        client.identities.fetch.failed.futureValue shouldEqual expected
+        client.identities.failed.futureValue shouldEqual expected
       }
     }
   }
