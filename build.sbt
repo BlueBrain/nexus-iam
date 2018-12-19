@@ -25,22 +25,22 @@ scalafmt: {
  */
 
 // Dependency versions
-val rdfVersion                 = "0.2.28"
+val rdfVersion                 = "0.2.29"
 val commonsVersion             = "0.10.41"
-val serviceVersion             = "0.10.21"
+val serviceVersion             = "0.10.23"
 val sourcingVersion            = "0.12.2"
-val akkaVersion                = "2.5.18"
-val akkaCorsVersion            = "0.3.1"
+val akkaVersion                = "2.5.19"
+val akkaCorsVersion            = "0.3.3"
 val akkaHttpVersion            = "10.1.5"
 val akkaPersistenceCassVersion = "0.91"
 val akkaPersistenceMemVersion  = "2.5.15.1"
-val catsVersion                = "1.4.0"
-val circeVersion               = "0.10.1"
+val catsVersion                = "1.5.0"
+val circeVersion               = "0.11.0"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.0.5"
+val mockitoVersion             = "1.0.6"
 val monixVersion               = "3.0.0-RC2"
-val nimbusJoseJwtVersion       = "6.4.1"
+val nimbusJoseJwtVersion       = "6.5"
 val pureconfigVersion          = "0.9.2"
 val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
@@ -71,7 +71,6 @@ lazy val akkaStream           = "com.typesafe.akka"       %% "akka-stream"      
 lazy val akkaStreamTestKit    = "com.typesafe.akka"       %% "akka-stream-testkit"        % akkaVersion
 lazy val catsCore             = "org.typelevel"           %% "cats-core"                  % catsVersion
 lazy val circeCore            = "io.circe"                %% "circe-core"                 % circeVersion
-lazy val circeJava8           = "io.circe"                %% "circe-java8"                % circeVersion
 lazy val journalCore          = "io.verizon.journal"      %% "core"                       % journalVersion
 lazy val mockitoScala         = "org.mockito"             %% "mockito-scala"              % mockitoVersion
 lazy val monixEval            = "io.monix"                %% "monix-eval"                 % monixVersion
@@ -110,7 +109,6 @@ lazy val iam = project
       akkaClusterSharding,
       catsCore,
       circeCore,
-      circeJava8,
       journalCore,
       kryo,
       monixEval,

@@ -11,7 +11,7 @@ import scala.concurrent.duration.FiniteDuration
   * @param msg the reason why the error occurred
   */
 @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-sealed abstract class IamError(msg: String) extends Exception with Product with Serializable {
+sealed abstract class IamError(val msg: String) extends Exception with Product with Serializable {
   override def fillInStackTrace(): Throwable = this
   override def getMessage: String            = msg
 }
@@ -53,9 +53,10 @@ object IamError {
   /**
     * Generic wrapper for iam errors that should not be exposed to clients.
     *
-    * @param error the underlying error
+    * @param reason the underlying error reason
     */
-  final case class InternalError(error: IamError) extends IamError("An internal server error occurred.")
+  final case class InternalError(reason: String)
+      extends IamError(s"An internal server error occurred due to '$reason'.")
 
   /**
     * Signals that an error occurred while attempting to perform an operation with an invalid access token.
@@ -63,5 +64,11 @@ object IamError {
     * @param reason a reason for why the token is considered invalid
     */
   final case class InvalidAccessToken(reason: TokenRejection) extends IamError("The provided access token is invalid.")
+
+  /**
+    * Signals that the provided client URI does not match any service endpoint
+    */
+  @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
+  final case object InvalidResourceIri extends IamError("Provided IRI does not match any service endpoint")
 
 }

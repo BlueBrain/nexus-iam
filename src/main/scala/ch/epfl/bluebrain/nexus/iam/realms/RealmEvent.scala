@@ -113,7 +113,6 @@ object RealmEvent {
     import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
     import io.circe.generic.extras.Configuration
     import io.circe.generic.extras.semiauto._
-    import io.circe.java8.time._
     import io.circe.{Encoder, Json}
 
     private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")

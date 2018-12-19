@@ -45,20 +45,31 @@ object instances extends FailFastCirceSupport {
   implicit val urlDecoder: Decoder[Url] =
     Decoder.decodeString.emap(Url.apply)
 
-  implicit val iamErrorEncoder: Encoder[IamError] =
-    deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
+  implicit val iamErrorEncoder: Encoder[IamError] = {
+    val enc = deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+  }
 
-  implicit val aclRejectionEncoder: Encoder[AclRejection] =
-    deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
+  implicit val aclRejectionEncoder: Encoder[AclRejection] = {
+    val enc = deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+  }
 
-  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] =
-    deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
+    val enc = deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+  }
 
-  implicit val realmRejectionEncoder: Encoder[RealmRejection] =
-    deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
+  implicit val realmRejectionEncoder: Encoder[RealmRejection] = {
+    val enc = deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
 
-  implicit val tokenRejectionEncoder: Encoder[TokenRejection] =
-    deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
+  }
+
+  implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
+    val enc = deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+  }
 
   implicit val resourceRejectionEncoder: Encoder[ResourceRejection] =
     deriveEncoder[ResourceRejection].mapJson(_ addContext errorCtxUri)

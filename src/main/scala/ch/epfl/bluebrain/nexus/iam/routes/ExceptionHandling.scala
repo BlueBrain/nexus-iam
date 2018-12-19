@@ -39,5 +39,6 @@ object ExceptionHandling {
     case _: IamError.DistributedDataError        => StatusCodes.InternalServerError
     case _: IamError.InternalError               => StatusCodes.InternalServerError
     case _: IamError.InvalidAccessToken          => StatusCodes.Unauthorized
+    case IamError.InvalidResourceIri             => StatusCodes.NotFound
   }
 }
