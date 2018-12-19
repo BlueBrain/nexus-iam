@@ -145,6 +145,12 @@ class RealmsRoutesSpec
         responseAs[Json].sort shouldEqual metaResponse(label, 1L).sort
       }
     }
+    "access an endpoint that does not exists" in {
+      Get("/v1/other/therealm?rev=5") ~> routes ~> check {
+        status shouldEqual StatusCodes.NotFound
+        responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
+      }
+    }
   }
 
 }

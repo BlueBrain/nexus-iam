@@ -6,8 +6,10 @@ import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server._
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
-import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.IllegalParameter
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
+import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.IllegalParameter
+import ch.epfl.bluebrain.nexus.iam.types.IamError
+import ch.epfl.bluebrain.nexus.iam.types.IamError.InvalidResourceIri
 
 /**
   * A rejection encapsulates a specific reason why a route was not able to handle a request.
@@ -36,6 +38,7 @@ object RejectionHandling {
         case _: AuthorizationFailedRejection =>
           complete(Unauthorized -> (UnauthorizedAccess: HttpRejection))
       }
+      .handleNotFound(complete(NotFound -> (InvalidResourceIri: IamError)))
       .handleAll[MalformedRequestContentRejection] { rejection =>
         val aggregate = rejection.map(_.message).mkString(", ")
         complete(BadRequest -> (WrongOrInvalidJson(Some(aggregate)): HttpRejection))

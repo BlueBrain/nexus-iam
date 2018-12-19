@@ -15,17 +15,17 @@ import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
 import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
-import ch.epfl.bluebrain.nexus.iam.index.KeyValueStore
 import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.realms.RealmCommand.{CreateRealm, DeprecateRealm, UpdateRealm}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.{RealmCreated, RealmDeprecated, RealmUpdated}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
-import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
+import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, InternalError, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
+import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStore
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
@@ -117,7 +117,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     * @return the current realms sorted by their creation date.
     */
   def list(implicit caller: Caller): F[List[Resource]] =
-    check(read) *> index.values().map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
+    check(read) *> index.values.map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
 
   /**
     * Attempts to compute the caller from the given [[AccessToken]].
@@ -135,8 +135,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     def issuer(claimsSet: JWTClaimsSet): Either[TokenRejection, String] =
       Option(claimsSet.getIssuer).map(Right.apply).getOrElse(Left(AccessTokenDoesNotContainAnIssuer))
     def activeRealm(issuer: String): F[Either[TokenRejection, ActiveRealm]] =
-      index
-        .values()
+      index.values
         .map {
           _.foldLeft(None: Option[ActiveRealm]) {
             case (s @ Some(_), _) => s
@@ -233,14 +232,17 @@ object Realms {
   /**
     * Creates a new realm index.
     */
-  def index[F[_]: Async: Timer](implicit as: ActorSystem, rc: RealmsConfig): RealmIndex[F] =
-    KeyValueStore.distributed(
-      "realms",
-      (_, resource) => resource.rev,
-      rc.keyValueStore.askTimeout,
-      rc.keyValueStore.consistencyTimeout,
-      rc.keyValueStore.retryStrategy
-    )
+  def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
+    implicit val _ = rc.keyValueStore
+    new RealmIndex[F] {
+      val underlying: RealmIndex[F] = KeyValueStore.distributed("realms", (_, resource) => resource.rev)
+
+      override def put(key: Label, value: Resource): F[Unit] =
+        underlying.put(key, value).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
+      override def entries: F[Map[Label, Resource]] =
+        underlying.entries.recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
+    }
+  }
 
   /**
     * Constructs a new realms aggregate.

@@ -93,7 +93,6 @@ object PermissionsEvent {
     import io.circe.Encoder
     import io.circe.generic.extras.Configuration
     import io.circe.generic.extras.semiauto._
-    import io.circe.java8.time._
 
     private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
 
