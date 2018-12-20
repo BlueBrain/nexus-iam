@@ -17,7 +17,7 @@ class IdentitySpec
     with EitherValues {
 
   "An identity" should {
-    implicit val config = IamClientConfig("v1", url"http://nexus.example.com".value)
+    implicit val config = IamClientConfig(url"http://nexus.example.com/v1".value)
     val user            = User("mysubject", "myrealm")
     val group           = Group("mygroup", "myrealm")
     val authenticated   = Authenticated("myrealm")
