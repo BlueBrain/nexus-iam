@@ -17,8 +17,7 @@ import ch.epfl.bluebrain.nexus.commons.types.Err
 import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types._
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import io.circe.generic.auto._
 import journal.Logger
@@ -41,9 +40,9 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     */
   def acls(path: Path, ancestors: Boolean = false, self: Boolean = false)(
       implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
-    val req =
-      requestFrom(path :: (config.prefix / "acls"), Query("ancestors" -> ancestors.toString, "self" -> self.toString))
-    aclsClient(req).recoverWith { case e => recover(e, path) }
+    val endpoint = config.aclsIri + path
+    val req      = requestFrom(endpoint, Query("ancestors" -> ancestors.toString, "self" -> self.toString))
+    aclsClient(req).recoverWith { case e => recover(e, endpoint) }
   }
 
   /**
@@ -51,9 +50,9 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     *
     */
   def identities(implicit credentials: Option[AuthToken]): F[Caller] = {
-    val path = config.prefix / "identities"
     credentials
-      .map(_ => callerClient(requestFrom(path)).recoverWith { case e => recover(e, path) })
+      .map(_ =>
+        callerClient(requestFrom(config.identitiesIri)).recoverWith { case e => recover(e, config.identitiesIri) })
       .getOrElse(F.pure(Caller.anonymous))
   }
 
@@ -71,22 +70,22 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
       else F.raiseError(UnauthorizedAccess)
     }
 
-  private def recover[A](th: Throwable, path: Path): F[A] = th match {
+  private def recover[A](th: Throwable, iri: AbsoluteIri): F[A] = th match {
     case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
       F.raiseError(UnauthorizedAccess)
     case ur: UnexpectedUnsuccessfulHttpResponse =>
       log.warn(
-        s"Received an unexpected response status code '${ur.response.status}' from IAM when attempting to perform and operation on a resource '$path'")
+        s"Received an unexpected response status code '${ur.response.status}' from IAM when attempting to perform and operation on a resource '$iri'")
       F.raiseError(ur)
     case err =>
       log.error(
-        s"Received an unexpected exception from IAM when attempting to perform and operation on a resource '$path'",
+        s"Received an unexpected exception from IAM when attempting to perform and operation on a resource '$iri'",
         err)
       F.raiseError(err)
   }
 
-  private def requestFrom(path: Path, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
-    val request = Get((config.publicIri + path).toAkkaUri.withQuery(query))
+  private def requestFrom(iri: AbsoluteIri, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
+    val request = Get(iri.toAkkaUri.withQuery(query))
     credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
   }
 

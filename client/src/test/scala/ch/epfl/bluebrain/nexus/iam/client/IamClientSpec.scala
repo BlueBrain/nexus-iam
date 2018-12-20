@@ -36,7 +36,7 @@ class IamClientSpec
   implicit val ec: ExecutionContext = system.dispatcher
 
   private val clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private val config       = IamClientConfig("v1", url"http://example.com/some/".value)
+  private val config       = IamClientConfig(url"http://example.com/some/v1".value)
   private val aclsClient   = mock[HttpClient[Future, AccessControlLists]]
   private val callerClient = mock[HttpClient[Future, Caller]]
   private val client       = new IamClient[Future](config, aclsClient, callerClient)

@@ -28,10 +28,10 @@ object Identity {
     * @return Some(identity) when the id maps to a known identity pattern, None otherwise
     */
   def apply(id: AbsoluteIri)(implicit config: IamClientConfig): Option[Identity] = {
-    val regexUser      = (config.publicIri + (config.prefix / "realms" / allowedInput / "users" / allowedInput)).asString.r
-    val regexGroup     = (config.publicIri + (config.prefix / "realms" / allowedInput / "groups" / allowedInput)).asString.r
-    val regexAuth      = (config.publicIri + (config.prefix / "realms" / allowedInput / "authenticated")).asString.r
-    val regexAnonymous = (config.publicIri + (config.prefix / "anonymous")).asString.r
+    val regexUser      = (config.baseIri + ("realms" / allowedInput / "users" / allowedInput)).asString.r
+    val regexGroup     = (config.baseIri + ("realms" / allowedInput / "groups" / allowedInput)).asString.r
+    val regexAuth      = (config.baseIri + ("realms" / allowedInput / "authenticated")).asString.r
+    val regexAnonymous = (config.baseIri + "anonymous").asString.r
     id.asString match {
       case regexUser(realm, subject) => Some(User(subject, realm))
       case regexGroup(realm, group)  => Some(Group(group, realm))
@@ -53,7 +53,7 @@ object Identity {
     */
   final case object Anonymous extends Anonymous {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.publicIri + (config.prefix / "anonymous")
+      config.baseIri + "anonymous"
   }
 
   /**
@@ -64,7 +64,7 @@ object Identity {
     */
   final case class User(subject: String, realm: String) extends Subject {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.publicIri + (config.prefix / "realms" / realm / "users" / subject)
+      config.baseIri + ("realms" / realm / "users" / subject)
 
   }
 
@@ -76,7 +76,7 @@ object Identity {
     */
   final case class Group(group: String, realm: String) extends Identity {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.publicIri + (config.prefix / "realms" / realm / "groups" / group)
+      config.baseIri + ("realms" / realm / "groups" / group)
   }
 
   /**
@@ -86,7 +86,7 @@ object Identity {
     */
   final case class Authenticated(realm: String) extends Identity {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.publicIri + (config.prefix / "realms" / realm / "authenticated")
+      config.baseIri + ("realms" / realm / "authenticated")
   }
 
   implicit def identityEncoder(implicit config: IamClientConfig): Encoder[Identity] = {
