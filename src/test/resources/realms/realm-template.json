@@ -8,12 +8,12 @@
     "Realm"
   ],
   "name": "The Realm",
-  "issuer": "issuer",
   "openIdConfig": "http://localhost:8080/realm",
   "logo": "http://localhost:8080/realm/logo",
-  "grantTypes": [
+  "_grantTypes": [
     "implicit"
   ],
+  "_issuer": "issuer",
   "_createdAt": "1970-01-01T00:00:00Z",
   "_createdBy": "{createdBy}",
   "_updatedAt": "1970-01-01T00:00:00Z",

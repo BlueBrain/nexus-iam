@@ -132,8 +132,12 @@ object Main {
       logger.info("==== Cluster is Live ====")
       bootstrapIndexers(acls, realms)
 
-      val routes: Route =
-        handleRejections(corsRejectionHandler)(cors(corsSettings)(apiRoutes ~ serviceDesc))
+      val routes: Route = {
+        val rejectionHandler = corsRejectionHandler.withFallback(RejectionHandling.notFound())
+        handleRejections(rejectionHandler)(cors(corsSettings) {
+          apiRoutes ~ serviceDesc
+        })
+      }
 
       val httpBinding = {
         Http().bindAndHandle(RouteResult.route2HandlerFlow(routes), appConfig.http.interface, appConfig.http.port)

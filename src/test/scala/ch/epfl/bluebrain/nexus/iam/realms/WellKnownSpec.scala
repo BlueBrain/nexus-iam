@@ -7,16 +7,23 @@ import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulH
 import ch.epfl.bluebrain.nexus.commons.test.io.IOEitherValues
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
+import ch.epfl.bluebrain.nexus.iam.types.GrantType
 import ch.epfl.bluebrain.nexus.iam.types.GrantType._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import io.circe.Json
 import io.circe.parser._
 import org.mockito.IdiomaticMockito
-import org.scalatest.{EitherValues, Matchers, WordSpecLike}
+import org.scalatest.{EitherValues, Matchers, OptionValues, WordSpecLike}
 
 //noinspection TypeAnnotation
-class WellKnownSpec extends WordSpecLike with Matchers with EitherValues with IOEitherValues with IdiomaticMockito {
+class WellKnownSpec
+    extends WordSpecLike
+    with Matchers
+    with OptionValues
+    with EitherValues
+    with IOEitherValues
+    with IdiomaticMockito {
 
   private def httpMock(openIdConfig: Json, jwks: Json): HttpClient[IO, Json] = {
     val cl = mock[HttpClient[IO, Json]]
@@ -25,14 +32,28 @@ class WellKnownSpec extends WordSpecLike with Matchers with EitherValues with IO
     cl
   }
 
-  "A WellKnow" should {
+  "A WellKnown" should {
 
-    "be constructed correctly" in {
-      implicit val cl = httpMock(validOpenIdConfig, validJwks)
-      val wk          = WellKnown[IO](openIdUrl).accepted
-      wk.issuer shouldEqual issuer
-      wk.grantTypes shouldEqual grantTypes
-      wk.keys shouldEqual Set(publicKeyJson)
+    "be constructed correctly" when {
+      "the openid config is valid" in {
+        implicit val cl = httpMock(validOpenIdConfig, validJwks)
+        val wk          = WellKnown[IO](openIdUrl).accepted
+        wk.issuer shouldEqual issuer
+        wk.grantTypes shouldEqual grantTypes
+        wk.keys shouldEqual Set(publicKeyJson)
+      }
+      "the openid contains empty grant_types" in {
+        implicit val cl =
+          httpMock(validOpenIdConfig.deepMerge(Json.obj("grant_types_supported" -> Json.arr())), validJwks)
+        val wk = WellKnown[IO](openIdUrl).accepted
+        wk.grantTypes shouldEqual Set.empty[GrantType]
+      }
+      "the openid contains no grant_types" in {
+        implicit val cl =
+          httpMock(validOpenIdConfig.hcursor.downField("grant_types_supported").delete.top.value, validJwks)
+        val wk = WellKnown[IO](openIdUrl).accepted
+        wk.grantTypes shouldEqual Set.empty[GrantType]
+      }
     }
 
     "fail to construct" when {
@@ -83,13 +104,6 @@ class WellKnownSpec extends WordSpecLike with Matchers with EitherValues with IO
         val rej = WellKnown[IO](openIdUrl).rejected[IllegalGrantTypeFormat]
         rej.document shouldEqual openIdUrl
         rej.location shouldEqual ".grant_types_supported[0]"
-      }
-      "the openid contains no grant_types" in {
-        implicit val cl =
-          httpMock(validOpenIdConfig.deepMerge(Json.obj("grant_types_supported" -> Json.arr())), validJwks)
-        val rej = WellKnown[IO](openIdUrl).rejected[IllegalGrantTypeFormat]
-        rej.document shouldEqual openIdUrl
-        rej.location shouldEqual ".grant_types_supported"
       }
       "the client returns a bad response for the jwks document" in {
         implicit val cl = mock[HttpClient[IO, Json]]

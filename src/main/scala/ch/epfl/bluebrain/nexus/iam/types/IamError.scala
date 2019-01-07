@@ -66,9 +66,8 @@ object IamError {
   final case class InvalidAccessToken(reason: TokenRejection) extends IamError("The provided access token is invalid.")
 
   /**
-    * Signals that the provided client URI does not match any service endpoint
+    * Signals that the requested resource was not found
     */
-  @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-  final case object InvalidResourceIri extends IamError("Provided IRI does not match any service endpoint")
+  final case object NotFound extends IamError("The requested resource was not found.")
 
 }

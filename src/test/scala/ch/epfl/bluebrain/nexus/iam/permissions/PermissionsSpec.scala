@@ -61,6 +61,22 @@ class PermissionsSpec
     Permission.unsafe("realms/read"),
     Permission.unsafe("realms/write"),
     Permission.unsafe("events/read"),
+    Permission.unsafe("organizations/read"),
+    Permission.unsafe("organizations/write"),
+    Permission.unsafe("organizations/create"),
+    Permission.unsafe("projects/read"),
+    Permission.unsafe("projects/write"),
+    Permission.unsafe("projects/create"),
+    Permission.unsafe("resources/read"),
+    Permission.unsafe("resources/write"),
+    Permission.unsafe("resolvers/read"),
+    Permission.unsafe("resolvers/write"),
+    Permission.unsafe("views/read"),
+    Permission.unsafe("views/write"),
+    Permission.unsafe("schemas/read"),
+    Permission.unsafe("schemas/write"),
+    Permission.unsafe("files/read"),
+    Permission.unsafe("files/write"),
   )
 
   val perm1: Permission = Permission.unsafe(genString())

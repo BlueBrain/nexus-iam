@@ -9,7 +9,6 @@ import ch.epfl.bluebrain.nexus.commons.types.HttpRejection._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.IllegalParameter
 import ch.epfl.bluebrain.nexus.iam.types.IamError
-import ch.epfl.bluebrain.nexus.iam.types.IamError.InvalidResourceIri
 
 /**
   * A rejection encapsulates a specific reason why a route was not able to handle a request.
@@ -38,7 +37,6 @@ object RejectionHandling {
         case _: AuthorizationFailedRejection =>
           complete(Unauthorized -> (UnauthorizedAccess: HttpRejection))
       }
-      .handleNotFound(complete(NotFound -> (InvalidResourceIri: IamError)))
       .handleAll[MalformedRequestContentRejection] { rejection =>
         val aggregate = rejection.map(_.message).mkString(", ")
         complete(BadRequest -> (WrongOrInvalidJson(Some(aggregate)): HttpRejection))
@@ -49,4 +47,12 @@ object RejectionHandling {
       }
       .result()
 
+  /**
+    * Defines a handler for NotFound rejections.
+    */
+  def notFound(): RejectionHandler =
+    RejectionHandler
+      .newBuilder()
+      .handleNotFound(complete(NotFound -> (IamError.NotFound: IamError)))
+      .result()
 }
