@@ -53,8 +53,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
   def routes: Route = {
     (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling()) & pathPrefix(hc.prefix)) {
       concat(
-        // TODO: replace `acls/write` with `acls/read` when self=false checks for `acls/read`
-        routesFor("acls" / "events", aclEventTag, aclsp.write, typedEventToSse[AclEvent]),
+        routesFor("acls" / "events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
         routesFor("permissions" / "events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
         routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
         routesFor("events", eventTag, eventsRead, eventToSse),

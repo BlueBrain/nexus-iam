@@ -51,12 +51,9 @@ object WellKnown {
         }
     def grantTypes(json: Json): Either[Rejection, Set[GrantType]] =
       json.hcursor
-        .get[Set[GrantType]]("grant_types_supported")
+        .get[Option[Set[GrantType]]]("grant_types_supported")
+        .map(_.getOrElse(Set.empty))
         .leftMap(df => IllegalGrantTypeFormat(address, CursorOp.opsToPath(df.history)))
-        .flatMap {
-          case grantTypes if grantTypes.isEmpty => Left(IllegalGrantTypeFormat(address, ".grant_types_supported"))
-          case grants                           => Right(grants)
-        }
     def jwksUrl(json: Json): Either[Rejection, Url] =
       json.hcursor
         .get[String]("jwks_uri")

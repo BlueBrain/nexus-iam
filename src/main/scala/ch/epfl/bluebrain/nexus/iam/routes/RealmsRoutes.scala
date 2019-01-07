@@ -13,7 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.directives.RealmDirectives._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.{Realms, Resource}
 import ch.epfl.bluebrain.nexus.iam.routes.RealmsRoutes.{NewRealm, UpdateRealm}
-import ch.epfl.bluebrain.nexus.iam.types.Caller
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError}
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
@@ -77,11 +77,17 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
               parameter("rev".as[Long].?) {
                 case Some(rev) =>
                   trace("getRealmByIdAndRev") {
-                    complete(realms.fetch(id, rev).runToFuture)
+                    onSuccess(realms.fetch(id, rev).runToFuture) {
+                      case Some(res) => complete(res)
+                      case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+                    }
                   }
                 case None =>
                   trace("getRealmById") {
-                    complete(realms.fetch(id).runToFuture)
+                    onSuccess(realms.fetch(id).runToFuture) {
+                      case Some(res) => complete(res)
+                      case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+                    }
                   }
               }
             },

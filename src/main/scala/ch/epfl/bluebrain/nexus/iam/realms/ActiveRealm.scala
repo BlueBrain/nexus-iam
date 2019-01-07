@@ -6,7 +6,8 @@ import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
 import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
-import io.circe.generic.semiauto.deriveEncoder
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.{Encoder, Json}
 
 import scala.util.Try
@@ -42,6 +43,11 @@ final case class ActiveRealm(
 }
 
 object ActiveRealm {
+  private implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
+    case "issuer"     => "_issuer"
+    case "grantTypes" => "_grantTypes"
+    case other        => other
+  })
   implicit val activeEncoder: Encoder[ActiveRealm] =
     deriveEncoder[ActiveRealm].mapJson(json => json.removeKeys("keys", "id"))
 }
