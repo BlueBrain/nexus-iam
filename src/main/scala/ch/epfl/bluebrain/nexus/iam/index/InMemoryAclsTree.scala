@@ -4,6 +4,7 @@ import java.util.function.BiFunction
 
 import cats.Applicative
 import ch.epfl.bluebrain.nexus.iam.acls._
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.index.InMemoryAclsTree._
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity
@@ -21,7 +22,9 @@ import scala.annotation.tailrec
   * @param acls a data structure used to store the ACLs for a path
   */
 class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], acls: ConcurrentHashMap[Path, Resource])(
-    implicit F: Applicative[F])
+    implicit F: Applicative[F],
+    pc: PermissionsConfig,
+    http: HttpConfig)
     extends AclsIndex[F] {
 
   private val any = "*"
@@ -93,7 +96,8 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
     def inner(toConsume: Vector[String]): AccessControlLists = {
       if (toConsume.contains(any)) {
         val consumed = toConsume.takeWhile(_ != any)
-        tree.getSafe(pathOf(consumed)) match {
+        val path     = pathOf(consumed)
+        tree.getSafe(path) match {
           case Some(children) if consumed.size + 1 == segments.size =>
             AccessControlLists(children.foldLeft(Map.empty[Path, Resource]) { (acc, p) =>
               acls.getSafe(p).map(r => acc + (p -> r)).getOrElse(acc)
@@ -105,16 +109,19 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
                 acc ++ inner(toConsumeNew)
               case (acc, _) => acc
             }
-          case None => AccessControlLists.empty
+          case None => initialAcls(path)
         }
       } else {
-        val p = pathOf(toConsume)
-        acls.getSafe(p).map(r => AccessControlLists(p -> r)).getOrElse(AccessControlLists.empty)
+        val path = pathOf(toConsume)
+        acls.getSafe(path).map(r => AccessControlLists(path -> r)).getOrElse(initialAcls(path))
       }
     }
+
     inner(segments)
   }
 
+  private def initialAcls(path: Path): AccessControlLists =
+    if (path == Path./) AccessControlLists(Path./ -> defaultResourceOnSlash) else AccessControlLists.empty
 }
 
 object InMemoryAclsTree {
@@ -127,6 +134,6 @@ object InMemoryAclsTree {
     * Constructs an in memory implementation of [[AclsIndex]]
     *
     */
-  final def apply[F[_]: Applicative](): InMemoryAclsTree[F] =
+  final def apply[F[_]: Applicative](implicit pc: PermissionsConfig, http: HttpConfig): InMemoryAclsTree[F] =
     new InMemoryAclsTree(new ConcurrentHashMap[Path, Set[Path]](), new ConcurrentHashMap[Path, Resource]())
 }

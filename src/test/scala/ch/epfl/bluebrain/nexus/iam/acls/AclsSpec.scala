@@ -7,7 +7,7 @@ import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig, PermissionsConfig}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
@@ -36,10 +36,9 @@ class AclsSpec
     with Inspectors
     with IdiomaticMockito {
 
-  val appConfig: AppConfig      = Settings(system).appConfig
-  val pc: PermissionsConfig     = appConfig.permissions
-  implicit val http: HttpConfig = appConfig.http
-  implicit val ac: AclsConfig   = appConfig.acls
+  implicit val appConfig: AppConfig = Settings(system).appConfig
+  val http                          = appConfig.http
+  val pc                            = appConfig.permissions
 
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)

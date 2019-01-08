@@ -2,22 +2,33 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import java.time.{Clock, Instant, ZoneId}
 
-import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, AccessControlLists, read => readAcls}
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import cats.Id
+import ch.epfl.bluebrain.nexus.iam.acls.{read => readAcls, _}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
+import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.scalatest._
 
 //noinspection NameBooleanParameters,TypeAnnotation
-class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues with Inspectors with EitherValues {
-  private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
-  private val instant       = clock.instant()
+class InMemoryAclsTreeSpec
+    extends ActorSystemFixture("InMemoryAclsTreeSpec", false)
+    with WordSpecLike
+    with Matchers
+    with OptionValues
+    with Inspectors
+    with EitherValues {
+
+  private val clock: Clock                  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private implicit val appConfig: AppConfig = Settings(system).appConfig
+  private val http                          = appConfig.http
+  private val instant                       = clock.instant()
 
   "A in memory Acls index" should {
-    val index = InMemoryAclsTree()
+    val index = InMemoryAclsTree[Id]
 
     val user  = User("uuid", "realm")
     val user2 = User("uuid2", "realm")
@@ -117,6 +128,9 @@ class InMemoryAclsTreeSpec extends WordSpecLike with Matchers with OptionValues 
 
       index.get("org1" / "proj1", ancestors = true, self = true)(Set(group)) shouldEqual
         AccessControlLists("org1" / "proj1" -> aclProject.map(_ => AccessControlList(group -> Set(other))))
+
+      index.get("org1" / "proj1", ancestors = true, self = false)(Set(Anonymous)) shouldEqual
+        AccessControlLists("org1" / "proj1" -> aclProject, / -> defaultResourceOnSlash)
     }
 
     "add ACLs on /org1" in {
