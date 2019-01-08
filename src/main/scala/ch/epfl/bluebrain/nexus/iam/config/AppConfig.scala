@@ -172,7 +172,9 @@ object AppConfig {
 
   val tracing = new TracingDirectives()
 
-  implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig = appConfig.persistence
-  implicit def toHttp(implicit appConfig: AppConfig): HttpConfig               = appConfig.http
-  implicit def toIndexing(implicit appConfig: AppConfig): IndexingConfig       = appConfig.indexing
+  implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig      = appConfig.persistence
+  implicit def toHttp(implicit appConfig: AppConfig): HttpConfig                    = appConfig.http
+  implicit def toPermissionConfig(implicit appConfig: AppConfig): PermissionsConfig = appConfig.permissions
+  implicit def toAclsConfig(implicit appConfig: AppConfig): AclsConfig              = appConfig.acls
+  implicit def toIndexing(implicit appConfig: AppConfig): IndexingConfig            = appConfig.indexing
 }

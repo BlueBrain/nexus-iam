@@ -31,17 +31,17 @@ val serviceVersion             = "0.10.23"
 val sourcingVersion            = "0.12.2"
 val akkaVersion                = "2.5.19"
 val akkaCorsVersion            = "0.3.3"
-val akkaHttpVersion            = "10.1.5"
-val akkaPersistenceCassVersion = "0.91"
+val akkaHttpVersion            = "10.1.7"
+val akkaPersistenceCassVersion = "0.92"
 val akkaPersistenceMemVersion  = "2.5.15.1"
 val catsVersion                = "1.5.0"
 val circeVersion               = "0.11.0"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.0.6"
+val mockitoVersion             = "1.0.8"
 val monixVersion               = "3.0.0-RC2"
-val nimbusJoseJwtVersion       = "6.5"
-val pureconfigVersion          = "0.9.2"
+val nimbusJoseJwtVersion       = "6.5.1"
+val pureconfigVersion          = "0.10.1"
 val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
 
@@ -66,6 +66,7 @@ lazy val akkaPersistence      = "com.typesafe.akka"       %% "akka-persistence" 
 lazy val akkaPersistenceCass  = "com.typesafe.akka"       %% "akka-persistence-cassandra" % akkaPersistenceCassVersion
 lazy val akkaPersistenceMem   = "com.github.dnvriend"     %% "akka-persistence-inmemory"  % akkaPersistenceMemVersion
 lazy val akkaPersistenceQuery = "com.typesafe.akka"       %% "akka-persistence-query"     % akkaVersion
+lazy val akkaTestkit          = "com.typesafe.akka"       %% "akka-testkit"               % akkaVersion
 lazy val akkaSlf4j            = "com.typesafe.akka"       %% "akka-slf4j"                 % akkaVersion
 lazy val akkaStream           = "com.typesafe.akka"       %% "akka-stream"                % akkaVersion
 lazy val akkaStreamTestKit    = "com.typesafe.akka"       %% "akka-stream-testkit"        % akkaVersion
@@ -143,6 +144,7 @@ lazy val client = project
       rdfAkka,
       rdfCirce,
       serviceHttp,
+      akkaTestkit     % Test,
       akkaHttpTestKit % Test,
       commonsTest     % Test,
       mockitoScala    % Test,
