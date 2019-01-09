@@ -27,7 +27,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.{RealmEvent, Realms}
 import ch.epfl.bluebrain.nexus.iam.routes.EventRoutes._
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.iam.{acls => aclsp, permissions => permissionsp, realms => realmsp}
-import io.circe.Encoder
+import io.circe.{Encoder, Printer}
 import io.circe.syntax._
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
@@ -47,6 +47,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
                                                           pc: PersistenceConfig) {
 
   private val pq: EventsByTagQuery = PersistenceQuery(as).readJournalFor[EventsByTagQuery](pc.queryJournalPlugin)
+  private val printer: Printer     = Printer.noSpaces.copy(dropNullValues = true)
 
   private implicit val implAcls: Acls[Task] = acls
 
@@ -105,7 +106,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
     import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
     val json = a.asJson.sortKeys(AppConfig.orderedKeys)
     ServerSentEvent(
-      data = json.noSpaces,
+      data = json.pretty(printer),
       eventType = json.hcursor.get[String]("@type").toOption,
       id = offset match {
         case NoOffset            => None
