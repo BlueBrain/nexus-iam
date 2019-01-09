@@ -11,7 +11,6 @@
       "@type": [
         "AccessControlList"
       ],
-      "path": "/one/two",
       "acl": [
         {
           "identity": {
@@ -37,6 +36,7 @@
           ]
         }
       ],
+      "_path": "/one/two",
       "_createdAt": "1970-01-01T01:00:00Z",
       "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
       "_updatedAt": "1970-01-01T01:00:00Z",
@@ -49,7 +49,6 @@
       "@type": [
         "AccessControlList"
       ],
-      "path": "/one",
       "acl": [
         {
           "identity": {
@@ -64,6 +63,7 @@
           ]
         }
       ],
+      "_path": "/one",
       "_createdAt": "1970-01-01T01:00:00Z",
       "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
       "_updatedAt": "1970-01-01T01:00:00Z",

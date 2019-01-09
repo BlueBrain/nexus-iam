@@ -7,9 +7,9 @@
     "permissions": [
       "acls/write"
     ],
-    "rev": 1,
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
     "@type": "PermissionsAppended"
   },
   {
@@ -20,9 +20,9 @@
     "permissions": [
       "acls/write"
     ],
-    "rev": 1,
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
     "@type": "PermissionsSubtracted"
   },
   {
@@ -33,9 +33,9 @@
     "permissions": [
       "acls/write"
     ],
-    "rev": 1,
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
     "@type": "PermissionsReplaced"
   },
   {
@@ -43,9 +43,9 @@
       "https://bluebrain.github.io/nexus/contexts/iam.json",
       "https://bluebrain.github.io/nexus/contexts/resource.json"
     ],
-    "rev": 1,
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
     "@type": "PermissionsDeleted"
   }
 ]

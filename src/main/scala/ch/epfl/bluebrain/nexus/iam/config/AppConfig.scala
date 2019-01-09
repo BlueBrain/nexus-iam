@@ -153,9 +153,11 @@ object AppConfig {
       nxv.results.prefix,
       nxv.score.prefix,
       "path",
+      "_path",
       "",
       "_grantTypes",
       "_issuer",
+      "_keys",
       nxv.self.prefix,
       nxv.constrainedBy.prefix,
       nxv.project.prefix,
@@ -167,7 +169,10 @@ object AppConfig {
       nxv.deprecated.prefix,
       "rev",
       "instant",
-      "subject"
+      "subject",
+      "_rev",
+      "_instant",
+      "_subject"
     ))
 
   val tracing = new TracingDirectives()

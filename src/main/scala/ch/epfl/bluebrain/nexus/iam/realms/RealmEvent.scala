@@ -115,7 +115,17 @@ object RealmEvent {
     import io.circe.generic.extras.semiauto._
     import io.circe.{Encoder, Json}
 
-    private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+    private implicit val config: Configuration = Configuration.default
+      .withDiscriminator("@type")
+      .copy(transformMemberNames = {
+        case "rev"        => "_rev"
+        case "instant"    => "_instant"
+        case "subject"    => "_subject"
+        case "issuer"     => "_issuer"
+        case "keys"       => "_keys"
+        case "grantTypes" => "_grantTypes"
+        case other        => other
+      })
 
     implicit def realmEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
       Encoder.encodeJson.contramap[Event] { ev =>
