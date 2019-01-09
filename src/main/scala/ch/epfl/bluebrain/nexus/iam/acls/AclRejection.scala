@@ -15,30 +15,32 @@ object AclRejection {
     * @param path the target path for the ACL
     */
   final case class NothingToBeUpdated(path: Path)
-      extends AclRejection(s"The ACL on path '$path' will not change after applying the provided update.")
+      extends AclRejection(s"The ACL on path '${path.asString}' will not change after applying the provided update.")
 
   /**
     * Signals an attempt to modify ACLs that do not exists.
     *
     * @param path the target path for the ACL
     */
-  final case class AclNotFound(path: Path) extends AclRejection(s"The ACL on path '$path' does not exists.")
+  final case class AclNotFound(path: Path) extends AclRejection(s"The ACL on path '${path.asString}' does not exists.")
 
   /**
     * Signals an attempt to delete ACLs that are already empty.
     *
     * @param path the target path for the ACL
     */
-  final case class AclIsEmpty(path: Path) extends AclRejection(s"The ACL on path '$path' is empty.")
+  final case class AclIsEmpty(path: Path) extends AclRejection(s"The ACL on path '${path.asString}' is empty.")
 
   /**
     * Signals an attempt to interact with an ACL collection with an incorrect revision.
     *
     * @param path the target path for the ACL
-    * @param rev the revision provided
+    * @param provided the provided revision
+    * @param expected the expected revision
     */
-  final case class IncorrectRev(path: Path, rev: Long)
-      extends AclRejection(s"ACL on path '$path' with incorrect revision '$rev' provided.")
+  final case class IncorrectRev(path: Path, provided: Long, expected: Long)
+      extends AclRejection(
+        s"Incorrect revision '$provided' provided, expected '$expected', the ACL on path '${path.asString}' may have been updated since last seen.")
 
   /**
     * Signals an attempt to create/replace/append/subtract ACL collection which contains void permissions.
@@ -46,7 +48,7 @@ object AclRejection {
     * @param path the target path for the ACL
     */
   final case class AclCannotContainEmptyPermissionCollection(path: Path)
-      extends AclRejection(s"The ACL for path '$path' cannot contain an empty permission collection.")
+      extends AclRejection(s"The ACL for path '${path.asString}' cannot contain an empty permission collection.")
 
   /**
     * Signals that an acl operation could not be performed because of unknown referenced permissions.

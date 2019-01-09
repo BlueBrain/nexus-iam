@@ -61,9 +61,9 @@ object IamError {
   /**
     * Signals that an error occurred while attempting to perform an operation with an invalid access token.
     *
-    * @param reason a reason for why the token is considered invalid
+    * @param rejection a reason for why the token is considered invalid
     */
-  final case class InvalidAccessToken(reason: TokenRejection) extends IamError("The provided access token is invalid.")
+  final case class InvalidAccessToken(rejection: TokenRejection) extends IamError("The provided access token is invalid.")
 
   /**
     * Signals that the requested resource was not found

@@ -133,7 +133,7 @@ class AclsSpec
       }
 
       "reject when wrong revision" in new Context {
-        acls.replace(path, 1L, acl).ioValue shouldEqual Left(IncorrectRev(path, 1L))
+        acls.replace(path, 1L, acl).ioValue shouldEqual Left(IncorrectRev(path, 1L, 0L))
       }
 
       "reject when empty permissions" in new Context {
@@ -166,7 +166,7 @@ class AclsSpec
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.replace(path, rev, replaced).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
+          acls.replace(path, rev, replaced).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev, 1L)
         }
       }
 
@@ -205,7 +205,8 @@ class AclsSpec
         forAll(List(0L, 2L, 10L)) { rev =>
           val rej = acls.append(path, rev, aclAppend).rejected[IncorrectRev]
           rej.path shouldEqual path
-          rej.rev shouldEqual rev
+          rej.provided shouldEqual rev
+          rej.expected shouldEqual 1L
         }
       }
 
@@ -255,7 +256,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.subtract(path, rev, acl).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
+          acls.subtract(path, rev, acl).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev, 1L)
         }
       }
 
@@ -304,7 +305,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         forAll(List(0L, 2L, 10L)) { rev =>
-          acls.delete(path, rev).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev)
+          acls.delete(path, rev).rejected[IncorrectRev] shouldEqual IncorrectRev(path, rev, 1L)
         }
       }
 

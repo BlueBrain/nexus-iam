@@ -375,7 +375,7 @@ object Realms {
     }
     def update(c: UpdateRealm): F[EventOrRejection] = state match {
       case Initial                      => reject(RealmNotFound(c.id))
-      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev))
+      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev, s.rev))
       case s: Current =>
         val cfg  = c.openIdConfig.getOrElse(s.openIdConfig)
         val name = c.name.getOrElse(s.name)
@@ -389,7 +389,7 @@ object Realms {
     }
     def deprecate(c: DeprecateRealm): F[EventOrRejection] = state match {
       case Initial                      => reject(RealmNotFound(c.id))
-      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev))
+      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev, s.rev))
       case _: Deprecated                => reject(RealmAlreadyDeprecated(c.id))
       case s: Current                   => accept(RealmDeprecated(s.id, s.rev + 1, _, c.subject))
     }

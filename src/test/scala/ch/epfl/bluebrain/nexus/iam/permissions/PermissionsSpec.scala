@@ -98,7 +98,7 @@ class PermissionsSpec
       perms.delete(0L).rejected[CannotDeleteMinimumCollection.type]
     }
     "fail to subtract with incorrect rev" in {
-      perms.subtract(Set(perm1), 1L).rejected[IncorrectRev].rev shouldEqual 1L
+      perms.subtract(Set(perm1), 1L).rejected[IncorrectRev] shouldEqual IncorrectRev(1L, 0L)
     }
     "fail to subtract from minimum" in {
       perms.subtract(Set(perm1), 0L).rejected[CannotSubtractFromMinimumCollection].permissions shouldEqual minimum
@@ -118,7 +118,7 @@ class PermissionsSpec
       perms.effectivePermissions.ioValue shouldEqual minimum
     }
     "fail to append with incorrect rev" in {
-      perms.append(Set(perm1)).rejected[IncorrectRev].rev shouldEqual 0L
+      perms.append(Set(perm1)).rejected[IncorrectRev] shouldEqual IncorrectRev(0L, 2L)
     }
     "append permissions" in {
       perms.append(Set(perm1, perm2), 2L).accepted
@@ -131,7 +131,7 @@ class PermissionsSpec
       perms.append(Set(), 3L).rejected[CannotAppendEmptyCollection.type]
     }
     "fail to replace with incorrect rev" in {
-      perms.replace(Set(perm3), 1L).rejected[IncorrectRev].rev shouldEqual 1L
+      perms.replace(Set(perm3), 1L).rejected[IncorrectRev] shouldEqual IncorrectRev(1L, 3L)
     }
     "fail to replace with empty permissions" in {
       perms.replace(Set(), 3L).rejected[CannotReplaceWithEmptyCollection.type]
@@ -144,7 +144,7 @@ class PermissionsSpec
       perms.effectivePermissions.ioValue shouldEqual (pc.minimum ++ Set(perm3, perm4))
     }
     "fail to delete with incorrect rev" in {
-      perms.delete(2L).rejected[IncorrectRev].rev shouldEqual 2L
+      perms.delete(2L).rejected[IncorrectRev] shouldEqual IncorrectRev(2L, 4L)
     }
     "delete permissions" in {
       perms.delete(4L).accepted

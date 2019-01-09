@@ -8,12 +8,12 @@ object ResourceRejection {
     * Signals the inability to convert the requested query parameter.
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-  final case class IllegalParameter(message: String) extends ResourceRejection(s"Illegal parameter error '$message'")
+  final case class IllegalParameter(reason: String) extends ResourceRejection(s"Illegal parameter error '$reason'")
 
   /**
     * Signals the inability to convert the requested query parameter.
     */
   @SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-  final case class Unexpected(message: String) extends ResourceRejection(s"Unexpected error '$message'")
+  final case class Unexpected(reason: String) extends ResourceRejection(s"Unexpected error '$reason'")
 
 }
