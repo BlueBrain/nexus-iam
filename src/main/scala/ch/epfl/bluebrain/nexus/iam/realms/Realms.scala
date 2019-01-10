@@ -151,8 +151,9 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
     def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
-      val authenticated = Authenticated(realmId.value)
-      val subject       = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
+      val authenticated     = Authenticated(realmId.value)
+      val preferredUsername = Try(claimsSet.getStringClaim("preferred_username")).filter(_ != null).toOption
+      val subject           = (preferredUsername orElse Option(claimsSet.getSubject)).toRight(AccessTokenDoesNotContainSubject)
       val groups = Try(claimsSet.getStringArrayClaim("groups"))
         .filter(_ != null)
         .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }

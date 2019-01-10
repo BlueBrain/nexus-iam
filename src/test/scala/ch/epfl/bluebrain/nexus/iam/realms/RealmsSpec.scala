@@ -83,7 +83,8 @@ class RealmsSpec
       exp: Date = Date.from(Instant.now().plusSeconds(3600)),
       nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
       groups: Option[Set[String]] = None,
-      useCommas: Boolean = false
+      useCommas: Boolean = false,
+      preferredUsername: Option[String] = None,
   ): AccessToken = {
     val signer = new RSASSASigner(privateKey)
     val csb = new JWTClaimsSet.Builder()
@@ -95,6 +96,10 @@ class RealmsSpec
     groups.map { set =>
       if (useCommas) csb.claim("groups", set.mkString(","))
       else csb.claim("groups", set.toArray)
+    }
+
+    preferredUsername.map { pu =>
+      csb.claim("preferred_username", pu)
     }
 
     val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
@@ -215,6 +220,7 @@ class RealmsSpec
 
     "correctly extract the caller" when {
       val subject      = "sub"
+      val preferred    = "preferred"
       val user         = User(subject, first.value)
       val groupStrings = Set("g1", "g2")
       val groups       = groupStrings.map(str => Group(str, first.value))
@@ -230,6 +236,11 @@ class RealmsSpec
       "the claimset contains array group values" in {
         val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
         realms.caller(token(subject, groups = Some(groupStrings), useCommas = false)).ioValue shouldEqual expected
+      }
+      "the claimset contains a preferred_username entry" in {
+        val user     = User(preferred, first.value)
+        val expected = Caller(user, Set(user, Anonymous, auth))
+        realms.caller(token(subject, preferredUsername = Some(preferred))).ioValue shouldEqual expected
       }
     }
 
