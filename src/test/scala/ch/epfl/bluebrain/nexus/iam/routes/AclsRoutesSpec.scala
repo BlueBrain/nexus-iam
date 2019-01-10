@@ -230,7 +230,8 @@ class AclsRoutesSpec
       Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "Unexpected", quote("{msg}") -> "Something went wrong. Please, try again later."))
+          Map(quote("{code}") -> "Unexpected",
+              quote("{msg}")  -> "The system experienced an unexpected error, please try again later."))
         status shouldEqual StatusCodes.InternalServerError
       }
     }
