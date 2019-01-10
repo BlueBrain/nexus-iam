@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.realms
 
 import java.time.Instant
 
+import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Identity, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
@@ -105,7 +106,6 @@ object RealmEvent {
   ) extends RealmEvent
 
   object JsonLd {
-    import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
     import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
     import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
     import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
@@ -118,12 +118,13 @@ object RealmEvent {
     private implicit val config: Configuration = Configuration.default
       .withDiscriminator("@type")
       .copy(transformMemberNames = {
-        case "rev"        => "_rev"
-        case "instant"    => "_instant"
-        case "subject"    => "_subject"
-        case "issuer"     => "_issuer"
-        case "keys"       => "_keys"
-        case "grantTypes" => "_grantTypes"
+        case "id"         => nxv.label.prefix
+        case "rev"        => nxv.rev.prefix
+        case "instant"    => nxv.instant.prefix
+        case "subject"    => nxv.subject.prefix
+        case "issuer"     => nxv.issuer.prefix
+        case "keys"       => nxv.keys.prefix
+        case "grantTypes" => nxv.grantTypes.prefix
         case other        => other
       })
 
@@ -134,7 +135,6 @@ object RealmEvent {
           .mapJson { json =>
             val id = Json.obj("@id" -> Json.fromString((http.realmsIri + ev.id.value).asUri))
             json
-              .removeKeys("id")
               .deepMerge(id)
               .addContext(iamCtxUri)
               .addContext(resourceCtxUri)

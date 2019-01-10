@@ -11,7 +11,7 @@ import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives.authenticator
 import ch.epfl.bluebrain.nexus.iam.directives.RealmDirectives._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.realms.{Realms, Resource}
+import ch.epfl.bluebrain.nexus.iam.realms.{Realms, Resource, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.iam.routes.RealmsRoutes.{NewRealm, UpdateRealm}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError}
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
@@ -33,6 +33,14 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
   private implicit val resourceEncoder: Encoder[Resource] =
     Encoder.encodeJson.contramap { r =>
       resourceMetaEncoder.apply(r.discard) deepMerge r.value.fold(_.asJson, _.asJson)
+    }
+
+  private implicit val resourceMetadataEncoder: Encoder[ResourceMetadata] =
+    Encoder.encodeJson.contramap { r =>
+      resourceMetaEncoder.apply(r.discard) deepMerge Json.obj(
+        nxv.label.prefix      -> Json.fromString(r.value._1.value),
+        nxv.deprecated.prefix -> Json.fromBoolean(r.value._2),
+      )
     }
 
   private implicit val resourceListEncoder: Encoder[List[Resource]] =

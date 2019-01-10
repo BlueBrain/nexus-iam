@@ -8,6 +8,7 @@
     "name": "The Realm",
     "openIdConfig": "http://localhost:8080/myrealm",
     "logo": "http://localhost:8080/myrealm/logo",
+    "_label": "myrealm",
     "_issuer": "issuer",
     "_grantTypes": [
       "implicit"
@@ -36,6 +37,7 @@
     "name": "The Realm",
     "openIdConfig": "http://localhost:8080/myrealm",
     "logo": "http://localhost:8080/myrealm/logo",
+    "_label": "myrealm",
     "_issuer": "issuer",
     "_grantTypes": [
       "implicit"
@@ -61,6 +63,7 @@
       "https://bluebrain.github.io/nexus/contexts/resource.json"
     ],
     "@id": "http://127.0.0.1:8080/v1/realms/myrealm",
+    "_label": "myrealm",
     "_instant": "1970-01-01T00:00:00Z",
     "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
     "_rev": 1,

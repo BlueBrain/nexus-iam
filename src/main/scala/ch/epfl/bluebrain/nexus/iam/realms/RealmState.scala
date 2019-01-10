@@ -5,7 +5,7 @@ import java.time.Instant
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
-import ch.epfl.bluebrain.nexus.iam.types._
+import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import io.circe.Json
 
@@ -102,15 +102,15 @@ object RealmState {
       * @return the current state in a [[ResourceMetadata]] representation
       */
     def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      ResourceMetadata(
+      ResourceF(
         id.toIri(http.realmsIri),
         rev,
         types,
-        deprecated,
         createdAt,
         createdBy,
         updatedAt,
-        updatedBy
+        updatedBy,
+        (id, deprecated)
       )
   }
 

@@ -40,6 +40,14 @@ object Vocabulary {
     val maxScore      = PrefixMapping("maxScore")
     val score         = PrefixMapping("score")
     val uuid          = PrefixMapping("uuid")
+    val label         = PrefixMapping("label")
+    val path          = PrefixMapping("path")
+    val grantTypes    = PrefixMapping("grantTypes")
+    val issuer        = PrefixMapping("issuer")
+    val keys          = PrefixMapping("keys")
+    val instant       = PrefixMapping("instant")
+    val subject       = PrefixMapping("subject")
+    val reason        = PrefixMapping("reason")
 
     //Resource types
     val Realm             = withSuffix("Realm")

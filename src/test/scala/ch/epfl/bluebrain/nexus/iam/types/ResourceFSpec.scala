@@ -22,15 +22,8 @@ class ResourceFSpec extends WordSpecLike with Matchers with Inspectors with Eith
     val id            = url"http://example.com/id"
 
     "converted to Json" in {
-      val json = jsonContentOf("/resources/write-response.json")
-      val model = ResourceMetadata(id,
-                                   1L,
-                                   Set(nxv.AccessControlList, nxv.Realm),
-                                   deprecated = false,
-                                   instant,
-                                   user,
-                                   instant,
-                                   user2)
+      val json  = jsonContentOf("/resources/write-response.json")
+      val model = ResourceMetadata(id, 1L, Set(nxv.AccessControlList, nxv.Realm), instant, user, instant, user2)
 
       model.asJson shouldEqual json
     }

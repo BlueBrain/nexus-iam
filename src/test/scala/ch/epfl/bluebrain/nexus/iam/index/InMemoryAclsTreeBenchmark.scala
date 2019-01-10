@@ -65,7 +65,6 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
       val acl = ResourceF(http.aclsIri + "id3",
                           3L,
                           Set.empty,
-                          false,
                           instant,
                           user,
                           instant,

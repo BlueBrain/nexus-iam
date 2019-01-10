@@ -57,7 +57,7 @@ class PermissionsRoutesSpec
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
   def resource(rev: Long, set: Set[Permission]): Resource =
-    ResourceF(id, rev, types, deprecated = false, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous, set)
+    ResourceF(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous, set)
 
   def metaResponse(rev: Long): Json =
     jsonContentOf(
@@ -66,7 +66,7 @@ class PermissionsRoutesSpec
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
   def meta(rev: Long): ResourceF[Unit] =
-    ResourceF.unit(id, rev, types, deprecated = false, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
+    ResourceF.unit(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
 
   def missingParams: Json =
     jsonContentOf("/permissions/missing-rev.json")

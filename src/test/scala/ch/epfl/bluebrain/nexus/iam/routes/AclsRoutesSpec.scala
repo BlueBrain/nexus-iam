@@ -80,7 +80,6 @@ class AclsRoutesSpec
       http.aclsIri + "id1",
       1L,
       Set[AbsoluteIri](nxv.AccessControlList),
-      false,
       clock.instant(),
       user,
       clock.instant(),
@@ -90,7 +89,6 @@ class AclsRoutesSpec
     val resourceAcl2 = ResourceF(http.aclsIri + "id2",
                                  2L,
                                  Set[AbsoluteIri](nxv.AccessControlList),
-                                 false,
                                  clock.instant(),
                                  user,
                                  clock.instant(),
@@ -111,7 +109,7 @@ class AclsRoutesSpec
     realms.caller(AccessToken(token.token)) shouldReturn Task.pure(caller)
 
     val responseMeta =
-      ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, clock.instant(), user, clock.instant(), user)
+      ResourceMetadata(id, 1L, Set(nxv.AccessControlList), clock.instant(), user, clock.instant(), user)
 
     "create ACL" in {
       acls.replace(path, 0L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))

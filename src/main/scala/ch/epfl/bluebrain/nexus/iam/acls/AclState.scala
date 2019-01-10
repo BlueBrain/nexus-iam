@@ -46,7 +46,7 @@ object AclState {
       * @return the current state in a [[Resource]] representation
       */
     def resource(implicit http: HttpConfig): Resource =
-      ResourceF(http.aclsIri + path.asString, rev, types, false, createdAt, createdBy, updatedAt, updatedBy, acl)
+      ResourceF(http.aclsIri + path.asString, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
 
     /**
       * @return the current state in a [[ResourceMetadata]] representation

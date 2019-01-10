@@ -92,7 +92,7 @@ class PermissionsSpec
       perms.effectivePermissions.ioValue shouldEqual minimum
     }
     "return the minimum permissions resource" in {
-      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, false, epoch, Anonymous, epoch, Anonymous, minimum)
+      perms.fetch.ioValue shouldEqual ResourceF(id, 0L, types, epoch, Anonymous, epoch, Anonymous, minimum)
     }
     "fail to delete minimum when initial" in {
       perms.delete(0L).rejected[CannotDeleteMinimumCollection.type]

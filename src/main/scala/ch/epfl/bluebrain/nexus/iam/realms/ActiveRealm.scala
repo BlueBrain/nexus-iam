@@ -1,9 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
 import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
+import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
 import io.circe.generic.extras.Configuration
@@ -43,11 +44,20 @@ final case class ActiveRealm(
 }
 
 object ActiveRealm {
-  private implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
-    case "issuer"     => "_issuer"
-    case "grantTypes" => "_grantTypes"
-    case other        => other
-  })
-  implicit val activeEncoder: Encoder[ActiveRealm] =
-    deriveEncoder[ActiveRealm].mapJson(json => json.removeKeys("keys", "id"))
+  implicit val activeEncoder: Encoder[ActiveRealm] = {
+    implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
+      case "issuer"     => nxv.issuer.prefix
+      case "grantTypes" => nxv.grantTypes.prefix
+      case other        => other
+    })
+    val default = deriveEncoder[ActiveRealm]
+    Encoder
+      .instance[ActiveRealm] { realm =>
+        default(realm) deepMerge Json.obj(
+          nxv.label.prefix      -> Json.fromString(realm.id.value),
+          nxv.deprecated.prefix -> Json.fromBoolean(false)
+        )
+      }
+      .mapJson(_.removeKeys("keys", "id"))
+  }
 }

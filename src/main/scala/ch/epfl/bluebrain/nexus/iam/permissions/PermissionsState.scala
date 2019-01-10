@@ -60,7 +60,7 @@ object PermissionsState {
       resourceMetadata.map(_ => pc.minimum)
 
     override def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      ResourceMetadata(id, rev, types, deprecated = false, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
+      ResourceMetadata(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
   }
 
   /**
@@ -91,6 +91,6 @@ object PermissionsState {
       resourceMetadata.map(_ => permissions)
 
     override def resourceMetadata(implicit http: HttpConfig): ResourceMetadata =
-      ResourceMetadata(id, rev, types, deprecated = false, createdAt, createdBy, updatedAt, updatedBy)
+      ResourceMetadata(id, rev, types, createdAt, createdBy, updatedAt, updatedBy)
   }
 }

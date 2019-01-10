@@ -41,8 +41,7 @@
       "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
       "_updatedAt": "1970-01-01T01:00:00Z",
       "_updatedBy": "http://nexus.example.com/v1/realms/realm/users/uuid2",
-      "_rev": 1,
-      "_deprecated": false
+      "_rev": 1
     },
     {
       "@id": "http://nexus.example.com/v1/acls/id2",
@@ -68,8 +67,7 @@
       "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
       "_updatedAt": "1970-01-01T01:00:00Z",
       "_updatedBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
-      "_rev": 2,
-      "_deprecated": false
+      "_rev": 2
     }
   ]
 }

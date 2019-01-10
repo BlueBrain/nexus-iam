@@ -143,26 +143,26 @@ class AclsSpec
 
       "successfully be created" in new Context {
         val metadata =
-          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.replace(path, 0L, acl).accepted shouldEqual metadata
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => acl)
       }
 
       "successfully be updated" in new Context {
         acls.replace(path, 0L, acl).accepted shouldEqual
-          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         val replaced         = AccessControlList(user1 -> permsUser1)
         val updatedBy        = User(genString(), genString())
         val otherIds: Caller = Caller(updatedBy, Set(Group("admin", "realm"), updatedBy, Anonymous))
         val metadata =
-          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), false, instant, createdBy, instant, updatedBy)
+          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).accepted shouldEqual metadata
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => replaced)
       }
 
       "reject when wrong revision after updated" in new Context {
         acls.replace(path, 0L, acl).accepted shouldEqual
-          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
 
         val replaced = AccessControlList(user1 -> permsUser1)
         forAll(List(0L, 2L, 10L)) { rev =>
@@ -221,7 +221,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         val metadata =
-          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.append(path, 1L, aclAppend).accepted shouldEqual metadata
 
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => aclAppend ++ acl)
@@ -271,7 +271,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         val metadata =
-          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.subtract(path, 1L, acl).accepted shouldEqual metadata
 
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => AccessControlList.empty)
@@ -313,7 +313,7 @@ class AclsSpec
         acls.replace(path, 0L, acl).accepted
 
         val metadata =
-          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), false, instant, createdBy, instant, createdBy)
+          ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
         acls.delete(path, 1L).ioValue shouldEqual
           Right(metadata)
 

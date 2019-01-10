@@ -25,7 +25,7 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, InternalError, 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStore
+import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
@@ -233,7 +233,7 @@ object Realms {
     * Creates a new realm index.
     */
   def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
-    implicit val _ = rc.keyValueStore
+    implicit val cfg: KeyValueStoreConfig = rc.keyValueStore
     new RealmIndex[F] {
       val underlying: RealmIndex[F] = KeyValueStore.distributed("realms", (_, resource) => resource.rev)
 
