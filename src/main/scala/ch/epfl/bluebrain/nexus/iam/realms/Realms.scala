@@ -72,15 +72,15 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     *
     * @param id           the realm id
     * @param rev          the current revision of the realm
-    * @param name         an optional new name for the realm
-    * @param openIdConfig an optional new openid configuration address
+    * @param name         the new name for the realm
+    * @param openIdConfig the new openid configuration address
     * @param logo         an optional new logo
     */
   def update(
       id: Label,
       rev: Long,
-      name: Option[String],
-      openIdConfig: Option[Url],
+      name: String,
+      openIdConfig: Url,
       logo: Option[Url]
   )(implicit caller: Caller): F[MetaOrRejection] =
     check(id, write) *> eval(UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
@@ -377,14 +377,11 @@ object Realms {
       case Initial                      => reject(RealmNotFound(c.id))
       case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev, s.rev))
       case s: Current =>
-        val cfg  = c.openIdConfig.getOrElse(s.openIdConfig)
-        val name = c.name.getOrElse(s.name)
-        val logo = c.logo orElse s.logo
         for {
           instant  <- instantF
-          wkeither <- WellKnown[F](cfg)
+          wkeither <- WellKnown[F](c.openIdConfig)
         } yield wkeither.map { wk =>
-          RealmUpdated(c.id, s.rev + 1, name, cfg, wk.issuer, wk.keys, wk.grantTypes, logo, instant, c.subject)
+          RealmUpdated(c.id, s.rev + 1, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, instant, c.subject)
         }
     }
     def deprecate(c: DeprecateRealm): F[EventOrRejection] = state match {

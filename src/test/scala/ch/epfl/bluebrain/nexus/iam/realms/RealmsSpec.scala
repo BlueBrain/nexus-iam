@@ -147,7 +147,7 @@ class RealmsSpec
       )
     }
     "update an existing realm" in {
-      realms.update(first, 1L, Some(firstName + "x"), Some(openIdUrl), Some(logoUrl)).accepted
+      realms.update(first, 1L, firstName + "x", openIdUrl, Some(logoUrl)).accepted
       realms.fetch(first).some shouldEqual ResourceF(
         first.toIri(http.realmsIri),
         2L,
@@ -188,7 +188,7 @@ class RealmsSpec
       realms.deprecate(first, 3L).rejected[RealmAlreadyDeprecated]
     }
     "un-deprecate a realm" in {
-      realms.update(first, 3L, Some(firstName), Some(openIdUrl), Some(logoUrl)).accepted
+      realms.update(first, 3L, firstName, openIdUrl, Some(logoUrl)).accepted
       realms.fetch(first).some shouldEqual ResourceF(
         first.toIri(http.realmsIri),
         4L,
@@ -200,24 +200,11 @@ class RealmsSpec
         Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
       )
     }
-    "update a realm with no changes" in {
-      realms.update(first, 4L, None, None, None).accepted
-      realms.fetch(first).some shouldEqual ResourceF(
-        first.toIri(http.realmsIri),
-        5L,
-        types,
-        instant,
-        Anonymous,
-        instant,
-        Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
-      )
-    }
     "fail to update a realm with incorrect revision" in {
-      realms.update(first, 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).rejected[IncorrectRev]
+      realms.update(first, 10L, firstName, openIdUrl, Some(logoUrl)).rejected[IncorrectRev]
     }
     "fail to update a realm that does not exist" in {
-      realms.update(Label.unsafe("blah"), 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).rejected[RealmNotFound]
+      realms.update(Label.unsafe("blah"), 10L, firstName, openIdUrl, Some(logoUrl)).rejected[RealmNotFound]
     }
     "fail to deprecate a realm with incorrect revision" in {
       realms.deprecate(first, 10L).rejected[IncorrectRev]
@@ -325,7 +312,7 @@ class RealmsSpec
     }
 
     "fail to update a realm with no permissions" in {
-      realms.update(first, 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).failed[AccessDenied]
+      realms.update(first, 10L, firstName, openIdUrl, Some(logoUrl)).failed[AccessDenied]
     }
 
     "fail to deprecate a realm with no permissions" in {

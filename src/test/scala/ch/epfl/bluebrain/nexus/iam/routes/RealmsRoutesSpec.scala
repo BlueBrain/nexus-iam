@@ -113,7 +113,7 @@ class RealmsRoutesSpec
       }
     }
     "update an existing realm" in {
-      realms.update(any[Label], any[Long], any[Option[String]], any[Option[Url]], any[Option[Url]])(any[Caller]) shouldReturn Task
+      realms.update(any[Label], any[Long], any[String], any[Url], any[Option[Url]])(any[Caller]) shouldReturn Task
         .pure(Right(meta(label, 1L, false)))
       Put("/v1/realms/therealm?rev=1", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
