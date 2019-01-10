@@ -46,6 +46,7 @@ class EventRoutesSpec
     with ScalaFutures
     with OptionValues
     with EitherValues
+    with Inspectors
     with IdiomaticMockito {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
@@ -117,40 +118,48 @@ class EventRoutesSpec
   "The EventRoutes" should {
     "return the acl events in the right order" in {
       val routes = new TestableEventRoutes(aclEvents, acls, realms).routes
-      Get("/v1/acls/events") ~> routes ~> check {
-        val expected = jsonContentOf("/events/acl-events.json").asArray.value
-        status shouldEqual StatusCodes.OK
-        responseAs[String] shouldEqual eventStreamFor(expected)
+      forAll(List("/v1/acls/events", "/v1/acls/events/")) { path =>
+        Get(path) ~> routes ~> check {
+          val expected = jsonContentOf("/events/acl-events.json").asArray.value
+          status shouldEqual StatusCodes.OK
+          responseAs[String] shouldEqual eventStreamFor(expected)
+        }
       }
     }
 
     "return the realm events in the right order" in {
       val routes = new TestableEventRoutes(realmEvents, acls, realms).routes
-      Get("/v1/realms/events") ~> routes ~> check {
-        val expected = jsonContentOf("/events/realm-events.json").asArray.value
-        status shouldEqual StatusCodes.OK
-        responseAs[String] shouldEqual eventStreamFor(expected)
+      forAll(List("/v1/realms/events", "/v1/realms/events/")) { path =>
+        Get(path) ~> routes ~> check {
+          val expected = jsonContentOf("/events/realm-events.json").asArray.value
+          status shouldEqual StatusCodes.OK
+          responseAs[String] shouldEqual eventStreamFor(expected)
+        }
       }
     }
 
     "return the permissions events in the right order" in {
       val routes = new TestableEventRoutes(permissionsEvents, acls, realms).routes
-      Get("/v1/permissions/events") ~> routes ~> check {
-        val expected = jsonContentOf("/events/permissions-events.json").asArray.value
-        status shouldEqual StatusCodes.OK
-        responseAs[String] shouldEqual eventStreamFor(expected)
+      forAll(List("/v1/permissions/events", "/v1/permissions/events/")) { path =>
+        Get(path) ~> routes ~> check {
+          val expected = jsonContentOf("/events/permissions-events.json").asArray.value
+          status shouldEqual StatusCodes.OK
+          responseAs[String] shouldEqual eventStreamFor(expected)
+        }
       }
     }
 
     "return all the events in the right order" in {
       val routes = new TestableEventRoutes(aclEvents ++ realmEvents ++ permissionsEvents, acls, realms).routes
-      Get("/v1/events") ~> routes ~> check {
-        val expected =
-          jsonContentOf("/events/acl-events.json").asArray.value ++
-            jsonContentOf("/events/realm-events.json").asArray.value ++
-            jsonContentOf("/events/permissions-events.json").asArray.value
-        status shouldEqual StatusCodes.OK
-        responseAs[String] shouldEqual eventStreamFor(expected)
+      forAll(List("/v1/events", "/v1/events/")) { path =>
+        Get(path) ~> routes ~> check {
+          val expected =
+            jsonContentOf("/events/acl-events.json").asArray.value ++
+              jsonContentOf("/events/realm-events.json").asArray.value ++
+              jsonContentOf("/events/permissions-events.json").asArray.value
+          status shouldEqual StatusCodes.OK
+          responseAs[String] shouldEqual eventStreamFor(expected)
+        }
       }
     }
 

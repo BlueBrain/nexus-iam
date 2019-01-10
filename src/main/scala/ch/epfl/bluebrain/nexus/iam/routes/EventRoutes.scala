@@ -68,7 +68,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
       permission: Permission,
       toSse: EventEnvelope => Option[ServerSentEvent]
   ): Route =
-    path(pm) {
+    (pathPrefix(pm) & pathEndOrSingleSlash) {
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         authorizeFor(permission).apply {
           lastEventId { offset =>
