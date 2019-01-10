@@ -68,7 +68,7 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
                 }
               }
             },
-            (patch & parameter("rev".as[Long])) { rev =>
+            (patch & parameter("rev" ? 0L)) { rev =>
               entity(as[PatchPermissions]) {
                 case Append(set) =>
                   trace("appendPermissions") {

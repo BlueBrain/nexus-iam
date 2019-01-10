@@ -81,22 +81,6 @@ class PermissionsRoutesSpec
       }
     }
     "return missing rev params" when {
-      "attempting to append" in {
-        val json =
-          Json.obj("@type" -> Json.fromString("Append"), "permissions" -> Json.arr(Json.fromString("random/a")))
-        Patch("/v1/permissions", json) ~> routes ~> check {
-          responseAs[Json].sort shouldEqual missingParams.sort
-          status shouldEqual StatusCodes.BadRequest
-        }
-      }
-      "attempting to subtract" in {
-        val json =
-          Json.obj("@type" -> Json.fromString("Subtract"), "permissions" -> Json.arr(Json.fromString("random/a")))
-        Patch("/v1/permissions", json) ~> routes ~> check {
-          responseAs[Json].sort shouldEqual missingParams.sort
-          status shouldEqual StatusCodes.BadRequest
-        }
-      }
       "attempting to replace" in {
         val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
         Put("/v1/permissions", json) ~> routes ~> check {
