@@ -15,13 +15,12 @@ import ch.epfl.bluebrain.nexus.iam.acls.AclEvent._
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
 import ch.epfl.bluebrain.nexus.iam.acls.AclState.{Current, Initial}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls._
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig}
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{AclsConfig, HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.index.{AclsIndex, InMemoryAclsTree}
 import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
-import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
@@ -31,9 +30,8 @@ import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     agg: Agg[F],
-    perms: F[Permissions[F]],
     index: AclsIndex[F],
-)(implicit F: MonadThrowable[F], http: HttpConfig) {
+)(implicit F: MonadThrowable[F], http: HttpConfig, pc: PermissionsConfig) {
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -114,7 +112,7 @@ class Acls[F[_]](
     index.get(path, ancestors, self)(caller.identities)
 
   private def fetchUnsafe(path: Path): F[ResourceOpt] =
-    agg.currentState(path.asString).flatMap(stateToAcl(path, _))
+    agg.currentState(path.asString).map(stateToAcl(path, _))
 
   private def fetchUnsafe(path: Path, rev: Long): F[ResourceOpt] =
     agg
@@ -122,17 +120,13 @@ class Acls[F[_]](
         case (state, event) if event.rev <= rev => next(state, event)
         case (state, _)                         => state
       }
-      .flatMap(stateToAcl(path, _))
+      .map(stateToAcl(path, _))
 
-  private def stateToAcl(path: Path, state: AclState): F[ResourceOpt] =
+  private def stateToAcl(path: Path, state: AclState): ResourceOpt =
     (state, path) match {
-      case (Initial, Path./) =>
-        perms.map { p =>
-          val acl = AccessControlList(Anonymous -> p.minimum)
-          Some(Current(Path./, acl, 0L, Instant.EPOCH, Instant.EPOCH, Anonymous, Anonymous).resource)
-        }
-      case (Initial, _)    => F.pure(None)
-      case (c: Current, _) => F.pure(Some(c.resource))
+      case (Initial, Path./) => Some(defaultResourceOnSlash)
+      case (Initial, _)      => None
+      case (c: Current, _)   => Some(c.resource)
     }
 
   private def check(path: Path, permission: Permission)(implicit caller: Caller): F[Unit] =
@@ -181,22 +175,20 @@ object Acls {
   /**
     * Constructs an ACL index.
     */
-  def index[F[_]: Applicative]: AclsIndex[F] =
-    InMemoryAclsTree[F]()
+  def index[F[_]: Applicative](implicit http: HttpConfig, pc: PermissionsConfig): AclsIndex[F] =
+    InMemoryAclsTree[F]
 
   /**
     * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
     *
     * @param agg   the acl aggregate
-    * @param perms a lazy reference to the permissions api
     * @param index an acl index
     */
   def apply[F[_]: MonadThrowable](
       agg: Agg[F],
-      perms: F[Permissions[F]],
       index: AclsIndex[F]
-  )(implicit http: HttpConfig): Acls[F] =
-    new Acls(agg, perms, index)
+  )(implicit http: HttpConfig, pc: PermissionsConfig): Acls[F] =
+    new Acls(agg, index)
 
   /**
     * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
@@ -208,23 +200,22 @@ object Acls {
       as: ActorSystem,
       mt: ActorMaterializer,
       http: HttpConfig,
-      ac: AclsConfig
+      ac: AclsConfig,
+      pc: PermissionsConfig
   ): F[Acls[F]] =
-    delay(aggregate(perms), perms, index)
+    delay(aggregate(perms), index)
 
   /**
     * Constructs a new ACLs api using the provided aggregate, a lazy reference to the permissions api and an index.
     *
     * @param agg   the acl aggregate
-    * @param perms a lazy reference to the permissions api
     * @param index an acl index
     */
   def delay[F[_]: MonadThrowable](
       agg: F[Agg[F]],
-      perms: F[Permissions[F]],
       index: AclsIndex[F]
-  )(implicit http: HttpConfig): F[Acls[F]] =
-    agg.map(apply(_, perms, index))
+  )(implicit http: HttpConfig, pc: PermissionsConfig): F[Acls[F]] =
+    agg.map(apply(_, index))
 
   /**
     * Builds a process for automatically updating the acl index with the latest events logged.

@@ -2,10 +2,13 @@ package ch.epfl.bluebrain.nexus.iam.index
 
 import java.time.{Clock, Instant, ZoneId}
 
+import akka.actor.ActorSystem
+import akka.testkit.TestKit
 import cats.Id
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.iam.acls.{State => _, _}
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
+import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.User
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
@@ -30,9 +33,14 @@ import scala.util.Random
   */
 //noinspection TypeAnnotation,NameBooleanParameters
 @State(Scope.Thread)
-class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
-  private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
+class InMemoryAclsTreeBenchmark
+    extends TestKit(ActorSystem("InMemoryAclsTreeBenchmark"))
+    with Randomness
+    with EitherValues {
+
+  private val clock: Clock                  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private implicit val appConfig: AppConfig = Settings(system).appConfig
+  private val http                          = appConfig.http
 
   val instant = clock.instant()
   //10 permissions
@@ -46,7 +54,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
   val projects1          = List.fill(100)(genString(length = 10))
   val users1: List[User] = List.fill(100)(User(genString(length = 10), "realm"))
 
-  val index1 = InMemoryAclsTree[Id]()
+  val index1 = InMemoryAclsTree[Id]
 
   ingest(orgs1, projects1, users1, index1, 1000)
 
@@ -107,7 +115,7 @@ class InMemoryAclsTreeBenchmark extends Randomness with EitherValues {
   val projects2              = List.fill(1000)(genString(length = 10))
   val users2: List[Identity] = List.fill(500)(User(genString(length = 10), "realm"))
 
-  val index2 = InMemoryAclsTree()
+  val index2 = InMemoryAclsTree[Id]
 
   ingest(orgs1, projects1, users1, index2, 100000)
 

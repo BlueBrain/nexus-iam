@@ -1,6 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam
 
+import java.time.Instant
+
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
+import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
@@ -29,4 +33,18 @@ package object acls {
   /* Constant permissions */
   val read: Permission  = Permission.unsafe("acls/read")
   val write: Permission = Permission.unsafe("acls/write")
+
+  /**
+    * The default [[ResourceF]] of [[AccessControlList]] instantiated on the / path
+    * whenever there is nothing already existing on that path
+    */
+  def defaultResourceOnSlash(implicit http: HttpConfig, pc: PermissionsConfig): Resource =
+    ResourceF(http.aclsIri + "/",
+              0L,
+              types,
+              Instant.EPOCH,
+              Anonymous,
+              Instant.EPOCH,
+              Anonymous,
+              AccessControlList(Anonymous -> pc.minimum))
 }
