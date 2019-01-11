@@ -11,10 +11,11 @@ import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions.{Append, Replace, Subtract}
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Permission}
 import io.circe.syntax._
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import akka.http.javadsl.server.Rejections._
+import akka.http.scaladsl.model.StatusCodes
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -39,11 +40,13 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
             get {
               parameter("rev".as[Long].?) { optRev =>
                 trace("fetchPermissions") {
-                  complete {
-                    optRev match {
-                      case Some(rev) => permissions.fetchAt(rev).runToFuture
-                      case None      => permissions.fetch.runToFuture
-                    }
+                  optRev match {
+                    case Some(rev) =>
+                      onSuccess(permissions.fetchAt(rev).runToFuture) {
+                        case Some(value) => complete(value)
+                        case None        => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+                      }
+                    case None => complete(permissions.fetch.runToFuture)
                   }
                 }
               }

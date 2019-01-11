@@ -169,6 +169,13 @@ class RealmsRoutesSpec
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, true).sort
       }
     }
+    "return 404 for wrong revision" in {
+      realms.fetch(any[Label], any[Long])(any[Caller]) shouldReturn Task.pure(None)
+      Get("/v1/realms/therealm?rev=5") ~> routes ~> check {
+        status shouldEqual StatusCodes.NotFound
+        responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
+      }
+    }
     "access an endpoint that does not exists" in {
       Get("/v1/other/therealm?rev=5") ~> routes ~> check {
         status shouldEqual StatusCodes.NotFound

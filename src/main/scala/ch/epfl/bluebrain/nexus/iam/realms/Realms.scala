@@ -188,7 +188,20 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
   }
 
   private def fetchUnsafe(id: Label, optRev: Option[Long] = None): F[OptResource] =
-    stateOf(id, optRev).map(_.optResource)
+    optRev
+      .map { rev =>
+        agg
+          .foldLeft[State](id.value, Initial) {
+            case (state, event) if event.rev <= rev => next(state, event)
+            case (state, _)                         => state
+          }
+          .map {
+            case Initial if rev != 0L       => None
+            case c: Current if rev != c.rev => None
+            case other                      => other.optResource
+          }
+      }
+      .getOrElse(agg.currentState(id.value).map(_.optResource))
 
   private def check(id: Label, permission: Permission)(implicit caller: Caller): F[Unit] =
     acls
@@ -210,16 +223,6 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         // $COVERAGE-ON$
         case Right(c: Current) => F.pure(Right(c.resourceMetadata))
       }
-
-  private def stateOf(id: Label, optRev: Option[Long]): F[State] =
-    optRev
-      .map { rev =>
-        agg.foldLeft[State](id.value, Initial) {
-          case (state, event) if event.rev <= rev => next(state, event)
-          case (state, _)                         => state
-        }
-      }
-      .getOrElse(agg.currentState(id.value))
 
   private[realms] def updateIndex(id: Label): F[Unit] =
     fetchUnsafe(id).flatMap {

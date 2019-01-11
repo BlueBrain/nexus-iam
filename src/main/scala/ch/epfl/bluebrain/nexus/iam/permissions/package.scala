@@ -17,7 +17,8 @@ package object permissions {
   type EventOrRejection = Either[Rejection, Event]
   type MetaOrRejection  = Either[Rejection, ResourceMetadata]
 
-  type Resource = ResourceF[Set[Permission]]
+  type Resource    = ResourceF[Set[Permission]]
+  type OptResource = Option[Resource]
 
   /**
     * @return the constant resource id of the permissions set

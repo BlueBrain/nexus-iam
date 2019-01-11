@@ -94,9 +94,9 @@ class AclsSpec
         acls.fetch(/, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
       }
 
-      "fetch initial with revision" in new Context {
-        acls.fetch(/, 10L, self = true).some.value shouldEqual AccessControlList(Anonymous  -> pc.minimum)
-        acls.fetch(/, 10L, self = false).some.value shouldEqual AccessControlList(Anonymous -> pc.minimum)
+      "return none for unknown revision" in new Context {
+        acls.fetch(/, 10L, self = true).ioValue shouldEqual None
+        acls.fetch(/, 10L, self = false).ioValue shouldEqual None
       }
 
       "fetch other non existing ACLs" in new Context {
@@ -157,6 +157,12 @@ class AclsSpec
           ResourceMetadata(id, 2L, Set(nxv.AccessControlList), instant, createdBy, instant, updatedBy)
         acls.replace(path, 1L, replaced)(otherIds).accepted shouldEqual metadata
         acls.fetch(path, self = false).some shouldEqual metadata.map(_ => replaced)
+      }
+
+      "fetch the correct revision" in new Context {
+        acls.replace(path, 0L, acl).accepted
+        acls.replace(path, 1L, AccessControlList(user1 -> permsUser1)).accepted
+        acls.fetch(path, 1L, self = false).some.value shouldEqual acl
       }
 
       "reject when wrong revision after updated" in new Context {

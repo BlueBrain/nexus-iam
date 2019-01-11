@@ -127,6 +127,20 @@ class PermissionsRoutesSpec
         status shouldEqual StatusCodes.OK
       }
     }
+    "return 404 for wrong revision" in {
+      perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(None)
+      Get("/v1/permissions?rev=2") ~> routes ~> check {
+        status shouldEqual StatusCodes.NotFound
+        responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
+      }
+    }
+    "return 200 for correct revision" in {
+      perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(Some(resource(3L, appConfig.permissions.minimum)))
+      Get("/v1/permissions?rev=2") ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[Json].sort shouldEqual response(3L).sort
+      }
+    }
   }
 
 }

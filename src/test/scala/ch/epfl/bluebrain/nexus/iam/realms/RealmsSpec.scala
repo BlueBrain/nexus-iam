@@ -262,6 +262,9 @@ class RealmsSpec
     "fail to deprecate twice a realm" in {
       realms.deprecate(first, 3L).rejected[RealmAlreadyDeprecated]
     }
+    "return none for a wrong revision" in {
+      realms.fetch(first, 9999L).ioValue shouldEqual None
+    }
     "un-deprecate a realm" in {
       realms.update(first, 3L, firstName, openIdUrl, Some(logoUrl)).accepted
       realms.fetch(first).some shouldEqual ResourceF(

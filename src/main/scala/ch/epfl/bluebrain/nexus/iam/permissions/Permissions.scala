@@ -51,8 +51,17 @@ class Permissions[F[_]: MonadThrowable](
     * @param rev the permissions revision
     * @return the permissions as a resource at the specified revision
     */
-  def fetchAt(rev: Long)(implicit caller: Caller): F[Resource] =
-    check(read) *> stateOf(Some(rev)).map(_.resource)
+  def fetchAt(rev: Long)(implicit caller: Caller): F[OptResource] =
+    check(read) *> agg
+      .foldLeft[State](pid, Initial) {
+        case (state, event) if event.rev <= rev => next(pc)(state, event)
+        case (state, _)                         => state
+      }
+      .map {
+        case Initial if rev != 0L       => None
+        case c: Current if rev != c.rev => None
+        case other                      => Some(other.resource)
+      }
 
   /**
     * @return the current permissions collection
@@ -64,7 +73,7 @@ class Permissions[F[_]: MonadThrowable](
     * @return the current permissions as a resource without checking permissions
     */
   def fetchUnsafe: F[Resource] =
-    stateOf(None).map(_.resource)
+    agg.currentState(pid).map(_.resource)
 
   /**
     * @return the current permissions collection without checking permissions
@@ -126,16 +135,6 @@ class Permissions[F[_]: MonadThrowable](
     acls
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(id, permission)))
-
-  private def stateOf(optRev: Option[Long]): F[State] =
-    optRev
-      .map { rev =>
-        agg.foldLeft[State](pid, Initial) {
-          case (state, event) if event.rev <= rev => next(pc)(state, event)
-          case (state, _)                         => state
-        }
-      }
-      .getOrElse(agg.currentState(pid))
 }
 
 object Permissions {

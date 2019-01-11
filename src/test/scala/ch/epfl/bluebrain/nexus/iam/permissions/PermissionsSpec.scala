@@ -153,6 +153,16 @@ class PermissionsSpec
     "fail to delete minimum permissions" in {
       perms.delete(5L).rejected[CannotDeleteMinimumCollection.type]
     }
+    "return some for correct rev" in {
+      val value = perms.fetchAt(4L).ioValue
+      value match {
+        case Some(res) => res.value shouldEqual (pc.minimum ++ Set(perm3, perm4))
+        case None      => fail("Permissions were not returned for a known revision")
+      }
+    }
+    "return none for unknown rev" in {
+      perms.fetchAt(9999L).ioValue shouldEqual None
+    }
 
     // NO PERMISSIONS BEYOND THIS LINE
 

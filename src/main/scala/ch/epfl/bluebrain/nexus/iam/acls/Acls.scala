@@ -120,7 +120,11 @@ class Acls[F[_]](
         case (state, event) if event.rev <= rev => next(state, event)
         case (state, _)                         => state
       }
-      .map(stateToAcl(path, _))
+      .map {
+        case Initial if rev != 0L       => None
+        case c: Current if rev != c.rev => None
+        case other                      => stateToAcl(path, other)
+      }
 
   private def stateToAcl(path: Path, state: AclState): ResourceOpt =
     (state, path) match {
