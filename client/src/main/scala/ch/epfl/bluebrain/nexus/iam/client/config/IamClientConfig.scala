@@ -8,6 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
   * @param baseIri base URL for all the HTTP calls, including prefix.
   */
 final case class IamClientConfig(baseIri: AbsoluteIri) {
-  lazy val identitiesIri: AbsoluteIri = baseIri + "identities"
-  lazy val aclsIri: AbsoluteIri       = baseIri + "acls"
+  lazy val identitiesIri: AbsoluteIri  = baseIri + "identities"
+  lazy val aclsIri: AbsoluteIri        = baseIri + "acls"
+  lazy val permissionsIri: AbsoluteIri = baseIri + "permissions"
 }
