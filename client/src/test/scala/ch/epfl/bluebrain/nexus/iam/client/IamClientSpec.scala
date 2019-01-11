@@ -18,7 +18,7 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import org.mockito.Mockito
 import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfter, Matchers, OptionValues, WordSpecLike}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,21 +29,24 @@ class IamClientSpec
     with Matchers
     with ScalaFutures
     with BeforeAndAfter
-    with IdiomaticMockitoFixture {
+    with IdiomaticMockitoFixture
+    with OptionValues {
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(5 seconds, 200 milliseconds)
 
   implicit val ec: ExecutionContext = system.dispatcher
 
-  private val clock        = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private val config       = IamClientConfig(url"http://example.com/some/v1".value)
-  private val aclsClient   = mock[HttpClient[Future, AccessControlLists]]
-  private val callerClient = mock[HttpClient[Future, Caller]]
-  private val client       = new IamClient[Future](config, aclsClient, callerClient)
+  private val clock             = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private val config            = IamClientConfig(url"http://example.com/some/v1".value)
+  private val aclsClient        = mock[HttpClient[Future, AccessControlLists]]
+  private val callerClient      = mock[HttpClient[Future, Caller]]
+  private val permissionsClient = mock[HttpClient[Future, Permissions]]
+  private val client            = new IamClient[Future](config, aclsClient, callerClient, permissionsClient)
 
   before {
     Mockito.reset(aclsClient)
     Mockito.reset(callerClient)
+    Mockito.reset(permissionsClient)
   }
 
   "An IAM client" when {
@@ -134,6 +137,29 @@ class IamClientSpec
         callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
           Future.failed(expected)
         client.identities.failed.futureValue shouldEqual expected
+      }
+    }
+
+    "fetching permissions" should {
+      "succeed when user is authorized" in {
+        implicit val tokenOpt   = Option(AuthToken("token"))
+        val token               = OAuth2BearerToken("token")
+        val expectedPermissions = Set(Permission("test/perm1").value, Permission("test/perm2").value)
+
+        permissionsClient(Get("http://example.com/some/v1/permissions").addCredentials(token)) shouldReturn
+          Future.successful(Permissions(expectedPermissions))
+        client.permissions.futureValue shouldEqual expectedPermissions
+
+      }
+
+      "fail when user is authorized" in {
+        implicit val tokenOpt = Option(AuthToken("token"))
+        val token             = OAuth2BearerToken("token")
+
+        permissionsClient(Get("http://example.com/some/v1/permissions").addCredentials(token)) shouldReturn
+          Future.failed(UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized)))
+        client.permissions.failed.futureValue shouldEqual UnauthorizedAccess
+
       }
     }
   }

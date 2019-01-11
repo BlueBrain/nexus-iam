@@ -10,6 +10,7 @@ import cats.MonadError
 import cats.effect.LiftIO
 import cats.syntax.applicativeError._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
@@ -24,9 +25,11 @@ import journal.Logger
 
 import scala.concurrent.ExecutionContextExecutor
 
-class IamClient[F[_]] private[client] (config: IamClientConfig,
-                                       aclsClient: HttpClient[F, AccessControlLists],
-                                       callerClient: HttpClient[F, Caller])(implicit F: MonadError[F, Throwable]) {
+class IamClient[F[_]] private[client] (
+    config: IamClientConfig,
+    aclsClient: HttpClient[F, AccessControlLists],
+    callerClient: HttpClient[F, Caller],
+    permissionsClient: HttpClient[F, Permissions])(implicit F: MonadError[F, Throwable]) {
 
   private val log = Logger[this.type]
 
@@ -42,6 +45,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
       implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
     val endpoint = config.aclsIri + path
     val req      = requestFrom(endpoint, Query("ancestors" -> ancestors.toString, "self" -> self.toString))
+
     aclsClient(req).recoverWith { case e => recover(e, endpoint) }
   }
 
@@ -55,6 +59,19 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
         callerClient(requestFrom(config.identitiesIri)).recoverWith { case e => recover(e, config.identitiesIri) })
       .getOrElse(F.pure(Caller.anonymous))
   }
+
+  /**
+    * Fetch available permissions.
+    *
+    * @param credentials an optionally available token
+    * @return available permissions
+    */
+  def permissions(implicit credentials: Option[AuthToken]): F[Set[Permission]] =
+    permissionsClient(requestFrom(config.permissionsIri))
+      .map(_.permissions)
+      .recoverWith {
+        case e => recover(e, config.permissionsIri)
+      }
 
   /**
     * Checks the presence of a specific ''permission'' on a particular ''path''.
@@ -112,7 +129,8 @@ object IamClient {
 
     val aclsClient: HttpClient[F, AccessControlLists] = HttpClient.withUnmarshaller[F, AccessControlLists]
     val callerClient: HttpClient[F, Caller]           = HttpClient.withUnmarshaller[F, Caller]
-    new IamClient(config, aclsClient, callerClient)
+    val permissionsClient: HttpClient[F, Permissions] = HttpClient.withUnmarshaller[F, Permissions]
+    new IamClient(config, aclsClient, callerClient, permissionsClient)
   }
 }
 // $COVERAGE-ON$
