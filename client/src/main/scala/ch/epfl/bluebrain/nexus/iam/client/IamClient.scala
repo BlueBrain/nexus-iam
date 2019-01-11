@@ -1,15 +1,17 @@
 package ch.epfl.bluebrain.nexus.iam.client
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.stream.ActorMaterializer
 import cats.MonadError
 import cats.effect.LiftIO
 import cats.syntax.applicativeError._
+import cats.syntax.apply._
 import cats.syntax.flatMap._
+import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
@@ -20,13 +22,16 @@ import ch.epfl.bluebrain.nexus.iam.client.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import io.circe.generic.auto._
+import io.circe.syntax._
 import journal.Logger
 
 import scala.concurrent.ExecutionContextExecutor
 
 class IamClient[F[_]] private[client] (config: IamClientConfig,
                                        aclsClient: HttpClient[F, AccessControlLists],
-                                       callerClient: HttpClient[F, Caller])(implicit F: MonadError[F, Throwable]) {
+                                       callerClient: HttpClient[F, Caller],
+                                       permissionsClient: HttpClient[F, Permissions],
+                                       httpClient: UntypedHttpClient[F])(implicit F: MonadError[F, Throwable]) {
 
   private val log = Logger[this.type]
 
@@ -54,6 +59,46 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
       .map(_ =>
         callerClient(requestFrom(config.identitiesIri)).recoverWith { case e => recover(e, config.identitiesIri) })
       .getOrElse(F.pure(Caller.anonymous))
+  }
+
+  /**
+    * Fetch available permissions.
+    *
+    * @param credentials an optionally available token
+    * @return available permissions
+    */
+  def permissions(implicit credentials: Option[AuthToken]): F[Set[Permission]] =
+    permissionsClient(requestFrom(config.permissionsIri))
+      .map(_.permissions)
+      .recoverWith {
+        case e => recover(e, config.permissionsIri)
+      }
+
+  /**
+    * Replace ACL at a given path.
+    *
+    * @param path       [[Path]] for which to replace the ACL
+    * @param acl        updated [[AccessControlList]]
+    * @param rev        current revision
+    * @param credentials an optionally available token
+    */
+  def putAcls(path: Path, acl: AccessControlList, rev: Option[Long] = None)(
+      implicit credentials: Option[AuthToken]): F[Unit] = {
+    implicit val _ = config
+    val endpoint   = config.aclsIri + path
+    val entity     = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
+    val query      = rev.map(r => Query("rev" -> r.toString)).getOrElse(Query.Empty)
+    val request    = Put(endpoint.toAkkaUri.withQuery(query), entity)
+    val requestWithCredentials =
+      credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
+
+    httpClient(requestWithCredentials).flatMap {
+      case HttpResponse(StatusCodes.OK, _, respEntity, _) => httpClient.discardBytes(respEntity) *> F.unit
+      case HttpResponse(StatusCodes.Unauthorized, _, respEntity, _) =>
+        httpClient.discardBytes(respEntity) *> F.raiseError(UnauthorizedAccess)
+      case response =>
+        httpClient.discardBytes(response.entity) *> F.raiseError(UnexpectedUnsuccessfulHttpResponse(response))
+    }
   }
 
   /**
@@ -112,7 +157,8 @@ object IamClient {
 
     val aclsClient: HttpClient[F, AccessControlLists] = HttpClient.withUnmarshaller[F, AccessControlLists]
     val callerClient: HttpClient[F, Caller]           = HttpClient.withUnmarshaller[F, Caller]
-    new IamClient(config, aclsClient, callerClient)
+    val permissionsClient: HttpClient[F, Permissions] = HttpClient.withUnmarshaller[F, Permissions]
+    new IamClient(config, aclsClient, callerClient, permissionsClient, ucl)
   }
 }
 // $COVERAGE-ON$
