@@ -171,6 +171,7 @@ object instances extends FailFastCirceSupport {
         case _: IllegalGrantTypeFormat           => StatusCodes.BadRequest
         case _: IllegalIssuerFormat              => StatusCodes.BadRequest
         case _: IllegalJwksUriFormat             => StatusCodes.BadRequest
+        case _: IllegalEndpointFormat            => StatusCodes.BadRequest
         case _: IllegalJwkFormat                 => StatusCodes.BadRequest
         case _: UnsuccessfulJwksResponse         => StatusCodes.BadRequest
         case _: UnsuccessfulOpenIdConfigResponse => StatusCodes.BadRequest

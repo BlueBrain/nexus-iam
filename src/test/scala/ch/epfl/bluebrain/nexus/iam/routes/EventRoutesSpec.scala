@@ -81,6 +81,12 @@ class EventRoutesSpec
   val keys         = Set[Json](jsonContentOf("/events/realm-key.json"))
   val logo         = Some(Url("http://localhost:8080/myrealm/logo").right.value)
 
+  val authorizationEndpoint = Url("https://localhost/auth").right.value
+  val tokenEndpoint         = Url("https://localhost/auth/token").right.value
+  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").right.value
+  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").right.value)
+  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").right.value)
+
   val aclEvents = List(
     AclReplaced(path, acl, rev, instant, subject),
     AclAppended(path, acl, rev, instant, subject),
@@ -89,8 +95,40 @@ class EventRoutesSpec
   )
 
   val realmEvents = List(
-    RealmCreated(Label.unsafe("myrealm"), rev, name, openIdConfig, issuer, keys, grantTypes, logo, instant, subject),
-    RealmUpdated(Label.unsafe("myrealm"), rev, name, openIdConfig, issuer, keys, grantTypes, logo, instant, subject),
+    RealmCreated(
+      Label.unsafe("myrealm"),
+      rev,
+      name,
+      openIdConfig,
+      issuer,
+      keys,
+      grantTypes,
+      logo,
+      authorizationEndpoint,
+      tokenEndpoint,
+      userInfoEndpoint,
+      revocationEndpoint,
+      endSessionEndpoint,
+      instant,
+      subject
+    ),
+    RealmUpdated(
+      Label.unsafe("myrealm"),
+      rev,
+      name,
+      openIdConfig,
+      issuer,
+      keys,
+      grantTypes,
+      logo,
+      authorizationEndpoint,
+      tokenEndpoint,
+      userInfoEndpoint,
+      revocationEndpoint,
+      endSessionEndpoint,
+      instant,
+      subject
+    ),
     RealmDeprecated(Label.unsafe("myrealm"), rev, instant, subject),
   )
 

@@ -85,6 +85,16 @@ object RealmRejection {
       extends RealmRejection(s"Illegal format of the JWKs document '${document.asUri}'.")
 
   /**
+    * Rejection returned when attempting to parse an openid configuration document, but the required endpoints were
+    * not found or were not properly formatted.
+    *
+    * @param document the address of the document
+    * @param location the location in the document
+    */
+  final case class IllegalEndpointFormat(document: Url, location: String)
+      extends RealmRejection(s"Failed to parse '$location' from '${document.asUri}' as a valid url.")
+
+  /**
     * Rejection returned when attempting to fetch a JWKS document but the response is not a successful one.
     *
     * @param document the address of the document

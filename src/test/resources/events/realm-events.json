@@ -13,6 +13,11 @@
     "_grantTypes": [
       "implicit"
     ],
+    "_authorizationEndpoint": "https://localhost/auth",
+    "_tokenEndpoint": "https://localhost/auth/token",
+    "_userInfoEndpoint": "https://localhost/auth/userinfo",
+    "_revocationEndpoint": "https://localhost/auth/revoke",
+    "_endSessionEndpoint": "https://localhost/auth/logout",
     "_keys": [
       {
         "kid": "AlALVuZlTj0NoBS4T1HOolEPeCmH0QnmqtXBtoqIxyc",
@@ -42,6 +47,11 @@
     "_grantTypes": [
       "implicit"
     ],
+    "_authorizationEndpoint": "https://localhost/auth",
+    "_tokenEndpoint": "https://localhost/auth/token",
+    "_userInfoEndpoint": "https://localhost/auth/userinfo",
+    "_revocationEndpoint": "https://localhost/auth/revoke",
+    "_endSessionEndpoint": "https://localhost/auth/logout",
     "_keys": [
       {
         "kid": "AlALVuZlTj0NoBS4T1HOolEPeCmH0QnmqtXBtoqIxyc",

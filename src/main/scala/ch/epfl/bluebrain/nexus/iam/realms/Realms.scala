@@ -333,11 +333,11 @@ object Realms {
   private[realms] def next(state: State, event: Event): State = {
     // format: off
     def created(e: RealmCreated): State = state match {
-      case Initial => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.instant, e.subject, e.instant, e.subject)
+      case Initial => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.authorizationEndpoint, e.tokenEndpoint, e.userInfoEndpoint, e.revocationEndpoint, e.endSessionEndpoint, e.instant, e.subject, e.instant, e.subject)
       case other   => other
     }
     def updated(e: RealmUpdated): State = state match {
-      case s: Current => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, s.createdAt, s.createdBy, e.instant, e.subject)
+      case s: Current => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.authorizationEndpoint, e.tokenEndpoint, e.userInfoEndpoint, e.revocationEndpoint, e.endSessionEndpoint, s.createdAt, s.createdBy, e.instant, e.subject)
       case other      => other
     }
     def deprecated(e: RealmDeprecated): State = state match {
@@ -370,7 +370,7 @@ object Realms {
           instant  <- instantF
           wkeither <- WellKnown[F](c.openIdConfig)
         } yield wkeither.map { wk =>
-          RealmCreated(c.id, 1L, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, instant, c.subject)
+          RealmCreated(c.id, 1L, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, wk.authorizationEndpoint, wk.tokenEndpoint, wk.userInfoEndpoint, wk.revocationEndpoint, wk.endSessionEndpoint, instant, c.subject)
         }
       case _ => reject(RealmAlreadyExists(c.id))
     }
@@ -382,7 +382,7 @@ object Realms {
           instant  <- instantF
           wkeither <- WellKnown[F](c.openIdConfig)
         } yield wkeither.map { wk =>
-          RealmUpdated(c.id, s.rev + 1, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, instant, c.subject)
+          RealmUpdated(c.id, s.rev + 1, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, wk.authorizationEndpoint, wk.tokenEndpoint, wk.userInfoEndpoint, wk.revocationEndpoint, wk.endSessionEndpoint, instant, c.subject)
         }
     }
     def deprecate(c: DeprecateRealm): F[EventOrRejection] = state match {

@@ -16,13 +16,18 @@ import scala.util.Try
 /**
   * An active realm representation.
   *
-  * @param id           the label of the realm
-  * @param name         the name of the realm
-  * @param openIdConfig the address of the openid configuration
-  * @param issuer       an identifier for the issuer
-  * @param grantTypes   the supported grant types of the realm
-  * @param logo         an optional logo address
-  * @param keys         the set of JWK keys as specified by rfc 7517 (https://tools.ietf.org/html/rfc7517)
+  * @param id                    the label of the realm
+  * @param name                  the name of the realm
+  * @param openIdConfig          the address of the openid configuration
+  * @param issuer                an identifier for the issuer
+  * @param grantTypes            the supported grant types of the realm
+  * @param logo                  an optional logo address
+  * @param authorizationEndpoint the authorization endpoint
+  * @param tokenEndpoint         the token endpoint
+  * @param userInfoEndpoint      the user info endpoint
+  * @param revocationEndpoint    an optional revocation endpoint
+  * @param endSessionEndpoint    an optional end session endpoint
+  * @param keys                  the set of JWK keys as specified by rfc 7517 (https://tools.ietf.org/html/rfc7517)
   */
 final case class ActiveRealm(
     id: Label,
@@ -31,6 +36,11 @@ final case class ActiveRealm(
     issuer: String,
     grantTypes: Set[GrantType],
     logo: Option[Url],
+    authorizationEndpoint: Url,
+    tokenEndpoint: Url,
+    userInfoEndpoint: Url,
+    revocationEndpoint: Option[Url],
+    endSessionEndpoint: Option[Url],
     keys: Set[Json]
 ) {
 
@@ -46,9 +56,14 @@ final case class ActiveRealm(
 object ActiveRealm {
   implicit val activeEncoder: Encoder[ActiveRealm] = {
     implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
-      case "issuer"     => nxv.issuer.prefix
-      case "grantTypes" => nxv.grantTypes.prefix
-      case other        => other
+      case "issuer"                => nxv.issuer.prefix
+      case "grantTypes"            => nxv.grantTypes.prefix
+      case "authorizationEndpoint" => nxv.authorizationEndpoint.prefix
+      case "tokenEndpoint"         => nxv.tokenEndpoint.prefix
+      case "userInfoEndpoint"      => nxv.userInfoEndpoint.prefix
+      case "revocationEndpoint"    => nxv.revocationEndpoint.prefix
+      case "endSessionEndpoint"    => nxv.endSessionEndpoint.prefix
+      case other                   => other
     })
     val default = deriveEncoder[ActiveRealm]
     Encoder

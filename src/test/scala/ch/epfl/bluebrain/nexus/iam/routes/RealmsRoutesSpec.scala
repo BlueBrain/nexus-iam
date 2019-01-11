@@ -10,7 +10,7 @@ import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.realms.{types, ActiveRealm, Realms, Resource, ResourceMetadata}
+import ch.epfl.bluebrain.nexus.iam.realms.{ActiveRealm, Realms, Resource, ResourceMetadata, types}
 import ch.epfl.bluebrain.nexus.iam.testsyntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, GrantType, Label, ResourceF}
@@ -21,7 +21,7 @@ import monix.eval.Task
 import org.mockito.matchers.MacroBasedMatchers
 import org.mockito.{IdiomaticMockito, Mockito}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfter, EitherValues, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
@@ -34,6 +34,7 @@ class RealmsRoutesSpec
     with MacroBasedMatchers
     with Resources
     with ScalaFutures
+    with EitherValues
     with IdiomaticMockito {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
@@ -49,6 +50,12 @@ class RealmsRoutesSpec
     Mockito.reset(realms)
     realms.caller(any[AccessToken]) shouldReturn Task.pure(Caller.anonymous)
   }
+
+  val authorizationEndpoint = Url("https://localhost/auth").right.value
+  val tokenEndpoint         = Url("https://localhost/auth/token").right.value
+  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").right.value
+  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").right.value)
+  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").right.value)
 
   def response(label: Label, rev: Long, deprecated: Boolean): Json =
     jsonContentOf(
@@ -120,7 +127,20 @@ class RealmsRoutesSpec
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, false).sort
       }
     }
-    val realm = ActiveRealm(label, name, openIdConfig, "issuer", Set(GrantType.Implicit), Some(logo), Set.empty)
+    val realm = ActiveRealm(
+      label,
+      name,
+      openIdConfig,
+      "issuer",
+      Set(GrantType.Implicit),
+      Some(logo),
+      authorizationEndpoint,
+      tokenEndpoint,
+      userInfoEndpoint,
+      revocationEndpoint,
+      endSessionEndpoint,
+      Set.empty
+    )
     "fetch a realm by id" in {
       realms.fetch(any[Label])(any[Caller]) shouldReturn Task.pure(Some(resource(label, 1L, realm)))
       Get("/v1/realms/therealm") ~> routes ~> check {

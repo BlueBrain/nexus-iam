@@ -57,7 +57,7 @@ class RealmsSpec
 
   implicit val httpClient: HttpJsonClient[IO] = {
     val m = mock[HttpJsonClient[IO]]
-    m.apply(Get(openIdUrlString)) shouldReturn IO.pure(validOpenIdConfig)
+    m.apply(Get(openIdUrlString)) shouldReturn IO.pure(fullOpenIdConfig)
     m.apply(Get(jwksUrlString)) shouldReturn IO.pure(validJwks)
     m.apply(Get(deprUrlString)) shouldReturn IO.pure(deprecatedOpenIdConfig)
     m
@@ -119,7 +119,21 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            None,
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
 
@@ -137,7 +151,21 @@ class RealmsSpec
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+          Right(
+            ActiveRealm(
+              first,
+              firstName,
+              openIdUrl,
+              issuer,
+              grantTypes,
+              None,
+              authorizationUrl,
+              tokenUrl,
+              userInfoUrl,
+              Some(revocationUrl),
+              Some(endSessionUrl),
+              Set(publicKeyJson)
+            ))
         ),
         ResourceF(
           second.toIri(http.realmsIri),
@@ -147,7 +175,21 @@ class RealmsSpec
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(second, secondName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+          Right(
+            ActiveRealm(
+              second,
+              secondName,
+              openIdUrl,
+              issuer,
+              grantTypes,
+              None,
+              authorizationUrl,
+              tokenUrl,
+              userInfoUrl,
+              Some(revocationUrl),
+              Some(endSessionUrl),
+              Set(publicKeyJson)
+            ))
         )
       )
     }
@@ -161,7 +203,21 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName + "x", openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName + "x",
+            openIdUrl,
+            issuer,
+            grantTypes,
+            Some(logoUrl),
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "fetch a realm at revision" in {
@@ -173,7 +229,21 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            None,
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "deprecate an existing realm" in {
@@ -202,7 +272,21 @@ class RealmsSpec
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            Some(logoUrl),
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "fail to update a realm with incorrect revision" in {
