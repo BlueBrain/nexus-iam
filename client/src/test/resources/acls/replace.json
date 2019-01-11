@@ -1,0 +1,15 @@
+{
+  "acl": [
+    {
+      "identity": {
+        "@id": "http://example.com/some/v1/realms/username/users/realm",
+        "@type": "User",
+        "realm": "username",
+        "subject": "realm"
+      },
+      "permissions": [
+        "test/permission"
+      ]
+    }
+  ]
+}
