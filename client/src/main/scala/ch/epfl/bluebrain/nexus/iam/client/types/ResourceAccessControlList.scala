@@ -2,6 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.client.types
 
 import java.time.Instant
 
+import cats.syntax.either._
 import ch.epfl.bluebrain.nexus.iam.client.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.config.Vocabulary._
@@ -10,8 +11,8 @@ import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import io.circe._
 import io.circe.syntax._
-import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 
 /**
   * The Access Control List with the metadata information
@@ -38,10 +39,15 @@ object ResourceAccessControlList {
   implicit def resourceAccessControlListEncoder(implicit config: IamClientConfig): Encoder[ResourceAccessControlList] =
     Encoder.encodeJson.contramap {
       case ResourceAccessControlList(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl) =>
+        val jsonTypes = types.toList match {
+          case Nil      => Json.Null
+          case t :: Nil => Json.fromString(t.lastSegment.getOrElse(t.asString))
+          case _        => Json.arr(types.map(t => Json.fromString(t.lastSegment.getOrElse(t.asString))).toSeq: _*)
+        }
         Json
           .obj(
             "@id"                -> id.asJson,
-            "@type"              -> Json.arr(types.map(t => Json.fromString(t.asString.stripPrefix(nxv.base.asString))).toSeq: _*),
+            "@type"              -> jsonTypes,
             nxv.rev.prefix       -> Json.fromLong(rev),
             nxv.createdBy.prefix -> createdBy.id.asJson,
             nxv.updatedBy.prefix -> updatedBy.id.asJson,
@@ -58,16 +64,29 @@ object ResourceAccessControlList {
         Identity(id)
           .collect { case s: Subject => s }
           .toRight(DecodingFailure(s"wrong subject with id '${id.asString}'", hc.history))
+      def decodeTypes(cursor: HCursor): Decoder.Result[Set[AbsoluteIri]] =
+        cursor
+          .get[Set[String]]("@type")
+          .orElse(cursor.get[String]("@type").map(str => Set(str)))
+          .orElse(Right(Set.empty))
+          .map(types => types.map(tpe => Iri.absolute(tpe).getOrElse(nxv.base + tpe)))
       for {
-        id       <- hc.get[AbsoluteIri]("@id")
-        typesStr <- hc.get[Vector[String]]("@type")
-        types = typesStr.map(tpe => Iri.absolute(tpe).getOrElse(nxv.base + tpe))
+        id        <- hc.get[AbsoluteIri]("@id")
+        types     <- decodeTypes(hc)
         rev       <- hc.get[Long](nxv.rev.prefix)
         createdBy <- hc.get[AbsoluteIri](nxv.createdBy.prefix).flatMap(toSubject)
         updatedBy <- hc.get[AbsoluteIri](nxv.updatedBy.prefix).flatMap(toSubject)
         createdAt <- hc.get[Instant](nxv.createdAt.prefix)
         updatedAt <- hc.get[Instant](nxv.updatedAt.prefix)
         acl       <- hc.value.as[AccessControlList]
-      } yield ResourceAccessControlList(id, rev, types.toSet, createdAt, createdBy, updatedAt, updatedBy, acl)
+      } yield ResourceAccessControlList(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
     }
+
+  private implicit class AbsoluteIriSyntax(private val iri: AbsoluteIri) extends AnyVal {
+    def lastSegment: Option[String] =
+      iri.path.head match {
+        case segment: String => Some(segment)
+        case _               => None
+      }
+  }
 }
