@@ -8,10 +8,7 @@
   "_results": [
     {
       "@id": "http://nexus.example.com/v1/acls/id1",
-      "@type": [
-        "AccessControlList"
-      ],
-      "path": "/myorg/myproj",
+      "@type": "AccessControlList",
       "acl": [
         {
           "identity": {
@@ -37,12 +34,12 @@
           ]
         }
       ],
+      "_path": "/myorg/myproj",
       "_createdAt": "1970-01-01T01:00:00Z",
       "_createdBy": "http://nexus.example.com/v1/realms/realm/users/uuid",
       "_updatedAt": "1970-01-01T01:00:00Z",
       "_updatedBy": "http://nexus.example.com/v1/realms/realm/users/uuid2",
-      "_rev": 1,
-      "_deprecated": false
+      "_rev": 1
     }
   ]
 }

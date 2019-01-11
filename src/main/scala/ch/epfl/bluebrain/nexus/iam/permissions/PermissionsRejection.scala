@@ -41,7 +41,7 @@ object PermissionsRejection {
     * Rejection returned when a subject intends to append an empty collection of permissions.
     */
   final case object CannotAppendEmptyCollection
-      extends PermissionsRejection("Cannot subtract from an empty collection of permissions.")
+      extends PermissionsRejection("Cannot append an empty collection of permissions.")
 
   /**
     * Rejection returned when a subject intends to replace the current collection of permission with an empty set.
@@ -60,9 +60,10 @@ object PermissionsRejection {
     * Rejection returned when a subject intends to perform an operation on the current collection of permissions, but
     * either provided an incorrect revision or a concurrent update won over this attempt.
     *
-    * @param rev the provided revision
+    * @param provided the provided revision
+    * @param expected the expected revision
     */
-  final case class IncorrectRev(rev: Long)
+  final case class IncorrectRev(provided: Long, expected: Long)
       extends PermissionsRejection(
-        s"Incorrect revision '$rev' provided, permissions may have been updated since last seen.")
+        s"Incorrect revision '$provided' provided, expected '$expected', permissions may have been updated since last seen.")
 }

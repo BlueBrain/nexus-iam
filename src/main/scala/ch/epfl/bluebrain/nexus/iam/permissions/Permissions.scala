@@ -51,8 +51,17 @@ class Permissions[F[_]: MonadThrowable](
     * @param rev the permissions revision
     * @return the permissions as a resource at the specified revision
     */
-  def fetchAt(rev: Long)(implicit caller: Caller): F[Resource] =
-    check(read) *> stateOf(Some(rev)).map(_.resource)
+  def fetchAt(rev: Long)(implicit caller: Caller): F[OptResource] =
+    check(read) *> agg
+      .foldLeft[State](pid, Initial) {
+        case (state, event) if event.rev <= rev => next(pc)(state, event)
+        case (state, _)                         => state
+      }
+      .map {
+        case Initial if rev != 0L       => None
+        case c: Current if rev != c.rev => None
+        case other                      => Some(other.resource)
+      }
 
   /**
     * @return the current permissions collection
@@ -64,7 +73,7 @@ class Permissions[F[_]: MonadThrowable](
     * @return the current permissions as a resource without checking permissions
     */
   def fetchUnsafe: F[Resource] =
-    stateOf(None).map(_.resource)
+    agg.currentState(pid).map(_.resource)
 
   /**
     * @return the current permissions collection without checking permissions
@@ -126,16 +135,6 @@ class Permissions[F[_]: MonadThrowable](
     acls
       .flatMap(_.hasPermission(Path./, permission, ancestors = false))
       .ifM(F.unit, F.raiseError(AccessDenied(id, permission)))
-
-  private def stateOf(optRev: Option[Long]): F[State] =
-    optRev
-      .map { rev =>
-        agg.foldLeft[State](pid, Initial) {
-          case (state, event) if event.rev <= rev => next(pc)(state, event)
-          case (state, _)                         => state
-        }
-      }
-      .getOrElse(agg.currentState(pid))
 }
 
 object Permissions {
@@ -235,12 +234,12 @@ object Permissions {
       F.pure(Left(rejection))
 
     def replace(c: ReplacePermissions): F[EventOrRejection] =
-      if (c.rev != state.rev) reject(IncorrectRev(c.rev))
+      if (c.rev != state.rev) reject(IncorrectRev(c.rev, state.rev))
       else if (c.permissions.isEmpty) reject(CannotReplaceWithEmptyCollection)
       else if (c.permissions -- pc.minimum isEmpty) reject(CannotReplaceWithEmptyCollection)
       else accept(PermissionsReplaced(c.rev + 1, c.permissions, _, c.subject))
     def append(c: AppendPermissions): F[EventOrRejection] = state match {
-      case _ if state.rev != c.rev    => reject(IncorrectRev(c.rev))
+      case _ if state.rev != c.rev    => reject(IncorrectRev(c.rev, state.rev))
       case _ if c.permissions.isEmpty => reject(CannotAppendEmptyCollection)
       case Initial                    => accept(PermissionsAppended(1L, c.permissions, _, c.subject))
       case s: Current =>
@@ -249,7 +248,7 @@ object Permissions {
         else accept(PermissionsAppended(c.rev + 1, c.permissions, _, c.subject))
     }
     def subtract(c: SubtractPermissions): F[EventOrRejection] = state match {
-      case _ if state.rev != c.rev    => reject(IncorrectRev(c.rev))
+      case _ if state.rev != c.rev    => reject(IncorrectRev(c.rev, state.rev))
       case _ if c.permissions.isEmpty => reject(CannotSubtractEmptyCollection)
       case Initial                    => reject(CannotSubtractFromMinimumCollection(pc.minimum))
       case s: Current =>
@@ -261,7 +260,7 @@ object Permissions {
         else accept(PermissionsSubtracted(c.rev + 1, delta, _, c.subject))
     }
     def delete(c: DeletePermissions): F[EventOrRejection] = state match {
-      case _ if state.rev != c.rev                   => reject(IncorrectRev(c.rev))
+      case _ if state.rev != c.rev                   => reject(IncorrectRev(c.rev, state.rev))
       case Initial                                   => reject(CannotDeleteMinimumCollection)
       case s: Current if s.permissions == pc.minimum => reject(CannotDeleteMinimumCollection)
       case _: Current                                => accept(PermissionsDeleted(c.rev + 1, _, c.subject))

@@ -91,7 +91,7 @@ object AccessControlLists {
     case AccessControlLists(value) =>
       val arr = value.map {
         case (path, acl) =>
-          Json.obj("path" -> Json.fromString(path.asString)) deepMerge acl.asJson.removeKeys("@context")
+          Json.obj("_path" -> Json.fromString(path.asString)) deepMerge acl.asJson.removeKeys("@context")
       }
       Json
         .obj(nxv.total.prefix -> Json.fromInt(arr.size), nxv.results.prefix -> Json.arr(arr.toSeq: _*))

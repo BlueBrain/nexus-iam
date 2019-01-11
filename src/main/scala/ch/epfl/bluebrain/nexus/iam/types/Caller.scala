@@ -22,7 +22,6 @@ object Caller {
   object JsonLd {
     final implicit def callerEncoder(
         implicit
-        S: Encoder[Subject],
         I: Encoder[Identity],
         http: HttpConfig
     ): Encoder[Caller] = {
@@ -32,7 +31,6 @@ object Caller {
       Encoder.instance[Caller] { caller =>
         Json
           .obj(
-            "subject"    -> S(caller.subject),
             "identities" -> Encoder.encodeList(I)(caller.identities.toList.sortBy(_.id.asUri))
           )
           .addContext(iamCtxUri)

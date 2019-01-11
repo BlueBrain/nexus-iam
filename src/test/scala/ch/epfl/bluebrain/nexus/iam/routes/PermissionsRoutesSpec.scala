@@ -57,7 +57,7 @@ class PermissionsRoutesSpec
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
   def resource(rev: Long, set: Set[Permission]): Resource =
-    ResourceF(id, rev, types, deprecated = false, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous, set)
+    ResourceF(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous, set)
 
   def metaResponse(rev: Long): Json =
     jsonContentOf(
@@ -66,7 +66,7 @@ class PermissionsRoutesSpec
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
   def meta(rev: Long): ResourceF[Unit] =
-    ResourceF.unit(id, rev, types, deprecated = false, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
+    ResourceF.unit(id, rev, types, Instant.EPOCH, Anonymous, Instant.EPOCH, Anonymous)
 
   def missingParams: Json =
     jsonContentOf("/permissions/missing-rev.json")
@@ -81,22 +81,6 @@ class PermissionsRoutesSpec
       }
     }
     "return missing rev params" when {
-      "attempting to append" in {
-        val json =
-          Json.obj("@type" -> Json.fromString("Append"), "permissions" -> Json.arr(Json.fromString("random/a")))
-        Patch("/v1/permissions", json) ~> routes ~> check {
-          responseAs[Json].sort shouldEqual missingParams.sort
-          status shouldEqual StatusCodes.BadRequest
-        }
-      }
-      "attempting to subtract" in {
-        val json =
-          Json.obj("@type" -> Json.fromString("Subtract"), "permissions" -> Json.arr(Json.fromString("random/a")))
-        Patch("/v1/permissions", json) ~> routes ~> check {
-          responseAs[Json].sort shouldEqual missingParams.sort
-          status shouldEqual StatusCodes.BadRequest
-        }
-      }
       "attempting to replace" in {
         val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
         Put("/v1/permissions", json) ~> routes ~> check {
@@ -141,6 +125,20 @@ class PermissionsRoutesSpec
       Delete("/v1/permissions?rev=2") ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
+      }
+    }
+    "return 404 for wrong revision" in {
+      perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(None)
+      Get("/v1/permissions?rev=2") ~> routes ~> check {
+        status shouldEqual StatusCodes.NotFound
+        responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
+      }
+    }
+    "return 200 for correct revision" in {
+      perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(Some(resource(3L, appConfig.permissions.minimum)))
+      Get("/v1/permissions?rev=2") ~> routes ~> check {
+        status shouldEqual StatusCodes.OK
+        responseAs[Json].sort shouldEqual response(3L).sort
       }
     }
   }

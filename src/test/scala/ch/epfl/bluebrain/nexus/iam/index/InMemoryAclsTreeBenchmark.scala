@@ -73,7 +73,6 @@ class InMemoryAclsTreeBenchmark
       val acl = ResourceF(http.aclsIri + "id3",
                           3L,
                           Set.empty,
-                          false,
                           instant,
                           user,
                           instant,

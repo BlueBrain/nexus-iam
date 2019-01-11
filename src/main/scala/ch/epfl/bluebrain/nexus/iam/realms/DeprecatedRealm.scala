@@ -1,10 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
+import _root_.io.circe.generic.semiauto._
+import _root_.io.circe.{Encoder, Json}
+import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import _root_.io.circe.Encoder
-import _root_.io.circe.generic.semiauto._
 
 /**
   * A realm representation that has been deprecated.
@@ -22,5 +24,15 @@ final case class DeprecatedRealm(
 )
 
 object DeprecatedRealm {
-  implicit val deprecatedEncoder: Encoder[DeprecatedRealm] = deriveEncoder
+  implicit val deprecatedEncoder: Encoder[DeprecatedRealm] = {
+    val default = deriveEncoder[DeprecatedRealm]
+    Encoder
+      .instance[DeprecatedRealm] { realm =>
+        default(realm) deepMerge Json.obj(
+          nxv.label.prefix      -> Json.fromString(realm.id.value),
+          nxv.deprecated.prefix -> Json.fromBoolean(true)
+        )
+      }
+      .mapJson(_.removeKeys("id"))
+  }
 }

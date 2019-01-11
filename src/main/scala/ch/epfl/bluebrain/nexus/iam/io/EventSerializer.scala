@@ -16,7 +16,7 @@ import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
-import io.circe.{Decoder, Encoder}
+import io.circe.{Decoder, Encoder, Printer}
 
 /**
   * A json event serializer for data types that need a human readable representation.
@@ -25,6 +25,8 @@ import io.circe.{Decoder, Encoder}
   */
 class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringManifest {
   private val utf8 = Charset.forName("UTF-8")
+
+  private val printer = Printer.noSpaces.copy(dropNullValues = true)
 
   private implicit val http: HttpConfig = Settings(system).appConfig.http
 
@@ -53,9 +55,9 @@ class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringM
         s"Cannot determine manifest for unknown type: '${other.getClass.getCanonicalName}'")
   }
   override def toBinary(o: AnyRef): Array[Byte] = o match {
-    case ev: PermissionsEvent => ev.asJson.noSpaces.getBytes(utf8)
-    case ev: AclEvent         => ev.asJson.noSpaces.getBytes(utf8)
-    case ev: RealmEvent       => ev.asJson.noSpaces.getBytes(utf8)
+    case ev: PermissionsEvent => ev.asJson.pretty(printer).getBytes(utf8)
+    case ev: AclEvent         => ev.asJson.pretty(printer).getBytes(utf8)
+    case ev: RealmEvent       => ev.asJson.pretty(printer).getBytes(utf8)
     case other =>
       throw new IllegalArgumentException(s"Cannot serialize unknown type: '${other.getClass.getCanonicalName}'")
   }

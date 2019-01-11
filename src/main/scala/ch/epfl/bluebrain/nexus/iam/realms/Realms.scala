@@ -25,7 +25,7 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, InternalError, 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStore
+import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
@@ -72,15 +72,15 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     *
     * @param id           the realm id
     * @param rev          the current revision of the realm
-    * @param name         an optional new name for the realm
-    * @param openIdConfig an optional new openid configuration address
+    * @param name         the new name for the realm
+    * @param openIdConfig the new openid configuration address
     * @param logo         an optional new logo
     */
   def update(
       id: Label,
       rev: Long,
-      name: Option[String],
-      openIdConfig: Option[Url],
+      name: String,
+      openIdConfig: Url,
       logo: Option[Url]
   )(implicit caller: Caller): F[MetaOrRejection] =
     check(id, write) *> eval(UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
@@ -151,8 +151,9 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
     def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
-      val authenticated = Authenticated(realmId.value)
-      val subject       = Option(claimsSet.getSubject).toRight(AccessTokenDoesNotContainSubject)
+      val authenticated     = Authenticated(realmId.value)
+      val preferredUsername = Try(claimsSet.getStringClaim("preferred_username")).filter(_ != null).toOption
+      val subject           = (preferredUsername orElse Option(claimsSet.getSubject)).toRight(AccessTokenDoesNotContainSubject)
       val groups = Try(claimsSet.getStringArrayClaim("groups"))
         .filter(_ != null)
         .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }
@@ -187,7 +188,20 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
   }
 
   private def fetchUnsafe(id: Label, optRev: Option[Long] = None): F[OptResource] =
-    stateOf(id, optRev).map(_.optResource)
+    optRev
+      .map { rev =>
+        agg
+          .foldLeft[State](id.value, Initial) {
+            case (state, event) if event.rev <= rev => next(state, event)
+            case (state, _)                         => state
+          }
+          .map {
+            case Initial if rev != 0L       => None
+            case c: Current if rev != c.rev => None
+            case other                      => other.optResource
+          }
+      }
+      .getOrElse(agg.currentState(id.value).map(_.optResource))
 
   private def check(id: Label, permission: Permission)(implicit caller: Caller): F[Unit] =
     acls
@@ -210,16 +224,6 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         case Right(c: Current) => F.pure(Right(c.resourceMetadata))
       }
 
-  private def stateOf(id: Label, optRev: Option[Long]): F[State] =
-    optRev
-      .map { rev =>
-        agg.foldLeft[State](id.value, Initial) {
-          case (state, event) if event.rev <= rev => next(state, event)
-          case (state, _)                         => state
-        }
-      }
-      .getOrElse(agg.currentState(id.value))
-
   private[realms] def updateIndex(id: Label): F[Unit] =
     fetchUnsafe(id).flatMap {
       case Some(res) => index.put(id, res)
@@ -233,7 +237,7 @@ object Realms {
     * Creates a new realm index.
     */
   def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
-    implicit val _ = rc.keyValueStore
+    implicit val cfg: KeyValueStoreConfig = rc.keyValueStore
     new RealmIndex[F] {
       val underlying: RealmIndex[F] = KeyValueStore.distributed("realms", (_, resource) => resource.rev)
 
@@ -332,11 +336,11 @@ object Realms {
   private[realms] def next(state: State, event: Event): State = {
     // format: off
     def created(e: RealmCreated): State = state match {
-      case Initial => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.instant, e.subject, e.instant, e.subject)
+      case Initial => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.authorizationEndpoint, e.tokenEndpoint, e.userInfoEndpoint, e.revocationEndpoint, e.endSessionEndpoint, e.instant, e.subject, e.instant, e.subject)
       case other   => other
     }
     def updated(e: RealmUpdated): State = state match {
-      case s: Current => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, s.createdAt, s.createdBy, e.instant, e.subject)
+      case s: Current => Active(e.id, e.rev, e.name, e.openIdConfig, e.issuer, e.keys, e.grantTypes, e.logo, e.authorizationEndpoint, e.tokenEndpoint, e.userInfoEndpoint, e.revocationEndpoint, e.endSessionEndpoint, s.createdAt, s.createdBy, e.instant, e.subject)
       case other      => other
     }
     def deprecated(e: RealmDeprecated): State = state match {
@@ -369,27 +373,24 @@ object Realms {
           instant  <- instantF
           wkeither <- WellKnown[F](c.openIdConfig)
         } yield wkeither.map { wk =>
-          RealmCreated(c.id, 1L, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, instant, c.subject)
+          RealmCreated(c.id, 1L, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, wk.authorizationEndpoint, wk.tokenEndpoint, wk.userInfoEndpoint, wk.revocationEndpoint, wk.endSessionEndpoint, instant, c.subject)
         }
       case _ => reject(RealmAlreadyExists(c.id))
     }
     def update(c: UpdateRealm): F[EventOrRejection] = state match {
       case Initial                      => reject(RealmNotFound(c.id))
-      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev))
+      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev, s.rev))
       case s: Current =>
-        val cfg  = c.openIdConfig.getOrElse(s.openIdConfig)
-        val name = c.name.getOrElse(s.name)
-        val logo = c.logo orElse s.logo
         for {
           instant  <- instantF
-          wkeither <- WellKnown[F](cfg)
+          wkeither <- WellKnown[F](c.openIdConfig)
         } yield wkeither.map { wk =>
-          RealmUpdated(c.id, s.rev + 1, name, cfg, wk.issuer, wk.keys, wk.grantTypes, logo, instant, c.subject)
+          RealmUpdated(c.id, s.rev + 1, c.name, c.openIdConfig, wk.issuer, wk.keys, wk.grantTypes, c.logo, wk.authorizationEndpoint, wk.tokenEndpoint, wk.userInfoEndpoint, wk.revocationEndpoint, wk.endSessionEndpoint, instant, c.subject)
         }
     }
     def deprecate(c: DeprecateRealm): F[EventOrRejection] = state match {
       case Initial                      => reject(RealmNotFound(c.id))
-      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev))
+      case s: Current if s.rev != c.rev => reject(IncorrectRev(c.rev, s.rev))
       case _: Deprecated                => reject(RealmAlreadyDeprecated(c.id))
       case s: Current                   => accept(RealmDeprecated(s.id, s.rev + 1, _, c.subject))
     }

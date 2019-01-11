@@ -14,7 +14,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import io.circe.Json
 import io.circe.parser._
 import org.mockito.IdiomaticMockito
-import org.scalatest.{EitherValues, Matchers, OptionValues, WordSpecLike}
+import org.scalatest._
 
 //noinspection TypeAnnotation
 class WellKnownSpec
@@ -23,6 +23,7 @@ class WellKnownSpec
     with OptionValues
     with EitherValues
     with IOEitherValues
+    with Inspectors
     with IdiomaticMockito {
 
   private def httpMock(openIdConfig: Json, jwks: Json): HttpClient[IO, Json] = {
@@ -53,6 +54,18 @@ class WellKnownSpec
           httpMock(validOpenIdConfig.hcursor.downField("grant_types_supported").delete.top.value, validJwks)
         val wk = WellKnown[IO](openIdUrl).accepted
         wk.grantTypes shouldEqual Set.empty[GrantType]
+      }
+      "the openid contains the expected endpoints" in {
+        implicit val cl = httpMock(fullOpenIdConfig, validJwks)
+        val wk          = WellKnown[IO](openIdUrl).accepted
+        wk.issuer shouldEqual issuer
+        wk.grantTypes shouldEqual grantTypes
+        wk.keys shouldEqual Set(publicKeyJson)
+        wk.authorizationEndpoint shouldEqual authorizationUrl
+        wk.tokenEndpoint shouldEqual tokenUrl
+        wk.userInfoEndpoint shouldEqual userInfoUrl
+        wk.revocationEndpoint.value shouldEqual revocationUrl
+        wk.endSessionEndpoint.value shouldEqual endSessionUrl
       }
     }
 
@@ -105,6 +118,28 @@ class WellKnownSpec
         rej.document shouldEqual openIdUrl
         rej.location shouldEqual ".grant_types_supported[0]"
       }
+      "the openid contains an incorrect endpoint" in {
+        forAll(
+          List("authorization_endpoint",
+               "token_endpoint",
+               "userinfo_endpoint",
+               "revocation_endpoint",
+               "end_session_endpoint")) { key =>
+          implicit val cl = httpMock(fullOpenIdConfig.deepMerge(Json.obj(key -> Json.fromInt(3))), validJwks)
+          val rej         = WellKnown[IO](openIdUrl).rejected[IllegalEndpointFormat]
+          rej.document shouldEqual openIdUrl
+          rej.location shouldEqual s".$key"
+        }
+      }
+      "the openid does not contain required endpoints" in {
+        forAll(List("authorization_endpoint", "token_endpoint", "userinfo_endpoint")) { key =>
+          val cfg         = fullOpenIdConfig.hcursor.downField(key).delete.top.value
+          implicit val cl = httpMock(cfg, validJwks)
+          val rej         = WellKnown[IO](openIdUrl).rejected[IllegalEndpointFormat]
+          rej.document shouldEqual openIdUrl
+          rej.location shouldEqual s".$key"
+        }
+      }
       "the client returns a bad response for the jwks document" in {
         implicit val cl = mock[HttpClient[IO, Json]]
         cl.apply(Get(openIdUrlString)) shouldReturn IO.pure(validOpenIdConfig)
@@ -144,6 +179,12 @@ object WellKnownSpec {
   val issuer          = "https://localhost/auth/realms/master"
   val deprUrlString   = "https://localhost/auth/realms/deprecated/.well-known/openid-configuration"
 
+  val authorizationUrl = Url("https://localhost/auth").right.value
+  val tokenUrl         = Url("https://localhost/auth/token").right.value
+  val userInfoUrl      = Url("https://localhost/auth/userinfo").right.value
+  val revocationUrl    = Url("https://localhost/auth/revoke").right.value
+  val endSessionUrl    = Url("https://localhost/auth/logout").right.value
+
   val validOpenIdConfigString =
     s"""
       | {
@@ -155,10 +196,34 @@ object WellKnownSpec {
       |     "refresh_token",
       |     "password",
       |     "client_credentials"
-      |   ]
+      |   ],
+      |   "authorization_endpoint": "${authorizationUrl.asUri}",
+      |   "token_endpoint": "${tokenUrl.asUri}",
+      |   "userinfo_endpoint": "${userInfoUrl.asUri}"
       | }
     """.stripMargin
   val validOpenIdConfig = parse(validOpenIdConfigString).right.value
+
+  val fullOpenIdConfigString =
+    s"""
+       | {
+       |   "issuer": "$issuer",
+       |   "jwks_uri": "$jwksUrlString",
+       |   "grant_types_supported": [
+       |     "authorization_code",
+       |     "implicit",
+       |     "refresh_token",
+       |     "password",
+       |     "client_credentials"
+       |   ],
+       |   "authorization_endpoint": "${authorizationUrl.asUri}",
+       |   "token_endpoint": "${tokenUrl.asUri}",
+       |   "userinfo_endpoint": "${userInfoUrl.asUri}",
+       |   "revocation_endpoint": "${revocationUrl.asUri}",
+       |   "end_session_endpoint": "${endSessionUrl.asUri}"
+       | }
+    """.stripMargin
+  val fullOpenIdConfig = parse(fullOpenIdConfigString).right.value
 
   val deprecatedOpenIdConfigString =
     s"""
@@ -171,7 +236,10 @@ object WellKnownSpec {
        |     "refresh_token",
        |     "password",
        |     "client_credentials"
-       |   ]
+       |   ],
+       |   "authorization_endpoint": "${authorizationUrl.asUri}",
+       |   "token_endpoint": "${tokenUrl.asUri}",
+       |   "userinfo_endpoint": "${userInfoUrl.asUri}"
        | }
     """.stripMargin
   val deprecatedOpenIdConfig = parse(deprecatedOpenIdConfigString).right.value

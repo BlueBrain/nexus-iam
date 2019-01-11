@@ -57,7 +57,7 @@ class RealmsSpec
 
   implicit val httpClient: HttpJsonClient[IO] = {
     val m = mock[HttpJsonClient[IO]]
-    m.apply(Get(openIdUrlString)) shouldReturn IO.pure(validOpenIdConfig)
+    m.apply(Get(openIdUrlString)) shouldReturn IO.pure(fullOpenIdConfig)
     m.apply(Get(jwksUrlString)) shouldReturn IO.pure(validJwks)
     m.apply(Get(deprUrlString)) shouldReturn IO.pure(deprecatedOpenIdConfig)
     m
@@ -83,7 +83,8 @@ class RealmsSpec
       exp: Date = Date.from(Instant.now().plusSeconds(3600)),
       nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
       groups: Option[Set[String]] = None,
-      useCommas: Boolean = false
+      useCommas: Boolean = false,
+      preferredUsername: Option[String] = None,
   ): AccessToken = {
     val signer = new RSASSASigner(privateKey)
     val csb = new JWTClaimsSet.Builder()
@@ -95,6 +96,10 @@ class RealmsSpec
     groups.map { set =>
       if (useCommas) csb.claim("groups", set.mkString(","))
       else csb.claim("groups", set.toArray)
+    }
+
+    preferredUsername.map { pu =>
+      csb.claim("preferred_username", pu)
     }
 
     val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
@@ -110,12 +115,25 @@ class RealmsSpec
         first.toIri(http.realmsIri),
         1L,
         types,
-        false,
         instant,
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            None,
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
 
@@ -129,38 +147,77 @@ class RealmsSpec
           first.toIri(http.realmsIri),
           1L,
           types,
-          false,
           instant,
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+          Right(
+            ActiveRealm(
+              first,
+              firstName,
+              openIdUrl,
+              issuer,
+              grantTypes,
+              None,
+              authorizationUrl,
+              tokenUrl,
+              userInfoUrl,
+              Some(revocationUrl),
+              Some(endSessionUrl),
+              Set(publicKeyJson)
+            ))
         ),
         ResourceF(
           second.toIri(http.realmsIri),
           1L,
           types,
-          false,
           instant,
           Anonymous,
           instant,
           Anonymous,
-          Right(ActiveRealm(second, secondName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+          Right(
+            ActiveRealm(
+              second,
+              secondName,
+              openIdUrl,
+              issuer,
+              grantTypes,
+              None,
+              authorizationUrl,
+              tokenUrl,
+              userInfoUrl,
+              Some(revocationUrl),
+              Some(endSessionUrl),
+              Set(publicKeyJson)
+            ))
         )
       )
     }
     "update an existing realm" in {
-      realms.update(first, 1L, Some(firstName + "x"), Some(openIdUrl), Some(logoUrl)).accepted
+      realms.update(first, 1L, firstName + "x", openIdUrl, Some(logoUrl)).accepted
       realms.fetch(first).some shouldEqual ResourceF(
         first.toIri(http.realmsIri),
         2L,
         types,
-        false,
         instant,
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName + "x", openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName + "x",
+            openIdUrl,
+            issuer,
+            grantTypes,
+            Some(logoUrl),
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "fetch a realm at revision" in {
@@ -168,12 +225,25 @@ class RealmsSpec
         first.toIri(http.realmsIri),
         1L,
         types,
-        false,
         instant,
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, None, Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            None,
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "deprecate an existing realm" in {
@@ -182,7 +252,6 @@ class RealmsSpec
         first.toIri(http.realmsIri),
         3L,
         types,
-        true,
         instant,
         Anonymous,
         instant,
@@ -193,39 +262,41 @@ class RealmsSpec
     "fail to deprecate twice a realm" in {
       realms.deprecate(first, 3L).rejected[RealmAlreadyDeprecated]
     }
+    "return none for a wrong revision" in {
+      realms.fetch(first, 9999L).ioValue shouldEqual None
+    }
     "un-deprecate a realm" in {
-      realms.update(first, 3L, Some(firstName), Some(openIdUrl), Some(logoUrl)).accepted
+      realms.update(first, 3L, firstName, openIdUrl, Some(logoUrl)).accepted
       realms.fetch(first).some shouldEqual ResourceF(
         first.toIri(http.realmsIri),
         4L,
         types,
-        false,
         instant,
         Anonymous,
         instant,
         Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
-      )
-    }
-    "update a realm with no changes" in {
-      realms.update(first, 4L, None, None, None).accepted
-      realms.fetch(first).some shouldEqual ResourceF(
-        first.toIri(http.realmsIri),
-        5L,
-        types,
-        false,
-        instant,
-        Anonymous,
-        instant,
-        Anonymous,
-        Right(ActiveRealm(first, firstName, openIdUrl, issuer, grantTypes, Some(logoUrl), Set(publicKeyJson)))
+        Right(
+          ActiveRealm(
+            first,
+            firstName,
+            openIdUrl,
+            issuer,
+            grantTypes,
+            Some(logoUrl),
+            authorizationUrl,
+            tokenUrl,
+            userInfoUrl,
+            Some(revocationUrl),
+            Some(endSessionUrl),
+            Set(publicKeyJson)
+          ))
       )
     }
     "fail to update a realm with incorrect revision" in {
-      realms.update(first, 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).rejected[IncorrectRev]
+      realms.update(first, 10L, firstName, openIdUrl, Some(logoUrl)).rejected[IncorrectRev]
     }
     "fail to update a realm that does not exist" in {
-      realms.update(Label.unsafe("blah"), 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).rejected[RealmNotFound]
+      realms.update(Label.unsafe("blah"), 10L, firstName, openIdUrl, Some(logoUrl)).rejected[RealmNotFound]
     }
     "fail to deprecate a realm with incorrect revision" in {
       realms.deprecate(first, 10L).rejected[IncorrectRev]
@@ -236,6 +307,7 @@ class RealmsSpec
 
     "correctly extract the caller" when {
       val subject      = "sub"
+      val preferred    = "preferred"
       val user         = User(subject, first.value)
       val groupStrings = Set("g1", "g2")
       val groups       = groupStrings.map(str => Group(str, first.value))
@@ -251,6 +323,11 @@ class RealmsSpec
       "the claimset contains array group values" in {
         val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
         realms.caller(token(subject, groups = Some(groupStrings), useCommas = false)).ioValue shouldEqual expected
+      }
+      "the claimset contains a preferred_username entry" in {
+        val user     = User(preferred, first.value)
+        val expected = Caller(user, Set(user, Anonymous, auth))
+        realms.caller(token(subject, preferredUsername = Some(preferred))).ioValue shouldEqual expected
       }
     }
 
@@ -333,7 +410,7 @@ class RealmsSpec
     }
 
     "fail to update a realm with no permissions" in {
-      realms.update(first, 10L, Some(firstName), Some(openIdUrl), Some(logoUrl)).failed[AccessDenied]
+      realms.update(first, 10L, firstName, openIdUrl, Some(logoUrl)).failed[AccessDenied]
     }
 
     "fail to deprecate a realm with no permissions" in {

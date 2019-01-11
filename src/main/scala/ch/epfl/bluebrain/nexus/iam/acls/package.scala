@@ -42,7 +42,6 @@ package object acls {
     ResourceF(http.aclsIri + "/",
               0L,
               types,
-              false,
               Instant.EPOCH,
               Anonymous,
               Instant.EPOCH,

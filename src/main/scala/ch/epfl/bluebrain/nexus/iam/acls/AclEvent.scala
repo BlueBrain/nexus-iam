@@ -110,7 +110,15 @@ object AclEvent {
     import io.circe.generic.extras.Configuration
     import io.circe.generic.extras.semiauto._
 
-    private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+    private implicit val config: Configuration = Configuration.default
+      .withDiscriminator("@type")
+      .copy(transformMemberNames = {
+        case "rev"     => "_rev"
+        case "instant" => "_instant"
+        case "subject" => "_subject"
+        case "path"    => "_path"
+        case other     => other
+      })
 
     implicit def aclEventEncoder(implicit httpConfig: HttpConfig): Encoder[AclEvent] = {
       implicit val arrayEncoder: Encoder[AccessControlList] = AccessControlList.aclArrayEncoder

@@ -38,10 +38,12 @@ object RealmRejection {
     * Rejection returned when a subject intends to perform an operation on the current realm, but either provided an
     * incorrect revision or a concurrent update won over this attempt.
     *
-    * @param rev the provided revision
+    * @param provided the provided revision
+    * @param expected the expected revision
     */
-  final case class IncorrectRev(rev: Long)
-      extends RealmRejection(s"Incorrect revision '$rev' provided, the realm may have been updated since last seen.")
+  final case class IncorrectRev(provided: Long, expected: Long)
+      extends RealmRejection(
+        s"Incorrect revision '$provided' provided, expected '$expected', the realm may have been updated since last seen.")
 
   /**
     * Rejection returned when attempting to parse an openid configuration document, but the grant types are not properly
@@ -81,6 +83,16 @@ object RealmRejection {
     */
   final case class IllegalJwkFormat(document: Url)
       extends RealmRejection(s"Illegal format of the JWKs document '${document.asUri}'.")
+
+  /**
+    * Rejection returned when attempting to parse an openid configuration document, but the required endpoints were
+    * not found or were not properly formatted.
+    *
+    * @param document the address of the document
+    * @param location the location in the document
+    */
+  final case class IllegalEndpointFormat(document: Url, location: String)
+      extends RealmRejection(s"Failed to parse '$location' from '${document.asUri}' as a valid url.")
 
   /**
     * Rejection returned when attempting to fetch a JWKS document but the response is not a successful one.

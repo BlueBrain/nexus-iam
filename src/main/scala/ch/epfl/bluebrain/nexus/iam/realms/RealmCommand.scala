@@ -1,4 +1,5 @@
 package ch.epfl.bluebrain.nexus.iam.realms
+
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
@@ -43,16 +44,16 @@ object RealmCommand {
     *
     * @param id           the label of the realm
     * @param rev          the expected current revision of the resource
-    * @param name         an optional new name of the realm
-    * @param openIdConfig an optional new address of the openid configuration
+    * @param name         the new name of the realm
+    * @param openIdConfig the new address of the openid configuration
     * @param logo         an optional new address for a logo
     * @param subject      the subject that intends to evaluate this command
     */
   final case class UpdateRealm(
       id: Label,
       rev: Long,
-      name: Option[String],
-      openIdConfig: Option[Url],
+      name: String,
+      openIdConfig: Url,
       logo: Option[Url],
       subject: Subject
   ) extends RealmCommand

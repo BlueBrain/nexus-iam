@@ -34,7 +34,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object instances extends FailFastCirceSupport {
 
-  private implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("code")
+  private implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
 
   implicit val finiteDurationEncoder: Encoder[FiniteDuration] =
     Encoder.encodeString.contramap(fd => s"${fd.toMillis} ms")
@@ -47,28 +47,28 @@ object instances extends FailFastCirceSupport {
 
   implicit val iamErrorEncoder: Encoder[IamError] = {
     val enc = deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
-    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     val enc = deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
-    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
   implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
     val enc = deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
-    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
   implicit val realmRejectionEncoder: Encoder[RealmRejection] = {
     val enc = deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
-    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
 
   }
 
   implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
-    val enc = deriveEncoder[TokenRejection].mapJson(_ addContext errorCtxUri)
-    Encoder.instance(r => enc(r) deepMerge Json.obj("message" -> Json.fromString(r.msg)))
+    val enc = deriveEncoder[TokenRejection]
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
   implicit val resourceRejectionEncoder: Encoder[ResourceRejection] =
@@ -171,6 +171,7 @@ object instances extends FailFastCirceSupport {
         case _: IllegalGrantTypeFormat           => StatusCodes.BadRequest
         case _: IllegalIssuerFormat              => StatusCodes.BadRequest
         case _: IllegalJwksUriFormat             => StatusCodes.BadRequest
+        case _: IllegalEndpointFormat            => StatusCodes.BadRequest
         case _: IllegalJwkFormat                 => StatusCodes.BadRequest
         case _: UnsuccessfulJwksResponse         => StatusCodes.BadRequest
         case _: UnsuccessfulOpenIdConfigResponse => StatusCodes.BadRequest

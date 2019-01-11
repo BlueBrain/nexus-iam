@@ -65,7 +65,7 @@ object AccessControlLists {
     case AccessControlLists(value) =>
       val arr = value.map {
         case (path, acl) =>
-          Json.obj("path" -> Json.fromString(path.asString)) deepMerge acl.asJson.removeKeys("@context")
+          Json.obj("_path" -> Json.fromString(path.asString)) deepMerge acl.asJson.removeKeys("@context")
       }
       Json
         .obj(nxv.total.prefix -> Json.fromInt(arr.size), nxv.results.prefix -> Json.arr(arr.toSeq: _*))
@@ -80,7 +80,7 @@ object AccessControlLists {
 
     def jsonToPathedAcl(hc: HCursor): Either[DecodingFailure, (Path, ResourceAccessControlList)] =
       for {
-        path <- hc.get[Path]("path")
+        path <- hc.get[Path]("_path")
         acl  <- hc.value.as[ResourceAccessControlList]
       } yield path -> acl
 

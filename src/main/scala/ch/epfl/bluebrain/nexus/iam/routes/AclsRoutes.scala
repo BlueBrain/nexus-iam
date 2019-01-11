@@ -34,47 +34,58 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit http: HttpConf
       pathPrefix(http.prefix / "acls") {
         authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
           extractResourcePath { path =>
-            parameter("rev" ? 0L) { rev =>
-              (put & entity(as[AccessControlList])) { acl =>
-                trace("replace ACL") {
-                  complete(Created -> acls.replace(path, rev, acl).runToFuture)
-                }
-              } ~
-                (patch & entity(as[PatchAcl])) {
-                  case AppendAcl(acl) =>
-                    trace("append ACL") {
-                      complete(acls.append(path, rev, acl).runToFuture)
+            concat(
+              parameter("rev" ? 0L) { rev =>
+                concat(
+                  (put & entity(as[AccessControlList])) { acl =>
+                    trace("replaceAcl") {
+                      complete(Created -> acls.replace(path, rev, acl).runToFuture)
                     }
-                  case SubtractAcl(acl) =>
-                    trace("subtract ACL") {
-                      complete(acls.subtract(path, rev, acl).runToFuture)
+                  },
+                  (patch & entity(as[PatchAcl])) {
+                    case AppendAcl(acl) =>
+                      trace("appendAcl") {
+                        complete(acls.append(path, rev, acl).runToFuture)
+                      }
+                    case SubtractAcl(acl) =>
+                      trace("subtractAcl") {
+                        complete(acls.subtract(path, rev, acl).runToFuture)
+                      }
+                  },
+                  delete {
+                    trace("deleteAcl") {
+                      complete(acls.delete(path, rev).runToFuture)
                     }
-                } ~
-                delete {
-                  trace("delete ACL") {
-                    complete(acls.delete(path, rev).runToFuture)
                   }
-                }
-            } ~
+                )
+              },
               (get & parameter("rev".as[Long] ?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
                 case (Some(_), true, _) =>
                   reject(simultaneousRevAndAncestorsRejection)
                 case (Some(_), _, _) if path.segments.contains(any) =>
                   reject(simultaneousRevAndAnyRejection)
                 case (_, ancestors, self) if path.segments.contains(any) =>
-                  complete(acls.list(path, ancestors, self).runToFuture)
+                  trace("listAcls") {
+                    complete(acls.list(path, ancestors, self).runToFuture)
+                  }
                 case (Some(rev), false, self) =>
-                  complete(acls.fetch(path, rev, self).toSingleList(path).runToFuture)
+                  trace("fetchAcl") {
+                    complete(acls.fetch(path, rev, self).toSingleList(path).runToFuture)
+                  }
                 case (_, false, self) =>
-                  complete(acls.fetch(path, self).toSingleList(path).runToFuture)
+                  trace("fetchAcl") {
+                    complete(acls.fetch(path, self).toSingleList(path).runToFuture)
+                  }
                 case (_, true, self) =>
-                  complete(acls.list(path, ancestors = true, self).runToFuture)
+                  trace("listAcls") {
+                    complete(acls.list(path, ancestors = true, self).runToFuture)
+                  }
               }
+            )
           }
         }
       }
     }
-
 }
 
 object AclsRoutes {

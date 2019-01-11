@@ -6,10 +6,9 @@ import akka.http.scaladsl.server.ExceptionHandler
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.routes.ResourceRejection.Unexpected
 import ch.epfl.bluebrain.nexus.iam.types.IamError
+import ch.epfl.bluebrain.nexus.iam.types.IamError.InvalidAccessToken
 import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
 import journal.Logger
-
-import scala.util.Try
 
 /**
   * It provides an exception handler implementation that ensures all unexpected failures are gracefully handled and presented to the caller.
@@ -23,13 +22,15 @@ object ExceptionHandling {
     */
   final def apply(): ExceptionHandler =
     ExceptionHandler {
+      case err: InvalidAccessToken =>
+        // suppress errors for invalid tokens
+        complete(iamErrorStatusFrom(err) -> (err: IamError))
       case err: IamError =>
         logger.error("Exception caught during routes processing ", err)
         complete(iamErrorStatusFrom(err) -> err)
       case err =>
         logger.error("Exception caught during routes processing ", err)
-        val msg = Try(err.getMessage).filter(_ != null).getOrElse("Something went wrong. Please, try again later.")
-        complete(Unexpected(msg): ResourceRejection)
+        complete(Unexpected("The system experienced an unexpected error, please try again later."): ResourceRejection)
     }
 
   private def iamErrorStatusFrom: StatusFrom[IamError] = StatusFrom {

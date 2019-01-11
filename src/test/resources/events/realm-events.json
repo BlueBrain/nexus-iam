@@ -6,13 +6,19 @@
     ],
     "@id": "http://127.0.0.1:8080/v1/realms/myrealm",
     "name": "The Realm",
-    "issuer": "issuer",
     "openIdConfig": "http://localhost:8080/myrealm",
     "logo": "http://localhost:8080/myrealm/logo",
-    "grantTypes": [
+    "_label": "myrealm",
+    "_issuer": "issuer",
+    "_grantTypes": [
       "implicit"
     ],
-    "keys": [
+    "_authorizationEndpoint": "https://localhost/auth",
+    "_tokenEndpoint": "https://localhost/auth/token",
+    "_userInfoEndpoint": "https://localhost/auth/userinfo",
+    "_revocationEndpoint": "https://localhost/auth/revoke",
+    "_endSessionEndpoint": "https://localhost/auth/logout",
+    "_keys": [
       {
         "kid": "AlALVuZlTj0NoBS4T1HOolEPeCmH0QnmqtXBtoqIxyc",
         "kty": "RSA",
@@ -22,9 +28,9 @@
         "e": "AQAB"
       }
     ],
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
-    "rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
     "@type": "RealmCreated"
   },
   {
@@ -34,13 +40,19 @@
     ],
     "@id": "http://127.0.0.1:8080/v1/realms/myrealm",
     "name": "The Realm",
-    "issuer": "issuer",
     "openIdConfig": "http://localhost:8080/myrealm",
     "logo": "http://localhost:8080/myrealm/logo",
-    "grantTypes": [
+    "_label": "myrealm",
+    "_issuer": "issuer",
+    "_grantTypes": [
       "implicit"
     ],
-    "keys": [
+    "_authorizationEndpoint": "https://localhost/auth",
+    "_tokenEndpoint": "https://localhost/auth/token",
+    "_userInfoEndpoint": "https://localhost/auth/userinfo",
+    "_revocationEndpoint": "https://localhost/auth/revoke",
+    "_endSessionEndpoint": "https://localhost/auth/logout",
+    "_keys": [
       {
         "kid": "AlALVuZlTj0NoBS4T1HOolEPeCmH0QnmqtXBtoqIxyc",
         "kty": "RSA",
@@ -50,9 +62,9 @@
         "e": "AQAB"
       }
     ],
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
-    "rev": 1,
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
     "@type": "RealmUpdated"
   },
   {
@@ -61,9 +73,10 @@
       "https://bluebrain.github.io/nexus/contexts/resource.json"
     ],
     "@id": "http://127.0.0.1:8080/v1/realms/myrealm",
-    "instant": "1970-01-01T00:00:00Z",
-    "subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
-    "rev": 1,
+    "_label": "myrealm",
+    "_instant": "1970-01-01T00:00:00Z",
+    "_subject": "http://127.0.0.1:8080/v1/realms/myrealm/users/uuid",
+    "_rev": 1,
     "@type": "RealmDeprecated"
   }
 ]
