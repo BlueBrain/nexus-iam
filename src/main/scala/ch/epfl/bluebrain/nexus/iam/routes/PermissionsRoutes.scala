@@ -29,7 +29,8 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
 
   private implicit val resourceEncoder: Encoder[Resource] =
     Encoder.encodeJson.contramap { r =>
-      resourceMetaEncoder.apply(r.discard) deepMerge Json.obj("permissions" -> Json.fromValues(r.value.map(_.asJson)))
+      resourceMetaEncoder.apply(r.discard) deepMerge Json.obj(
+        "permissions" -> Json.fromValues(r.value.toList.sortBy(_.value).map(_.asJson)))
     }
 
   def routes: Route =
