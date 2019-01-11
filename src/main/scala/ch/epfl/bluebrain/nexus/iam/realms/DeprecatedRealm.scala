@@ -25,10 +25,10 @@ final case class DeprecatedRealm(
 
 object DeprecatedRealm {
   implicit val deprecatedEncoder: Encoder[DeprecatedRealm] = {
-//    val default = deriveEncoder[DeprecatedRealm]
+    val default = deriveEncoder[DeprecatedRealm]
     Encoder
       .instance[DeprecatedRealm] { realm =>
-        deriveEncoder[DeprecatedRealm].apply(realm) deepMerge Json.obj(
+        default(realm) deepMerge Json.obj(
           nxv.label.prefix      -> Json.fromString(realm.id.value),
           nxv.deprecated.prefix -> Json.fromBoolean(true)
         )
