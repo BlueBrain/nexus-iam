@@ -163,7 +163,7 @@ class IamClientSpec
           httpClient.discardBytes(HttpEntity.Empty) shouldReturn Future.successful(
             new DiscardedEntity(Future.successful(Done)))
 
-          client.replaceAcls(path, acl, Some(1L)).failed.futureValue shouldEqual UnauthorizedAccess
+          client.putAcls(path, acl, Some(1L)).failed.futureValue shouldEqual UnauthorizedAccess
         }
       }
 
