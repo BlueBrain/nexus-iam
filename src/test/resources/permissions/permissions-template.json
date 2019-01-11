@@ -4,9 +4,7 @@
     "https://bluebrain.github.io/nexus/contexts/iam.json"
   ],
   "@id": "http://127.0.0.1:8080/v1/permissions",
-  "@type": [
-    "Permissions"
-  ],
+  "@type": "Permissions",
   "permissions": [
     "acls/read",
     "acls/write",

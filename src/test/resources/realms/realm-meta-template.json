@@ -4,9 +4,7 @@
     "https://bluebrain.github.io/nexus/contexts/iam.json"
   ],
   "@id": "http://127.0.0.1:8080/v1/realms/{label}",
-  "@type": [
-    "Realm"
-  ],
+  "@type": "Realm",
   "_label": "{label}",
   "_rev": 1,
   "_deprecated": {deprecated},

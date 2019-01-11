@@ -4,9 +4,7 @@
     "https://bluebrain.github.io/nexus/contexts/iam.json"
   ],
   "@id": "http://127.0.0.1:8080/v1/realms/{label}",
-  "@type": [
-    "Realm"
-  ],
+  "@type": "Realm",
   "name": "The Realm",
   "openIdConfig": "http://localhost:8080/realm",
   "logo": "http://localhost:8080/realm/logo",

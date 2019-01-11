@@ -8,9 +8,7 @@
   "_results": [
     {
       "@id": "http://nexus.example.com/v1/acls/id1",
-      "@type": [
-        "AccessControlList"
-      ],
+      "@type": "AccessControlList",
       "acl": [
         {
           "identity": {
@@ -45,9 +43,7 @@
     },
     {
       "@id": "http://nexus.example.com/v1/acls/id2",
-      "@type": [
-        "AccessControlList"
-      ],
+      "@type": "AccessControlList",
       "acl": [
         {
           "identity": {

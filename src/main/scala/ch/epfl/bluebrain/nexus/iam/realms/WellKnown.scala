@@ -40,7 +40,7 @@ final case class WellKnown(
 
 object WellKnown {
 
-  private case class Endpoints(
+  private final case class Endpoints(
       authorization_endpoint: Url,
       token_endpoint: Url,
       userinfo_endpoint: Url,

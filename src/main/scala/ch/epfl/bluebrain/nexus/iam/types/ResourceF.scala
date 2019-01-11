@@ -84,17 +84,22 @@ object ResourceF {
   implicit def resourceMetaEncoder(implicit http: HttpConfig): Encoder[ResourceMetadata] =
     Encoder.encodeJson.contramap {
       case ResourceF(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, _: Unit) =>
+        val jsonTypes = types.toList match {
+          case Nil      => Json.Null
+          case t :: Nil => Json.fromString(t.lastSegment.getOrElse(t.asString))
+          case _        => Json.arr(types.map(t => Json.fromString(t.lastSegment.getOrElse(t.asString))).toSeq: _*)
+        }
         Json
           .obj(
             "@id"                -> id.asJson,
-            "@type"              -> Json.arr(types.map(t => Json.fromString(t.lastSegment.getOrElse(t.asString))).toSeq: _*),
+            "@type"              -> jsonTypes,
             nxv.rev.prefix       -> Json.fromLong(rev),
             nxv.createdBy.prefix -> createdBy.id.asJson,
             nxv.updatedBy.prefix -> updatedBy.id.asJson,
             nxv.createdAt.prefix -> Json.fromString(createdAt.toString),
             nxv.updatedAt.prefix -> Json.fromString(updatedAt.toString)
           )
-          .addContext(resourceCtxUri)
           .addContext(iamCtxUri)
+          .addContext(resourceCtxUri)
     }
 }
