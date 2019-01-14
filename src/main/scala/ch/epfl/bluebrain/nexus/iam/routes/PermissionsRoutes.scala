@@ -52,7 +52,7 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
                 }
               }
             },
-            (put & parameter("rev".as[Long])) { rev =>
+            (put & parameter("rev" ? 0L)) { rev =>
               entity(as[PatchPermissions]) {
                 case Replace(set) =>
                   trace("replacePermissions") {

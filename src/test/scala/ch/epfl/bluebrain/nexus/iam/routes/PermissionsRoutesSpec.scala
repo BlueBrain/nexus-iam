@@ -24,7 +24,7 @@ import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
-//noinspection TypeAnnotation
+//noinspection TypeAnnotation,RedundantDefaultArgument
 class PermissionsRoutesSpec
     extends WordSpecLike
     with Matchers
@@ -81,13 +81,6 @@ class PermissionsRoutesSpec
       }
     }
     "return missing rev params" when {
-      "attempting to replace" in {
-        val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
-        Put("/v1/permissions", json) ~> routes ~> check {
-          responseAs[Json].sort shouldEqual missingParams.sort
-          status shouldEqual StatusCodes.BadRequest
-        }
-      }
       "attempting to delete" in {
         Delete("/v1/permissions") ~> routes ~> check {
           responseAs[Json].sort shouldEqual missingParams.sort
@@ -99,6 +92,14 @@ class PermissionsRoutesSpec
       perms.replace(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
       Put("/v1/permissions?rev=2", json) ~> routes ~> check {
+        responseAs[Json].sort shouldEqual metaResponse(0L).sort
+        status shouldEqual StatusCodes.OK
+      }
+    }
+    "default rev to 0L for replace permissions" in {
+      perms.replace(any[Set[Permission]], 0L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
+      val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
+      Put("/v1/permissions", json) ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
