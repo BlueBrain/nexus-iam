@@ -28,10 +28,10 @@ object Identity {
     * @return Some(identity) when the id maps to a known identity pattern, None otherwise
     */
   def apply(id: AbsoluteIri): Option[Identity] = {
-    val regexUser      = s"http://.+/v1/realms/$allowedInput/users/$allowedInput".r
-    val regexGroup     = s"http://.+/v1/realms/$allowedInput/groups/$allowedInput".r
-    val regexAuth      = s"http://.+/v1/realms/$allowedInput/authenticated".r
-    val regexAnonymous = "http://.+/v1/anonymous".r
+    val regexUser      = s".+/v1/realms/$allowedInput/users/$allowedInput".r
+    val regexGroup     = s".+/v1/realms/$allowedInput/groups/$allowedInput".r
+    val regexAuth      = s".+/v1/realms/$allowedInput/authenticated".r
+    val regexAnonymous = ".+/v1/anonymous".r
     id.asString match {
       case regexUser(realm, subject) => Some(User(subject, realm))
       case regexGroup(realm, group)  => Some(Group(group, realm))
