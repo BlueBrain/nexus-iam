@@ -7,10 +7,7 @@ import akka.actor.{ActorSystem, Address, AddressFromURIString}
 import akka.cluster.Cluster
 import akka.event.Logging
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.model.headers.Location
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{Route, RouteResult}
+import akka.http.scaladsl.server.RouteResult
 import akka.stream.ActorMaterializer
 import cats.effect.Effect
 import cats.effect.concurrent.Deferred
@@ -20,9 +17,6 @@ import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes._
-import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives._
-import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
-import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import com.github.jsonldjava.core.DocumentLoader
 import com.typesafe.config.{Config, ConfigFactory}
 import kamon.Kamon
@@ -94,12 +88,9 @@ object Main {
     setupMonitoring(config)
 
     implicit val appConfig = Settings(config).appConfig
-
-    implicit val hc = appConfig.http
-    implicit val pc = appConfig.persistence
-    implicit val as = ActorSystem(appConfig.description.fullName, config)
-    implicit val ec = as.dispatcher
-    implicit val mt = ActorMaterializer()
+    implicit val as        = ActorSystem(appConfig.description.fullName, config)
+    implicit val ec        = as.dispatcher
+    implicit val mt        = ActorMaterializer()
 
     val cluster = Cluster(as)
     val seeds: List[Address] = appConfig.cluster.seeds.toList
@@ -111,33 +102,13 @@ object Main {
 
     val (perms, acls, realms) = bootstrap(as)
 
-    val eventRoutes  = new EventRoutes(acls, realms).routes
-    val aclsRoutes   = new AclsRoutes(acls, realms).routes
-    val permsRoutes  = new PermissionsRoutes(perms, realms).routes
-    val realmsRoutes = new RealmsRoutes(realms).routes
-    val idsRoutes    = new IdentitiesRoutes(realms).routes
-    val apiRoutes = uriPrefix(appConfig.http.publicUri)(
-      eventRoutes ~ aclsRoutes ~ permsRoutes ~ realmsRoutes ~ idsRoutes
-    )
-    val serviceDesc = AppInfoRoutes(appConfig.description, cluster, CassandraHeath(as)).routes
-
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")
-
-    val corsSettings = CorsSettings.defaultSettings
-      .withAllowedMethods(List(GET, PUT, POST, DELETE, OPTIONS, HEAD))
-      .withExposedHeaders(List(Location.name))
 
     cluster.registerOnMemberUp {
       logger.info("==== Cluster is Live ====")
       bootstrapIndexers(acls, realms)
-
-      val routes: Route = {
-        val rejectionHandler = corsRejectionHandler.withFallback(RejectionHandling.notFound())
-        handleRejections(rejectionHandler)(cors(corsSettings) {
-          apiRoutes ~ serviceDesc
-        })
-      }
+      val routes = Routes(acls, realms, perms)
 
       val httpBinding = {
         Http().bindAndHandle(RouteResult.route2HandlerFlow(routes), appConfig.http.interface, appConfig.http.port)

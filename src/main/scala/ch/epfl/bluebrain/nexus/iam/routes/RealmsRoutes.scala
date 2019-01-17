@@ -54,60 +54,58 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
     }
 
   def routes: Route =
-    (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling())) {
-      pathPrefix(http.prefix / "realms") {
-        authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-          concat(
-            (get & pathEndOrSingleSlash) {
-              trace("listRealms") {
-                complete(realms.list.runToFuture)
-              }
-            },
-            (put & label & pathEndOrSingleSlash) { id =>
-              parameter("rev".as[Long].?) {
-                case Some(rev) =>
-                  entity(as[Realm]) {
-                    case Realm(name, openIdConfig, logo) =>
-                      trace("updateRealm") {
-                        complete(realms.update(id, rev, name, openIdConfig, logo).runToFuture)
-                      }
-                  }
-                case None =>
-                  entity(as[Realm]) {
-                    case Realm(name, openIdConfig, logo) =>
-                      trace("createRealm") {
-                        complete(StatusCodes.Created -> realms.create(id, name, openIdConfig, logo).runToFuture)
-                      }
-                  }
-              }
-            },
-            (get & label & pathEndOrSingleSlash) { id =>
-              parameter("rev".as[Long].?) {
-                case Some(rev) =>
-                  trace("getRealmByIdAndRev") {
-                    onSuccess(realms.fetch(id, rev).runToFuture) {
-                      case Some(res) => complete(res)
-                      case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+    pathPrefix("realms") {
+      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
+        concat(
+          (get & pathEndOrSingleSlash) {
+            trace("listRealms") {
+              complete(realms.list.runToFuture)
+            }
+          },
+          (put & label & pathEndOrSingleSlash) { id =>
+            parameter("rev".as[Long].?) {
+              case Some(rev) =>
+                entity(as[Realm]) {
+                  case Realm(name, openIdConfig, logo) =>
+                    trace("updateRealm") {
+                      complete(realms.update(id, rev, name, openIdConfig, logo).runToFuture)
                     }
-                  }
-                case None =>
-                  trace("getRealmById") {
-                    onSuccess(realms.fetch(id).runToFuture) {
-                      case Some(res) => complete(res)
-                      case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
-                    }
-                  }
-              }
-            },
-            (delete & label & pathEndOrSingleSlash) { id =>
-              parameter("rev".as[Long]) { rev =>
-                trace("deprecateRealm") {
-                  complete(realms.deprecate(id, rev).runToFuture)
                 }
+              case None =>
+                entity(as[Realm]) {
+                  case Realm(name, openIdConfig, logo) =>
+                    trace("createRealm") {
+                      complete(StatusCodes.Created -> realms.create(id, name, openIdConfig, logo).runToFuture)
+                    }
+                }
+            }
+          },
+          (get & label & pathEndOrSingleSlash) { id =>
+            parameter("rev".as[Long].?) {
+              case Some(rev) =>
+                trace("getRealmByIdAndRev") {
+                  onSuccess(realms.fetch(id, rev).runToFuture) {
+                    case Some(res) => complete(res)
+                    case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+                  }
+                }
+              case None =>
+                trace("getRealmById") {
+                  onSuccess(realms.fetch(id).runToFuture) {
+                    case Some(res) => complete(res)
+                    case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
+                  }
+                }
+            }
+          },
+          (delete & label & pathEndOrSingleSlash) { id =>
+            parameter("rev".as[Long]) { rev =>
+              trace("deprecateRealm") {
+                complete(realms.deprecate(id, rev).runToFuture)
               }
             }
-          )
-        }
+          }
+        )
       }
     }
 }

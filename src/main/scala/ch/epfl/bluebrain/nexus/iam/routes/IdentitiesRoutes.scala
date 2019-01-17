@@ -20,13 +20,11 @@ import monix.execution.Scheduler.Implicits.global
 class IdentitiesRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
 
   def routes: Route = {
-    (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling())) {
-      pathPrefix(http.prefix / "identities") {
-        authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-          (get & pathEndOrSingleSlash) {
-            trace("listIdentities") {
-              complete(caller)
-            }
+    (pathPrefix("identities") & pathEndOrSingleSlash) {
+      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
+        get {
+          trace("listIdentities") {
+            complete(caller)
           }
         }
       }

@@ -3,37 +3,39 @@ package ch.epfl.bluebrain.nexus.iam.client
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.Uri.Query
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import akka.stream.{ActorMaterializer, Materializer}
 import cats.MonadError
-import cats.effect.LiftIO
+import cats.effect.{IO, LiftIO}
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
-import ch.epfl.bluebrain.nexus.commons.types.Err
-import ch.epfl.bluebrain.nexus.commons.types.HttpRejection.UnauthorizedAccess
+import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized, UnknownError, UnmarshallingError}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import io.circe.generic.auto._
 import io.circe.syntax._
+import io.circe.{DecodingFailure, Json, ParsingFailure}
 import journal.Logger
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.reflect.ClassTag
 
-class IamClient[F[_]] private[client] (config: IamClientConfig,
-                                       aclsClient: HttpClient[F, AccessControlLists],
-                                       callerClient: HttpClient[F, Caller],
-                                       permissionsClient: HttpClient[F, Permissions],
-                                       httpClient: UntypedHttpClient[F])(implicit F: MonadError[F, Throwable]) {
-
-  private val log = Logger[this.type]
+class IamClient[F[_]] private[client] (
+    config: IamClientConfig,
+    aclsClient: HttpClient[F, AccessControlLists],
+    callerClient: HttpClient[F, Caller],
+    permissionsClient: HttpClient[F, Permissions],
+    jsonClient: HttpClient[F, Json]
+)(implicit F: MonadError[F, Throwable]) {
 
   /**
     * Retrieve the current ''acls'' for some particular ''path''.
@@ -47,7 +49,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
       implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
     val endpoint = config.aclsIri + path
     val req      = requestFrom(endpoint, Query("ancestors" -> ancestors.toString, "self" -> self.toString))
-    aclsClient(req).recoverWith { case e => recover(e, endpoint) }
+    aclsClient(req)
   }
 
   /**
@@ -56,8 +58,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     */
   def identities(implicit credentials: Option[AuthToken]): F[Caller] = {
     credentials
-      .map(_ =>
-        callerClient(requestFrom(config.identitiesIri)).recoverWith { case e => recover(e, config.identitiesIri) })
+      .map(_ => callerClient(requestFrom(config.identitiesIri)))
       .getOrElse(F.pure(Caller.anonymous))
   }
 
@@ -68,11 +69,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     * @return available permissions
     */
   def permissions(implicit credentials: Option[AuthToken]): F[Set[Permission]] =
-    permissionsClient(requestFrom(config.permissionsIri))
-      .map(_.permissions)
-      .recoverWith {
-        case e => recover(e, config.permissionsIri)
-      }
+    permissionsClient(requestFrom(config.permissionsIri)).map(_.permissions)
 
   /**
     * Replace ACL at a given path.
@@ -91,14 +88,7 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     val request    = Put(endpoint.toAkkaUri.withQuery(query), entity)
     val requestWithCredentials =
       credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
-
-    httpClient(requestWithCredentials).flatMap {
-      case HttpResponse(StatusCodes.OK, _, respEntity, _) => httpClient.discardBytes(respEntity) *> F.unit
-      case HttpResponse(StatusCodes.Unauthorized, _, respEntity, _) =>
-        httpClient.discardBytes(respEntity) *> F.raiseError(UnauthorizedAccess)
-      case response =>
-        httpClient.discardBytes(response.entity) *> F.raiseError(UnexpectedUnsuccessfulHttpResponse(response))
-    }
+    jsonClient(requestWithCredentials) *> F.unit
   }
 
   /**
@@ -108,26 +98,12 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
     * @param permission  the permission to check
     * @param credentials an optionally available token
     */
-  def authorizeOn(path: Path, permission: Permission)(implicit credentials: Option[AuthToken]): F[Unit] =
+  def hasPermission(path: Path, permission: Permission)(implicit credentials: Option[AuthToken]): F[Boolean] =
     acls(path, ancestors = true, self = true).flatMap { acls =>
       val found = acls.value.exists { case (_, acl) => acl.value.permissions.contains(permission) }
-      if (found) F.unit
-      else F.raiseError(UnauthorizedAccess)
+      if (found) F.pure(true)
+      else F.pure(false)
     }
-
-  private def recover[A](th: Throwable, iri: AbsoluteIri): F[A] = th match {
-    case UnexpectedUnsuccessfulHttpResponse(HttpResponse(StatusCodes.Unauthorized, _, _, _)) =>
-      F.raiseError(UnauthorizedAccess)
-    case ur: UnexpectedUnsuccessfulHttpResponse =>
-      log.warn(
-        s"Received an unexpected response status code '${ur.response.status}' from IAM when attempting to perform and operation on a resource '$iri'")
-      F.raiseError(ur)
-    case err =>
-      log.error(
-        s"Received an unexpected exception from IAM when attempting to perform and operation on a resource '$iri'",
-        err)
-      F.raiseError(err)
-  }
 
   private def requestFrom(iri: AbsoluteIri, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
     val request = Get(iri.toAkkaUri.withQuery(query))
@@ -139,7 +115,55 @@ class IamClient[F[_]] private[client] (config: IamClientConfig,
 // $COVERAGE-OFF$
 object IamClient {
 
-  final case object UserRefNotFound extends Err("Missing UserRef")
+  private def httpClient[F[_], A: ClassTag](
+      implicit L: LiftIO[F],
+      F: MonadError[F, Throwable],
+      ec: ExecutionContext,
+      mt: Materializer,
+      cl: UntypedHttpClient[F],
+      um: FromEntityUnmarshaller[A]
+  ): HttpClient[F, A] = new HttpClient[F, A] {
+    private val logger = Logger(s"IamHttpClient[${implicitly[ClassTag[A]]}]")
+
+    override def apply(req: HttpRequest): F[A] =
+      cl.apply(req).flatMap { resp =>
+        resp.status match {
+          case StatusCodes.Unauthorized =>
+            cl.toString(resp.entity).flatMap { entityAsString =>
+              F.raiseError[A](Unauthorized(entityAsString))
+            }
+          case StatusCodes.Forbidden =>
+            logger.error(s"Received Forbidden when accessing '${req.method.name()} ${req.uri.toString()}'.")
+            cl.toString(resp.entity).flatMap { entityAsString =>
+              F.raiseError[A](Forbidden(entityAsString))
+            }
+          case other if other.isSuccess() =>
+            val value = L.liftIO(IO.fromFuture(IO(um(resp.entity))))
+            value.recoverWith {
+              case pf: ParsingFailure =>
+                logger.error(
+                  s"Failed to parse a successful response of '${req.method.name()} ${req.getUri().toString}'.")
+                F.raiseError[A](UnmarshallingError(pf.getMessage()))
+              case df: DecodingFailure =>
+                logger.error(
+                  s"Failed to decode a successful response of '${req.method.name()} ${req.getUri().toString}'.")
+                F.raiseError(UnmarshallingError(df.getMessage()))
+            }
+          case other =>
+            cl.toString(resp.entity).flatMap { entityAsString =>
+              logger.error(
+                s"Received '${other.value}' when accessing '${req.method.name()} ${req.uri.toString()}', response entity as string: '$entityAsString.'")
+              F.raiseError[A](UnknownError(other, entityAsString))
+            }
+        }
+      }
+
+    override def discardBytes(entity: HttpEntity): F[HttpMessage.DiscardedEntity] =
+      cl.discardBytes(entity)
+
+    override def toString(entity: HttpEntity): F[String] =
+      cl.toString(entity)
+  }
 
   /**
     * Constructs an ''IamClient[F]'' from implicitly available instances of [[IamClientConfig]], [[ActorSystem]],
@@ -155,10 +179,11 @@ object IamClient {
     implicit val ec: ExecutionContextExecutor = as.dispatcher
     implicit val ucl: UntypedHttpClient[F]    = HttpClient.untyped[F]
 
-    val aclsClient: HttpClient[F, AccessControlLists] = HttpClient.withUnmarshaller[F, AccessControlLists]
-    val callerClient: HttpClient[F, Caller]           = HttpClient.withUnmarshaller[F, Caller]
-    val permissionsClient: HttpClient[F, Permissions] = HttpClient.withUnmarshaller[F, Permissions]
-    new IamClient(config, aclsClient, callerClient, permissionsClient, ucl)
+    val aclsClient: HttpClient[F, AccessControlLists] = httpClient[F, AccessControlLists]
+    val callerClient: HttpClient[F, Caller]           = httpClient[F, Caller]
+    val permissionsClient: HttpClient[F, Permissions] = httpClient[F, Permissions]
+    val jsonClient: HttpClient[F, Json]               = httpClient[F, Json]
+    new IamClient(config, aclsClient, callerClient, permissionsClient, jsonClient)
   }
 }
 // $COVERAGE-ON$

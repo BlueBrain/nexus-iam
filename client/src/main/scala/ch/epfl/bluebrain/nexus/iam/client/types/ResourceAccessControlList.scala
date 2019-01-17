@@ -58,7 +58,7 @@ object ResourceAccessControlList {
           .addContext(iamCtxUri) deepMerge acl.asJson
     }
 
-  implicit def resourceAccessControlListDecoder(implicit config: IamClientConfig): Decoder[ResourceAccessControlList] =
+  implicit def resourceAccessControlListDecoder: Decoder[ResourceAccessControlList] =
     Decoder.instance { hc =>
       def toSubject(id: AbsoluteIri): Decoder.Result[Subject] =
         Identity(id)

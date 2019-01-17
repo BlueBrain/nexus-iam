@@ -25,9 +25,13 @@ class IdentitySpec
     "be created from ids" in {
       val cases = List[(AbsoluteIri, Identity)](
         url"http://nexus.example.com/v1/realms/myrealm/users/mysubject".value -> user,
+        url"https://random.com/v1/realms/myrealm/users/mysubject".value       -> user,
         url"http://nexus.example.com/v1/realms/myrealm/groups/mygroup".value  -> group,
+        url"https://random.com/v1/realms/myrealm/groups/mygroup".value        -> group,
         url"http://nexus.example.com/v1/realms/myrealm/authenticated".value   -> authenticated,
-        url"http://nexus.example.com/v1/anonymous".value                      -> Anonymous
+        url"https://random.com/v1/realms/myrealm/authenticated".value         -> authenticated,
+        url"http://nexus.example.com/v1/anonymous".value                      -> Anonymous,
+        url"https://random.com/v1/anonymous".value                            -> Anonymous,
       )
       forAll(cases) {
         case (iri, identity) => Identity(iri).value shouldEqual identity

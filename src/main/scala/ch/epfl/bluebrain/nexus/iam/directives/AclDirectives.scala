@@ -14,7 +14,7 @@ trait AclDirectives {
   def extractResourcePath: Directive1[Path] = extractUnmatchedPath.flatMap { path =>
     path.toIriPath match {
       case p if p.asString.contains("//") =>
-        reject(validationRejection(s"path '${p.asString}' cannot contain double slash"))
+        reject(validationRejection(s"Path '${p.asString}' cannot contain double slash."))
       case p if p.isEmpty => provide(Path./)
       case p              => provide(p)
     }

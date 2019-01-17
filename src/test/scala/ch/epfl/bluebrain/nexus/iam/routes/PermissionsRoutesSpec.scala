@@ -72,17 +72,17 @@ class PermissionsRoutesSpec
     jsonContentOf("/permissions/missing-rev.json")
 
   "A PermissionsRoute" should {
-    val routes = new PermissionsRoutes(perms, realms).routes
+    val routes = Routes.wrap(new PermissionsRoutes(perms, realms).routes)
     "return the default minimum permissions" in {
       perms.fetch(any[Caller]) shouldReturn Task.pure(resource(0L, appConfig.permissions.minimum))
-      Get("/v1/permissions") ~> routes ~> check {
+      Get("/permissions") ~> routes ~> check {
         responseAs[Json].sort shouldEqual response(0L).sort
         status shouldEqual StatusCodes.OK
       }
     }
     "return missing rev params" when {
       "attempting to delete" in {
-        Delete("/v1/permissions") ~> routes ~> check {
+        Delete("/permissions") ~> routes ~> check {
           responseAs[Json].sort shouldEqual missingParams.sort
           status shouldEqual StatusCodes.BadRequest
         }
@@ -91,7 +91,7 @@ class PermissionsRoutesSpec
     "replace permissions" in {
       perms.replace(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
-      Put("/v1/permissions?rev=2", json) ~> routes ~> check {
+      Put("/permissions?rev=2", json) ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
@@ -99,7 +99,7 @@ class PermissionsRoutesSpec
     "default rev to 0L for replace permissions" in {
       perms.replace(any[Set[Permission]], 0L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json = Json.obj("permissions" -> Json.arr(Json.fromString("random/a")))
-      Put("/v1/permissions", json) ~> routes ~> check {
+      Put("/permissions", json) ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
@@ -107,7 +107,7 @@ class PermissionsRoutesSpec
     "append new permissions" in {
       perms.append(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json = Json.obj("@type" -> Json.fromString("Append"), "permissions" -> Json.arr(Json.fromString("random/a")))
-      Patch("/v1/permissions?rev=2", json) ~> routes ~> check {
+      Patch("/permissions?rev=2", json) ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
@@ -116,28 +116,28 @@ class PermissionsRoutesSpec
       perms.subtract(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json =
         Json.obj("@type" -> Json.fromString("Subtract"), "permissions" -> Json.arr(Json.fromString("random/a")))
-      Patch("/v1/permissions?rev=2", json) ~> routes ~> check {
+      Patch("/permissions?rev=2", json) ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
     }
     "delete permissions" in {
       perms.delete(2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
-      Delete("/v1/permissions?rev=2") ~> routes ~> check {
+      Delete("/permissions?rev=2") ~> routes ~> check {
         responseAs[Json].sort shouldEqual metaResponse(0L).sort
         status shouldEqual StatusCodes.OK
       }
     }
     "return 404 for wrong revision" in {
       perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(None)
-      Get("/v1/permissions?rev=2") ~> routes ~> check {
+      Get("/permissions?rev=2") ~> routes ~> check {
         status shouldEqual StatusCodes.NotFound
         responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
       }
     }
     "return 200 for correct revision" in {
       perms.fetchAt(any[Long])(any[Caller]) shouldReturn Task.pure(Some(resource(3L, appConfig.permissions.minimum)))
-      Get("/v1/permissions?rev=2") ~> routes ~> check {
+      Get("/permissions?rev=2") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual response(3L).sort
       }

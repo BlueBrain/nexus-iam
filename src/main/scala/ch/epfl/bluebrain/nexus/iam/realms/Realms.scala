@@ -25,7 +25,7 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, InternalError, 
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig}
+import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig, OnKeyValueStoreChange}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
@@ -245,6 +245,14 @@ object Realms {
         underlying.put(key, value).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
       override def entries: F[Map[Label, Resource]] =
         underlying.entries.recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
+      override def remove(key: Label): F[Unit] =
+        underlying.remove(key).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
+      override def subscribe(value: OnKeyValueStoreChange[Label, Resource]): F[KeyValueStore.Subscription] =
+        underlying.subscribe(value).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
+      override def unsubscribe(subscription: KeyValueStore.Subscription): F[Unit] =
+        underlying.unsubscribe(subscription).recoverWith {
+          case err => F.raiseError(InternalError(err.getMessage): IamError)
+        }
     }
   }
 

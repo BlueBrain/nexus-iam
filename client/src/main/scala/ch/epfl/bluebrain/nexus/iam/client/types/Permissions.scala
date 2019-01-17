@@ -5,4 +5,4 @@ package ch.epfl.bluebrain.nexus.iam.client.types
   *
   * @param permissions available permissions
   */
-case class Permissions(permissions: Set[Permission])
+final case class Permissions(permissions: Set[Permission])

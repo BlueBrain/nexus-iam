@@ -74,7 +74,7 @@ object AccessControlLists {
         .addContext(searchCtxUri)
   }
 
-  implicit def aclsDecoder(implicit http: IamClientConfig): Decoder[AccessControlLists] = {
+  implicit def aclsDecoder: Decoder[AccessControlLists] = {
     import cats.implicits._
     import ch.epfl.bluebrain.nexus.rdf.instances._
 

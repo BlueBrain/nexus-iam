@@ -1,5 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.auth
 
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
+
 /**
   * Enumeration of token rejections.
   *
@@ -39,4 +43,10 @@ object TokenRejection {
   final case object InvalidAccessToken
       extends TokenRejection(
         "The token is invalid; possible causes are: incorrect signature, the token is expired or the 'nbf' value was not met.")
+
+  implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
+    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+    val enc                                     = deriveEncoder[TokenRejection]
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
+  }
 }

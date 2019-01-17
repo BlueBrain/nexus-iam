@@ -47,17 +47,17 @@ class IdentitiesRoutesSpec
   }
 
   "The IdentitiesRoutes" should {
-    val routes = new IdentitiesRoutes(realms).routes
+    val routes = Routes.wrap(new IdentitiesRoutes(realms).routes)
     "return forbidden" in {
       val err = InvalidAccessToken(TokenRejection.InvalidAccessToken)
       realms.caller(any[AccessToken]) shouldReturn Task.raiseError(err)
-      Get("/v1/identities").addCredentials(OAuth2BearerToken("token")) ~> routes ~> check {
+      Get("/identities").addCredentials(OAuth2BearerToken("token")) ~> routes ~> check {
         status shouldEqual StatusCodes.Unauthorized
       }
     }
     "return anonymous" in {
       realms.caller(any[AccessToken]) shouldReturn Task.pure(Caller.anonymous)
-      Get("/v1/identities") ~> routes ~> check {
+      Get("/identities") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual jsonContentOf("/identities/anonymous.json")
       }
@@ -67,7 +67,7 @@ class IdentitiesRoutesSpec
       val auth   = Authenticated("therealm")
       val caller = Caller(user, Set(user, Anonymous, auth))
       realms.caller(any[AccessToken]) shouldReturn Task.pure(caller)
-      Get("/v1/identities").addCredentials(OAuth2BearerToken("token")) ~> routes ~> check {
+      Get("/identities").addCredentials(OAuth2BearerToken("token")) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual jsonContentOf("/identities/identities.json")
       }

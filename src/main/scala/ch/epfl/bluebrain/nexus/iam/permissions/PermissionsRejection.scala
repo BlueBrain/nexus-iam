@@ -1,13 +1,20 @@
 package ch.epfl.bluebrain.nexus.iam.permissions
 
-import ch.epfl.bluebrain.nexus.iam.types.Permission
+import akka.http.scaladsl.model.StatusCodes._
+import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
+import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
 
 /**
   * Enumeration of Permissions rejection types.
   *
   * @param msg a descriptive message for why the rejection occurred
   */
-sealed abstract class PermissionsRejection(val msg: String) extends Product with Serializable
+sealed abstract class PermissionsRejection(val msg: String) extends ResourceRejection
 
 object PermissionsRejection {
 
@@ -66,4 +73,22 @@ object PermissionsRejection {
   final case class IncorrectRev(provided: Long, expected: Long)
       extends PermissionsRejection(
         s"Incorrect revision '$provided' provided, expected '$expected', permissions may have been updated since last seen.")
+
+  implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
+    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+    val enc                                     = deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
+  }
+
+  implicit val permissionsStatusCode: StatusFrom[PermissionsRejection] =
+    StatusFrom {
+      case CannotSubtractEmptyCollection          => BadRequest
+      case _: CannotSubtractFromMinimumCollection => BadRequest
+      case CannotSubtractFromEmptyCollection      => BadRequest
+      case _: CannotSubtractUndefinedPermissions  => BadRequest
+      case CannotAppendEmptyCollection            => BadRequest
+      case CannotReplaceWithEmptyCollection       => BadRequest
+      case CannotDeleteMinimumCollection          => BadRequest
+      case _: IncorrectRev                        => Conflict
+    }
 }
