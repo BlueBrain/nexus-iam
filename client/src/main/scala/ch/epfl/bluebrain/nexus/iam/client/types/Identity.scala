@@ -27,11 +27,11 @@ object Identity {
     * @param id the id
     * @return Some(identity) when the id maps to a known identity pattern, None otherwise
     */
-  def apply(id: AbsoluteIri)(implicit config: IamClientConfig): Option[Identity] = {
-    val regexUser      = (config.baseIri + ("realms" / allowedInput / "users" / allowedInput)).asString.r
-    val regexGroup     = (config.baseIri + ("realms" / allowedInput / "groups" / allowedInput)).asString.r
-    val regexAuth      = (config.baseIri + ("realms" / allowedInput / "authenticated")).asString.r
-    val regexAnonymous = (config.baseIri + "anonymous").asString.r
+  def apply(id: AbsoluteIri): Option[Identity] = {
+    val regexUser      = s"http://.+/v1/realms/$allowedInput/users/$allowedInput".r
+    val regexGroup     = s"http://.+/v1/realms/$allowedInput/groups/$allowedInput".r
+    val regexAuth      = s"http://.+/v1/realms/$allowedInput/authenticated".r
+    val regexAnonymous = "http://.+/v1/anonymous".r
     id.asString match {
       case regexUser(realm, subject) => Some(User(subject, realm))
       case regexGroup(realm, group)  => Some(Group(group, realm))
