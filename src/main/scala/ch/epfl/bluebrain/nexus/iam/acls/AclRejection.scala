@@ -1,12 +1,18 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import ch.epfl.bluebrain.nexus.iam.types.Permission
+import akka.http.scaladsl.model.StatusCodes.{BadRequest, Conflict, NotFound}
+import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
+import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
 
-@SuppressWarnings(Array("IncorrectlyNamedExceptions"))
-sealed abstract class AclRejection(val msg: String) extends Product with Serializable
+sealed abstract class AclRejection(val msg: String) extends ResourceRejection
 
-@SuppressWarnings(Array("IncorrectlyNamedExceptions"))
 object AclRejection {
 
   /**
@@ -58,4 +64,20 @@ object AclRejection {
   final case class UnknownPermissions(permissions: Set[Permission])
       extends AclRejection(
         s"Some of the permissions specified are not known: '${permissions.mkString("\"", ", ", "\"")}'")
+
+  implicit val aclRejectionEncoder: Encoder[AclRejection] = {
+    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+    val enc                                     = deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
+  }
+
+  implicit val aclStatusCode: StatusFrom[AclRejection] =
+    StatusFrom {
+      case _: NothingToBeUpdated                        => BadRequest
+      case _: AclIsEmpty                                => BadRequest
+      case _: AclCannotContainEmptyPermissionCollection => BadRequest
+      case _: AclNotFound                               => NotFound
+      case _: IncorrectRev                              => Conflict
+      case _: UnknownPermissions                        => BadRequest
+    }
 }

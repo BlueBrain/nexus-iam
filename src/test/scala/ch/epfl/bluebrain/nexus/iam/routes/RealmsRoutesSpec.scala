@@ -5,12 +5,11 @@ import java.util.regex.Pattern.quote
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import akka.http.scaladsl.server.Directives._
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.realms.{ActiveRealm, Realms, Resource, ResourceMetadata, types}
+import ch.epfl.bluebrain.nexus.iam.realms._
 import ch.epfl.bluebrain.nexus.iam.testsyntax._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, GrantType, Label, ResourceF}
@@ -106,7 +105,7 @@ class RealmsRoutesSpec
     )
 
   "A RealmsRoute" should {
-    val routes       = handleRejections(RejectionHandling.notFound())(new RealmsRoutes(realms).routes)
+    val routes       = Routes.wrap(new RealmsRoutes(realms).routes)
     val label        = Label.unsafe("therealm")
     val name         = "The Realm"
     val openIdConfig = Url("http://localhost:8080/realm").right.get
@@ -114,7 +113,7 @@ class RealmsRoutesSpec
     "create a new realm" in {
       realms.create(any[Label], any[String], any[Url], any[Option[Url]])(any[Caller]) shouldReturn Task.pure(
         Right(meta(label, 1L, false)))
-      Put("/v1/realms/therealm", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
+      Put("/realms/therealm", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, false).sort
       }
@@ -122,7 +121,7 @@ class RealmsRoutesSpec
     "update an existing realm" in {
       realms.update(any[Label], any[Long], any[String], any[Url], any[Option[Url]])(any[Caller]) shouldReturn Task
         .pure(Right(meta(label, 1L, false)))
-      Put("/v1/realms/therealm?rev=1", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
+      Put("/realms/therealm?rev=1", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, false).sort
       }
@@ -143,41 +142,41 @@ class RealmsRoutesSpec
     )
     "fetch a realm by id" in {
       realms.fetch(any[Label])(any[Caller]) shouldReturn Task.pure(Some(resource(label, 1L, realm)))
-      Get("/v1/realms/therealm") ~> routes ~> check {
+      Get("/realms/therealm") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual response(label, 1L, false).sort
       }
     }
     "fetch a realm by id and rev" in {
       realms.fetch(any[Label], any[Long])(any[Caller]) shouldReturn Task.pure(Some(resource(label, 1L, realm)))
-      Get("/v1/realms/therealm?rev=5") ~> routes ~> check {
+      Get("/realms/therealm?rev=5") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual response(label, 1L, false).sort
       }
     }
     "list realms" in {
       realms.list(any[Caller]) shouldReturn Task.pure(List(resource(label, 1L, realm)))
-      Get("/v1/realms") ~> routes ~> check {
+      Get("/realms") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual listResponse(label, false).sort
       }
     }
     "deprecate a realm" in {
       realms.deprecate(any[Label], any[Long])(any[Caller]) shouldReturn Task.pure(Right(meta(label, 1L, true)))
-      Delete("/v1/realms/therealm?rev=5") ~> routes ~> check {
+      Delete("/realms/therealm?rev=5") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, true).sort
       }
     }
     "return 404 for wrong revision" in {
       realms.fetch(any[Label], any[Long])(any[Caller]) shouldReturn Task.pure(None)
-      Get("/v1/realms/therealm?rev=5") ~> routes ~> check {
+      Get("/realms/therealm?rev=5") ~> routes ~> check {
         status shouldEqual StatusCodes.NotFound
         responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
       }
     }
     "access an endpoint that does not exists" in {
-      Get("/v1/other/therealm?rev=5") ~> routes ~> check {
+      Get("/other/therealm?rev=5") ~> routes ~> check {
         status shouldEqual StatusCodes.NotFound
         responseAs[Json] shouldEqual jsonContentOf("/resources/not-found.json")
       }

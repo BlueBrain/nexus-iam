@@ -155,8 +155,8 @@ class EventRoutesSpec
 
   "The EventRoutes" should {
     "return the acl events in the right order" in {
-      val routes = new TestableEventRoutes(aclEvents, acls, realms).routes
-      forAll(List("/v1/acls/events", "/v1/acls/events/")) { path =>
+      val routes = Routes.wrap(new TestableEventRoutes(aclEvents, acls, realms).routes)
+      forAll(List("/acls/events", "/acls/events/")) { path =>
         Get(path) ~> routes ~> check {
           val expected = jsonContentOf("/events/acl-events.json").asArray.value
           status shouldEqual StatusCodes.OK
@@ -166,8 +166,8 @@ class EventRoutesSpec
     }
 
     "return the realm events in the right order" in {
-      val routes = new TestableEventRoutes(realmEvents, acls, realms).routes
-      forAll(List("/v1/realms/events", "/v1/realms/events/")) { path =>
+      val routes = Routes.wrap(new TestableEventRoutes(realmEvents, acls, realms).routes)
+      forAll(List("/realms/events", "/realms/events/")) { path =>
         Get(path) ~> routes ~> check {
           val expected = jsonContentOf("/events/realm-events.json").asArray.value
           status shouldEqual StatusCodes.OK
@@ -177,8 +177,8 @@ class EventRoutesSpec
     }
 
     "return the permissions events in the right order" in {
-      val routes = new TestableEventRoutes(permissionsEvents, acls, realms).routes
-      forAll(List("/v1/permissions/events", "/v1/permissions/events/")) { path =>
+      val routes = Routes.wrap(new TestableEventRoutes(permissionsEvents, acls, realms).routes)
+      forAll(List("/permissions/events", "/permissions/events/")) { path =>
         Get(path) ~> routes ~> check {
           val expected = jsonContentOf("/events/permissions-events.json").asArray.value
           status shouldEqual StatusCodes.OK
@@ -188,8 +188,9 @@ class EventRoutesSpec
     }
 
     "return all the events in the right order" in {
-      val routes = new TestableEventRoutes(aclEvents ++ realmEvents ++ permissionsEvents, acls, realms).routes
-      forAll(List("/v1/events", "/v1/events/")) { path =>
+      val routes =
+        Routes.wrap(new TestableEventRoutes(aclEvents ++ realmEvents ++ permissionsEvents, acls, realms).routes)
+      forAll(List("/events", "/events/")) { path =>
         Get(path) ~> routes ~> check {
           val expected =
             jsonContentOf("/events/acl-events.json").asArray.value ++
@@ -202,8 +203,8 @@ class EventRoutesSpec
     }
 
     "return events from the last seen" in {
-      val routes = new TestableEventRoutes(realmEvents, acls, realms).routes
-      Get("/v1/realms/events").addHeader(`Last-Event-ID`(0.toString)) ~> routes ~> check {
+      val routes = Routes.wrap(new TestableEventRoutes(realmEvents, acls, realms).routes)
+      Get("/realms/events").addHeader(`Last-Event-ID`(0.toString)) ~> routes ~> check {
         val expected = jsonContentOf("/events/realm-events.json").asArray.value
         status shouldEqual StatusCodes.OK
         responseAs[String] shouldEqual eventStreamFor(expected, 1)
@@ -212,8 +213,8 @@ class EventRoutesSpec
 
     "return Forbidden when requesting the log with no permissions" in {
       acls.hasPermission(Path./, any[Permission], ancestors = false)(any[Caller]) shouldReturn Task.pure(false)
-      val routes = new TestableEventRoutes(realmEvents, acls, realms).routes
-      Get("/v1/realms/events") ~> routes ~> check {
+      val routes = Routes.wrap(new TestableEventRoutes(realmEvents, acls, realms).routes)
+      Get("/realms/events") ~> routes ~> check {
         status shouldEqual StatusCodes.Forbidden
       }
     }

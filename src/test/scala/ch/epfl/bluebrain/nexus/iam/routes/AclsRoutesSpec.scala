@@ -54,7 +54,7 @@ class AclsRoutesSpec
 
   private val acls: Acls[Task]     = mock[Acls[Task]]
   private val realms: Realms[Task] = mock[Realms[Task]]
-  private val routes               = new AclsRoutes(acls, realms).routes
+  private val routes               = Routes.wrap(new AclsRoutes(acls, realms).routes)
 
   before {
     Mockito.reset(acls)
@@ -114,7 +114,7 @@ class AclsRoutesSpec
     "create ACL" in {
       acls.replace(path, 0L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
 
-      Put(s"/v1/acls/myorg/myproj", aclJson) ~> addCredentials(token) ~> routes ~> check {
+      Put(s"/acls/myorg/myproj", aclJson) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.Created
       }
@@ -123,7 +123,7 @@ class AclsRoutesSpec
     "append ACL" in {
       acls.append(path, 1L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Append"))
-      Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
+      Patch(s"/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.OK
       }
@@ -132,7 +132,7 @@ class AclsRoutesSpec
     "subtract ACL" in {
       acls.subtract(path, 1L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
       val patch = aclJson deepMerge Json.obj("@type" -> Json.fromString("Subtract"))
-      Patch(s"/v1/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
+      Patch(s"/acls/myorg/myproj?rev=1", patch) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.OK
       }
@@ -140,7 +140,7 @@ class AclsRoutesSpec
 
     "delete ACL" in {
       acls.delete(path, 1L) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
-      Delete(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
+      Delete(s"/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.OK
       }
@@ -148,7 +148,7 @@ class AclsRoutesSpec
 
     "get ACL self = true" in {
       acls.fetch(path, self = true) shouldReturn Task.pure(Option(resourceAcl1))
-      Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
       }
@@ -156,7 +156,7 @@ class AclsRoutesSpec
 
     "get ACL self = true and rev = 1" in {
       acls.fetch(path, 1L, self = true) shouldReturn Task.pure(Option(resourceAcl1))
-      Get(s"/v1/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?rev=1") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
       }
@@ -164,7 +164,7 @@ class AclsRoutesSpec
 
     "get ACL self = true with path containing *" in {
       acls.list(Path("/myorg/*").right.value, ancestors = false, self = true) shouldReturn Task.pure(aclsFetch)
-      Get(s"/v1/acls/myorg/*") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/*") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK
       }
@@ -172,7 +172,7 @@ class AclsRoutesSpec
 
     "get ACL self = false and rev = 2 when response is an empty ACL" in {
       acls.fetch(path, 2L, self = false) shouldReturn Task.pure(Option(resourceAcl1.map(_ => AccessControlList.empty)))
-      Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes-empty.json")
         status shouldEqual StatusCodes.OK
       }
@@ -180,7 +180,7 @@ class AclsRoutesSpec
 
     "get ACL self = false and rev = 2 when response is None" in {
       acls.fetch(path, 2L, self = false) shouldReturn Task.pure[ResourceOpt](None)
-      Get(s"/v1/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?rev=2&self=false") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes-empty.json")
         status shouldEqual StatusCodes.OK
       }
@@ -188,60 +188,78 @@ class AclsRoutesSpec
 
     "get ACL self = true and ancestors = true" in {
       acls.list(path, ancestors = true, self = true) shouldReturn Task.pure(aclsFetch)
-      Get(s"/v1/acls/myorg/myproj?ancestors=true&self=true") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?ancestors=true&self=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK
       }
     }
 
     "return error when getting ACL with rev and ancestors = true" in {
-      Get(s"/v1/acls/myorg/myproj?rev=2&ancestors=true") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?rev=2&ancestors=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "IllegalParameter",
-              quote("{msg}")  -> "'rev' and 'ancestors' query parameters cannot be present simultaneously.")
+          Map(
+            quote("{code}") -> "MalformedQueryParam",
+            quote("{msg}")  -> "The query parameter 'rev' was malformed: 'rev and ancestors query parameters cannot be present simultaneously'."
+          )
         )
         status shouldEqual StatusCodes.BadRequest
       }
     }
 
     "return error when getting ACL with rev and path containing *" in {
-      Get(s"/v1/acls/myorg/*?rev=2") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/*?rev=2") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "IllegalParameter",
-              quote("{msg}")  -> "'rev' query parameter and path containing '*' cannot be present simultaneously.")
+          Map(
+            quote("{code}") -> "MalformedQueryParam",
+            quote("{msg}")  -> "The query parameter 'rev' was malformed: 'rev query parameter and path containing * cannot be present simultaneously'."
+          )
         )
         status shouldEqual StatusCodes.BadRequest
       }
     }
 
     "return error when invalid query parameter" in {
-      Get(s"/v1/acls/myorg/myproj?rev=2ancestors=true") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj?rev=2ancestors=true") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "IllegalParameter", quote("{msg}") -> "For input string: \\\\\"2ancestors=true\\\\\""))
+          Map(
+            quote("{code}") -> "MalformedQueryParam",
+            quote("{msg}")  -> "The query parameter 'rev' was malformed: ''2ancestors=true' is not a valid 64-bit signed integer value'."
+          )
+        )
         status shouldEqual StatusCodes.BadRequest
       }
     }
 
     "return error when making a call that returns exception on the ACLs" in {
       acls.fetch(path, self = true) shouldReturn Task.raiseError(ExpectedException)
-      Get(s"/v1/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "Unexpected",
+          Map(quote("{code}") -> "InternalError",
               quote("{msg}")  -> "The system experienced an unexpected error, please try again later."))
         status shouldEqual StatusCodes.InternalServerError
       }
     }
 
     "return error when path contains double slash" in {
-      Get(s"/v1/acls/myorg//") ~> addCredentials(token) ~> routes ~> check {
-        responseAs[Json] shouldEqual jsonContentOf("/acls/error.json",
-                                                   Map(quote("{code}") -> "IllegalParameter",
-                                                       quote("{msg}")  -> "path '/myorg//' cannot contain double slash"))
+      Get(s"/acls/myorg//") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf(
+          "/acls/error.json",
+          Map(quote("{code}") -> "ValidationRejection",
+              quote("{msg}")  -> "Path '/myorg//' cannot contain double slash."))
         status shouldEqual StatusCodes.BadRequest
+      }
+    }
+
+    "return a not found" in {
+      Get(s"/random/a") ~> addCredentials(token) ~> routes ~> check {
+        responseAs[Json] shouldEqual jsonContentOf("/acls/error.json",
+                                                   Map(quote("{code}") -> "NotFound",
+                                                       quote("{msg}")  -> "The requested resource could not be found."))
+        status shouldEqual StatusCodes.NotFound
       }
     }
   }

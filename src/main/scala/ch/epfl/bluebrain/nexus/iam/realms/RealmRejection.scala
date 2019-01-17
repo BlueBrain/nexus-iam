@@ -1,14 +1,22 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
-import ch.epfl.bluebrain.nexus.iam.types.Label
+import akka.http.scaladsl.model.StatusCodes.{BadRequest, Conflict}
+import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
+import ch.epfl.bluebrain.nexus.iam.types.{Label, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
 
 /**
   * Enumeration of realm rejection types.
   *
   * @param msg a descriptive message for why the rejection occurred
   */
-sealed abstract class RealmRejection(val msg: String) extends Product with Serializable
+sealed abstract class RealmRejection(val msg: String) extends ResourceRejection
 
 object RealmRejection {
 
@@ -118,4 +126,25 @@ object RealmRejection {
   final case class NoValidKeysFound(document: Url)
       extends RealmRejection(s"Failed to find a valid RSA JWK key at '${document.asUri}'.")
 
+  implicit val realmRejectionEncoder: Encoder[RealmRejection] = {
+    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+    val enc                                     = deriveEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
+  }
+
+  implicit val realmsStatusCode: StatusFrom[RealmRejection] =
+    StatusFrom {
+      case _: RealmAlreadyExists               => BadRequest
+      case _: RealmNotFound                    => BadRequest
+      case _: RealmAlreadyDeprecated           => BadRequest
+      case _: IncorrectRev                     => Conflict
+      case _: IllegalGrantTypeFormat           => BadRequest
+      case _: IllegalIssuerFormat              => BadRequest
+      case _: IllegalJwksUriFormat             => BadRequest
+      case _: IllegalEndpointFormat            => BadRequest
+      case _: IllegalJwkFormat                 => BadRequest
+      case _: UnsuccessfulJwksResponse         => BadRequest
+      case _: UnsuccessfulOpenIdConfigResponse => BadRequest
+      case _: NoValidKeysFound                 => BadRequest
+    }
 }

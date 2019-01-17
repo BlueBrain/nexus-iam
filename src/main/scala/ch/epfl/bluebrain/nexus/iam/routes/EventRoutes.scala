@@ -20,6 +20,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PersistenceConfig}
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives._
 import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter._
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.JsonLd._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.JsonLd._
@@ -27,8 +28,8 @@ import ch.epfl.bluebrain.nexus.iam.realms.{RealmEvent, Realms}
 import ch.epfl.bluebrain.nexus.iam.routes.EventRoutes._
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.iam.{acls => aclsp, permissions => permissionsp, realms => realmsp}
-import io.circe.{Encoder, Printer}
 import io.circe.syntax._
+import io.circe.{Encoder, Printer}
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -51,16 +52,13 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
 
   private implicit val implAcls: Acls[Task] = acls
 
-  def routes: Route = {
-    (handleRejections(RejectionHandling()) & handleExceptions(ExceptionHandling()) & pathPrefix(hc.prefix)) {
-      concat(
-        routesFor("acls" / "events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
-        routesFor("permissions" / "events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
-        routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
-        routesFor("events", eventTag, eventsRead, eventToSse),
-      )
-    }
-  }
+  def routes: Route =
+    concat(
+      routesFor("acls" / "events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
+      routesFor("permissions" / "events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
+      routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
+      routesFor("events", eventTag, eventsRead, eventToSse),
+    )
 
   private def routesFor(
       pm: PathMatcher0,

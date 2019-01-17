@@ -1,7 +1,14 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
+import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances.finiteDurationEncoder
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
+import ch.epfl.bluebrain.nexus.rdf.instances.absoluteIriEncoder
+import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import io.circe.generic.extras.Configuration
+import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.{Encoder, Json}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -55,8 +62,7 @@ object IamError {
     *
     * @param reason the underlying error reason
     */
-  final case class InternalError(reason: String)
-      extends IamError(s"An internal server error occurred due to '$reason'.")
+  final case class InternalError(reason: String) extends IamError(reason)
 
   /**
     * Signals that an error occurred while attempting to perform an operation with an invalid access token.
@@ -69,6 +75,11 @@ object IamError {
   /**
     * Signals that the requested resource was not found
     */
-  final case object NotFound extends IamError("The requested resource was not found.")
+  final case object NotFound extends IamError("The requested resource could not be found.")
 
+  implicit val iamErrorEncoder: Encoder[IamError] = {
+    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+    val enc                                     = deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
+    Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
+  }
 }
