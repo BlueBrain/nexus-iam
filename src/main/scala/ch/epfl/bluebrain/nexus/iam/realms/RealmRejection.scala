@@ -2,9 +2,9 @@ package ch.epfl.bluebrain.nexus.iam.realms
 
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, Conflict}
 import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.types.{Label, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
 import io.circe.generic.extras.Configuration
@@ -25,22 +25,22 @@ object RealmRejection {
     *
     * @param id the id of the realm
     */
-  final case class RealmAlreadyExists(id: Label) extends RealmRejection(s"Realm '${id.value}' already exists.")
+  final case class RealmAlreadyExists(label: Label) extends RealmRejection(s"Realm '${label.value}' already exists.")
 
   /**
     * Rejection returned when attempting to update a realm with an id that doesnt exist.
     *
     * @param id the id of the realm
     */
-  final case class RealmNotFound(id: Label) extends RealmRejection(s"Realm '${id.value}' not found.")
+  final case class RealmNotFound(label: Label) extends RealmRejection(s"Realm '${label.value}' not found.")
 
   /**
     * Rejection returned when attempting to deprecate a realm that is already deprecated.
     *
     * @param id the id of the realm
     */
-  final case class RealmAlreadyDeprecated(id: Label)
-      extends RealmRejection(s"Realm '${id.value}' is already deprecated.")
+  final case class RealmAlreadyDeprecated(label: Label)
+      extends RealmRejection(s"Realm '${label.value}' is already deprecated.")
 
   /**
     * Rejection returned when a subject intends to perform an operation on the current realm, but either provided an
@@ -132,7 +132,7 @@ object RealmRejection {
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
-  implicit val realmsStatusCode: StatusFrom[RealmRejection] =
+  implicit val realmRejectionStatusFrom: StatusFrom[RealmRejection] =
     StatusFrom {
       case _: RealmAlreadyExists               => BadRequest
       case _: RealmNotFound                    => BadRequest

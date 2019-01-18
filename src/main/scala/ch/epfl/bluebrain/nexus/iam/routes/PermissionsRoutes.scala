@@ -1,7 +1,6 @@
 package ch.epfl.bluebrain.nexus.iam.routes
 
 import akka.http.javadsl.server.Rejections._
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
@@ -13,7 +12,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions.{Append, Replace, Subtract}
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import io.circe.syntax._
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import monix.eval.Task
@@ -41,12 +40,8 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
             parameter("rev".as[Long].?) { optRev =>
               trace("fetchPermissions") {
                 optRev match {
-                  case Some(rev) =>
-                    onSuccess(permissions.fetchAt(rev).runToFuture) {
-                      case Some(value) => complete(value)
-                      case None        => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
-                    }
-                  case None => complete(permissions.fetch.runToFuture)
+                  case Some(rev) => complete(permissions.fetchAt(rev).runNotFound)
+                  case None      => complete(permissions.fetch.runToFuture)
                 }
               }
             }
@@ -55,9 +50,7 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
             entity(as[PatchPermissions]) {
               case Replace(set) =>
                 trace("replacePermissions") {
-                  complete {
-                    permissions.replace(set, rev).runToFuture
-                  }
+                  complete(permissions.replace(set, rev).runToFuture)
                 }
               case _ => reject(validationRejection("Only @type 'Replace' is permitted when using 'put'."))
             }
@@ -65,9 +58,7 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
           delete {
             parameter("rev".as[Long]) { rev =>
               trace("deletePermissions") {
-                complete {
-                  permissions.delete(rev).runToFuture
-                }
+                complete(permissions.delete(rev).runToFuture)
               }
             }
           },

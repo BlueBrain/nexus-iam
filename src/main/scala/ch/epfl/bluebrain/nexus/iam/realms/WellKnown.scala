@@ -1,13 +1,13 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import akka.http.scaladsl.client.RequestBuilding._
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances.urlDecoder
 import cats.data.EitherT
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, MonadThrowable}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import com.nimbusds.jose.jwk.{JWK, KeyType}
 import io.circe.generic.semiauto._
 import io.circe.{CursorOp, Decoder, Json}

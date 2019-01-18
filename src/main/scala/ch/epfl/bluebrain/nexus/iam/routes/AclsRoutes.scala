@@ -34,16 +34,17 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit hc: HttpConfig
         extractResourcePath { path =>
           concat(
             parameter("rev" ? 0L) { rev =>
+              val status = if (rev == 0L) Created else OK
               concat(
                 (put & entity(as[AccessControlList])) { acl =>
                   trace("replaceAcl") {
-                    complete(Created -> acls.replace(path, rev, acl).runToFuture)
+                    complete(acls.replace(path, rev, acl).runWithStatus(status))
                   }
                 },
                 (patch & entity(as[PatchAcl])) {
                   case AppendAcl(acl) =>
                     trace("appendAcl") {
-                      complete(acls.append(path, rev, acl).runToFuture)
+                      complete(acls.append(path, rev, acl).runWithStatus(status))
                     }
                   case SubtractAcl(acl) =>
                     trace("subtractAcl") {
