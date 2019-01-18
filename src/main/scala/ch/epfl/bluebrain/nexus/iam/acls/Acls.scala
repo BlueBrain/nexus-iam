@@ -283,19 +283,23 @@ object Acls {
       })
 
     def replaced(c: ReplaceAcl): F[EventOrRejection] = state match {
-      case _ if c.acl.hasVoidPermissions  => reject(AclCannotContainEmptyPermissionCollection(c.path))
-      case Initial if c.rev == 0L         => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, 1L, _, c.subject))
-      case Initial                        => reject(IncorrectRev(c.path, c.rev, 0L))
-      case ss: Current if c.rev != ss.rev => reject(IncorrectRev(c.path, c.rev, ss.rev))
-      case _: Current                     => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, c.rev + 1, _, c.subject))
+      case _ if c.acl.hasVoidPermissions                                 => reject(AclCannotContainEmptyPermissionCollection(c.path))
+      case Initial if c.rev == 0L                                        => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, 1L, _, c.subject))
+      case Initial                                                       => reject(IncorrectRev(c.path, c.rev, 0L))
+      case ss: Current if ss.acl.permissions.nonEmpty && c.rev != ss.rev => reject(IncorrectRev(c.path, c.rev, ss.rev))
+      case ss: Current if ss.acl.permissions.isEmpty && c.rev != ss.rev && c.rev != 0L =>
+        reject(IncorrectRev(c.path, c.rev, ss.rev))
+      case ss: Current => acceptChecking(c.acl)(AclReplaced(c.path, c.acl, ss.rev + 1, _, c.subject))
     }
     def append(c: AppendAcl): F[EventOrRejection] = state match {
-      case Initial if c.rev == 0L                 => acceptChecking(c.acl)(AclAppended(c.path, c.acl, c.rev + 1, _, c.subject))
-      case Initial                                => reject(IncorrectRev(c.path, c.rev, 0L))
-      case s: Current if c.rev != s.rev           => reject(IncorrectRev(c.path, c.rev, s.rev))
+      case Initial if c.rev == 0L                                     => acceptChecking(c.acl)(AclAppended(c.path, c.acl, c.rev + 1, _, c.subject))
+      case Initial                                                    => reject(IncorrectRev(c.path, c.rev, 0L))
+      case s: Current if s.acl.permissions.nonEmpty && c.rev != s.rev => reject(IncorrectRev(c.path, c.rev, s.rev))
+      case s: Current if s.acl.permissions.isEmpty && c.rev != s.rev & c.rev != 0L =>
+        reject(IncorrectRev(c.path, c.rev, s.rev))
       case _: Current if c.acl.hasVoidPermissions => reject(AclCannotContainEmptyPermissionCollection(c.path))
       case s: Current if s.acl ++ c.acl == s.acl  => reject(NothingToBeUpdated(c.path))
-      case _: Current                             => acceptChecking(c.acl)(AclAppended(c.path, c.acl, c.rev + 1, _, c.subject))
+      case s: Current                             => acceptChecking(c.acl)(AclAppended(c.path, c.acl, s.rev + 1, _, c.subject))
     }
     def subtract(c: SubtractAcl): F[EventOrRejection] = state match {
       case Initial                                => reject(AclNotFound(c.path))

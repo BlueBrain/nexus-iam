@@ -23,7 +23,7 @@ import org.mockito.IdiomaticMockito
 import org.scalatest._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.MILLISECONDS
+import scala.concurrent.duration._
 import scala.util.Random
 
 //noinspection TypeAnnotation,NameBooleanParameters
@@ -35,6 +35,8 @@ class AclsSpec
     with Randomness
     with Inspectors
     with IdiomaticMockito {
+
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
 
   implicit val appConfig: AppConfig = Settings(system).appConfig
   val http                          = appConfig.http
@@ -178,6 +180,30 @@ class AclsSpec
       "reject changes with unknown permissions" in new Context {
         acls.replace(path, 0L, unknownAcl).rejected[UnknownPermissions].permissions shouldEqual Set(unknownPerm)
       }
+
+      "accept updates with rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.replace(path, 2L, acl).accepted shouldEqual metadata.copy(rev = 3L)
+      }
+
+      "accept updates without rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata.copy(rev = 3L)
+      }
+
+      "reject updates with incorrect rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.replace(path, 5L, acl).rejected[IncorrectRev].expected shouldEqual 2L
+      }
     }
 
     "performing append operations" should {
@@ -235,6 +261,30 @@ class AclsSpec
 
       "reject changes with unknown permissions" in new AppendCtx {
         acls.append(path, 0L, unknownAcl).rejected[UnknownPermissions].permissions shouldEqual Set(unknownPerm)
+      }
+
+      "accept appends with rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.append(path, 2L, acl).accepted shouldEqual metadata.copy(rev = 3L)
+      }
+
+      "accept appends without rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.append(path, 0L, acl).accepted shouldEqual metadata.copy(rev = 3L)
+      }
+
+      "reject appends with incorrect rev when ACL is empty" in new Context {
+        val metadata =
+          ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, createdBy, instant, createdBy)
+        acls.replace(path, 0L, acl).accepted shouldEqual metadata
+        acls.delete(path, 1L).accepted shouldEqual metadata.copy(rev = 2L)
+        acls.append(path, 5L, acl).rejected[IncorrectRev].expected shouldEqual 2L
       }
     }
 

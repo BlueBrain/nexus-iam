@@ -30,6 +30,8 @@ class PermissionsSpec
     with Randomness
     with IdiomaticMockito {
 
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
+
   val appConfig: AppConfig           = Settings(system).appConfig
   implicit val http: HttpConfig      = appConfig.http
   implicit val pc: PermissionsConfig = appConfig.permissions
