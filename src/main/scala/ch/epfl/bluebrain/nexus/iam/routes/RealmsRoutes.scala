@@ -13,9 +13,10 @@ import ch.epfl.bluebrain.nexus.iam.directives.RealmDirectives._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.{Realms, Resource, ResourceMetadata}
 import ch.epfl.bluebrain.nexus.iam.routes.RealmsRoutes.Realm
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError}
+import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.syntax._
@@ -75,7 +76,7 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
                 entity(as[Realm]) {
                   case Realm(name, openIdConfig, logo) =>
                     trace("createRealm") {
-                      complete(StatusCodes.Created -> realms.create(id, name, openIdConfig, logo).runToFuture)
+                      complete(realms.create(id, name, openIdConfig, logo).runWithStatus(StatusCodes.Created))
                     }
                 }
             }
@@ -84,17 +85,11 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
             parameter("rev".as[Long].?) {
               case Some(rev) =>
                 trace("getRealmByIdAndRev") {
-                  onSuccess(realms.fetch(id, rev).runToFuture) {
-                    case Some(res) => complete(res)
-                    case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
-                  }
+                  complete(realms.fetch(id, rev).runNotFound)
                 }
               case None =>
                 trace("getRealmById") {
-                  onSuccess(realms.fetch(id).runToFuture) {
-                    case Some(res) => complete(res)
-                    case None      => complete(StatusCodes.NotFound -> (IamError.NotFound: IamError))
-                  }
+                  complete(realms.fetch(id).runNotFound)
                 }
             }
           },

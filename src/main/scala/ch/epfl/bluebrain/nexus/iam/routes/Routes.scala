@@ -61,13 +61,13 @@ object Routes {
     val custom = RejectionHandling.apply[ResourceRejection]({
       case rejection: RealmRejection =>
         logger.debug(s"Handling realm rejection '$rejection'")
-        rejection
+        RealmRejection.realmRejectionStatusFrom(rejection) -> rejection
       case rejection: AclRejection =>
         logger.debug(s"Handling acl rejection '$rejection'")
-        rejection
+        AclRejection.aclRejectionStatusFrom(rejection) -> rejection
       case rejection: PermissionsRejection =>
         logger.debug(s"Handling permission rejection '$rejection'")
-        rejection
+        PermissionsRejection.permissionsRejectionStatusFrom(rejection) -> rejection
     })
     corsRejectionHandler withFallback custom withFallback RejectionHandling.notFound withFallback RejectionHandler.default
   }

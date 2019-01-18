@@ -4,11 +4,11 @@ import akka.cluster.{Cluster, MemberStatus}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.Description
+import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.routes.AppInfoRoutes.Status.{Inaccessible, Up}
 import ch.epfl.bluebrain.nexus.iam.routes.AppInfoRoutes.{Health, ServiceDescription, Status}
-import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+import io.circe.Encoder
 import io.circe.generic.auto._
-import io.circe.{Encoder, Printer}
 
 import scala.util._
 
@@ -17,23 +17,23 @@ import scala.util._
   */
 class AppInfoRoutes(serviceDescription: ServiceDescription, cluster: Cluster, cassandraHealth: CassandraHeath) {
 
-  private implicit val printer = Printer.noSpaces.copy(dropNullValues = true)
-
   private def clusterStatus: Status =
     Status(
       !cluster.isTerminated &&
         cluster.state.leader.isDefined && cluster.state.members.nonEmpty &&
         !cluster.state.members.exists(_.status != MemberStatus.Up) && cluster.state.unreachable.isEmpty)
 
-  def routes: Route =
+  def routes: Route = concat(
     (get & pathEndOrSingleSlash) {
       complete(serviceDescription)
-    } ~ (pathPrefix("health") & get & pathEndOrSingleSlash) {
+    },
+    (pathPrefix("health") & get & pathEndOrSingleSlash) {
       onComplete(cassandraHealth.check) {
         case Success(true) => complete(Health(cluster = clusterStatus, cassandra = Up))
         case _             => complete(Health(cluster = clusterStatus, cassandra = Inaccessible))
       }
     }
+  )
 }
 
 object AppInfoRoutes {

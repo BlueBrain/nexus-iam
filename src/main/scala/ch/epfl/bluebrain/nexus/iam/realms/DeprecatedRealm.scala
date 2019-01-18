@@ -4,9 +4,9 @@ import _root_.io.circe.generic.semiauto._
 import _root_.io.circe.{Encoder, Json}
 import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
+import ch.epfl.bluebrain.nexus.rdf.instances._
 
 /**
   * A realm representation that has been deprecated.

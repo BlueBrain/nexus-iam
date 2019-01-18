@@ -71,7 +71,7 @@ object AclRejection {
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
-  implicit val aclStatusCode: StatusFrom[AclRejection] =
+  implicit val aclRejectionStatusFrom: StatusFrom[AclRejection] =
     StatusFrom {
       case _: NothingToBeUpdated                        => BadRequest
       case _: AclIsEmpty                                => BadRequest

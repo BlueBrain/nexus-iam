@@ -80,7 +80,7 @@ object PermissionsRejection {
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
-  implicit val permissionsStatusCode: StatusFrom[PermissionsRejection] =
+  implicit val permissionsRejectionStatusFrom: StatusFrom[PermissionsRejection] =
     StatusFrom {
       case CannotSubtractEmptyCollection          => BadRequest
       case _: CannotSubtractFromMinimumCollection => BadRequest
