@@ -71,13 +71,10 @@ class PermissionsSpec
     Permission.unsafe("projects/create"),
     Permission.unsafe("resources/read"),
     Permission.unsafe("resources/write"),
-    Permission.unsafe("resolvers/read"),
     Permission.unsafe("resolvers/write"),
-    Permission.unsafe("views/read"),
+    Permission.unsafe("views/query"),
     Permission.unsafe("views/write"),
-    Permission.unsafe("schemas/read"),
     Permission.unsafe("schemas/write"),
-    Permission.unsafe("files/read"),
     Permission.unsafe("files/write"),
   )
 
