@@ -28,7 +28,7 @@ import org.mockito.IdiomaticMockito
 import org.scalatest.Matchers
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.MILLISECONDS
+import scala.concurrent.duration._
 
 //noinspection TypeAnnotation,NameBooleanParameters,RedundantDefaultArgument
 class RealmsSpec
@@ -38,6 +38,8 @@ class RealmsSpec
     with IOOptionValues
     with Randomness
     with IdiomaticMockito {
+
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
 
   val appConfig: AppConfig      = Settings(system).appConfig
   implicit val http: HttpConfig = appConfig.http
