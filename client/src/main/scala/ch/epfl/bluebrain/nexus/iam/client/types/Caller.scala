@@ -23,7 +23,7 @@ object Caller {
       cursor
         .get[Set[Identity]]("identities")
         .flatMap { identities =>
-          identities.find(_.isInstanceOf[User]).orElse(identities.find(_.isInstanceOf[Anonymous])) match {
+          identities.collectFirst { case u: User => u } orElse identities.collectFirst { case Anonymous => Anonymous } match {
             case Some(subject: Subject) => Right(Caller(subject, identities))
             case _ =>
               val pos = cursor.downField("identities").history
