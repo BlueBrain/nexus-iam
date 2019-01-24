@@ -17,10 +17,11 @@ class IdentitySpec
     with EitherValues {
 
   "An identity" should {
-    implicit val config = IamClientConfig(url"http://nexus.example.com/v1".value)
-    val user            = User("mysubject", "myrealm")
-    val group           = Group("mygroup", "myrealm")
-    val authenticated   = Authenticated("myrealm")
+    implicit val config =
+      IamClientConfig(url"http://nexus.example.com/v1".value, url"http://internal.nexus.example.com/v1".value)
+    val user          = User("mysubject", "myrealm")
+    val group         = Group("mygroup", "myrealm")
+    val authenticated = Authenticated("myrealm")
 
     "be created from ids" in {
       val cases = List[(AbsoluteIri, Identity)](

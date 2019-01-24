@@ -53,7 +53,7 @@ object Identity {
     */
   final case object Anonymous extends Anonymous {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.baseIri + "anonymous"
+      config.publicIri + "anonymous"
   }
 
   /**
@@ -64,7 +64,7 @@ object Identity {
     */
   final case class User(subject: String, realm: String) extends Subject {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.baseIri + ("realms" / realm / "users" / subject)
+      config.publicIri + ("realms" / realm / "users" / subject)
 
   }
 
@@ -76,7 +76,7 @@ object Identity {
     */
   final case class Group(group: String, realm: String) extends Identity {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.baseIri + ("realms" / realm / "groups" / group)
+      config.publicIri + ("realms" / realm / "groups" / group)
   }
 
   /**
@@ -86,7 +86,7 @@ object Identity {
     */
   final case class Authenticated(realm: String) extends Identity {
     def id(implicit config: IamClientConfig): AbsoluteIri =
-      config.baseIri + ("realms" / realm / "authenticated")
+      config.publicIri + ("realms" / realm / "authenticated")
   }
 
   implicit def identityEncoder(implicit config: IamClientConfig): Encoder[Identity] = {

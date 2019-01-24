@@ -39,8 +39,9 @@ class IamClientSpec
 
   implicit val ec: ExecutionContext = system.dispatcher
 
-  private val clock             = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
-  private val config            = IamClientConfig(url"http://example.com/some/v1".value)
+  private val clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private val config =
+    IamClientConfig(url"http://example.com/some/v1".value, url"http://internal.example.com/some/v1".value)
   private val aclsClient        = mock[HttpClient[IO, AccessControlLists]]
   private val callerClient      = mock[HttpClient[IO, Caller]]
   private val permissionsClient = mock[HttpClient[IO, Permissions]]
@@ -72,7 +73,7 @@ class IamClientSpec
         val token             = OAuth2BearerToken("token")
         val expected          = AccessControlLists(/ -> aclWithMeta)
 
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true").addCredentials(token)) shouldReturn
+        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true").addCredentials(token)) shouldReturn
           IO(expected)
         client.acls("a" / "b", ancestors = true, self = true).ioValue shouldEqual expected
         client.hasPermission("a" / "b", Permission.unsafe("read")).ioValue shouldEqual true
@@ -83,14 +84,15 @@ class IamClientSpec
         implicit val tokenOpt: Option[AuthToken] = None
         val expected                             = AccessControlLists(/ -> aclWithMeta)
 
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn IO(expected)
+        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn IO(
+          expected)
         client.acls("a" / "b", ancestors = true, self = true).ioValue shouldEqual expected
         client.hasPermission("a" / "b", Permission.unsafe("read")).ioValue shouldEqual true
       }
 
       "fail with UnauthorizedAccess" in {
         implicit val tokenOpt: Option[AuthToken] = None
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
+        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
           IO.raiseError(Unauthorized("{}"))
         client.acls("a" / "b", ancestors = true, self = true).failed[Unauthorized]
         client.hasPermission("a" / "b", Permission.unsafe("read")).failed[Unauthorized]
@@ -98,7 +100,7 @@ class IamClientSpec
 
       "fail with Forbidden" in {
         implicit val tokenOpt: Option[AuthToken] = None
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
+        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
           IO.raiseError(Forbidden("{}"))
         client.acls("a" / "b", ancestors = true, self = true).failed[Forbidden]
         client.hasPermission("a" / "b", Permission.unsafe("read")).failed[Forbidden]
@@ -118,7 +120,7 @@ class IamClientSpec
           )
 
           val entity  = HttpEntity(ContentTypes.`application/json`, jsonContentOf("/acls/replace.json").noSpaces)
-          val request = Put("http://example.com/some/v1/acls/my/path?rev=1", entity).addCredentials(token)
+          val request = Put("http://internal.example.com/some/v1/acls/my/path?rev=1", entity).addCredentials(token)
 
           jsonClient(request) shouldReturn IO.pure(Json.obj())
           client.putAcls(path, acl, Some(1L)).ioValue shouldEqual (())
@@ -137,7 +139,7 @@ class IamClientSpec
           )
 
           val entity  = HttpEntity(ContentTypes.`application/json`, jsonContentOf("/acls/replace.json").noSpaces)
-          val request = Put("http://example.com/some/v1/acls/my/path", entity).addCredentials(token)
+          val request = Put("http://internal.example.com/some/v1/acls/my/path", entity).addCredentials(token)
 
           jsonClient(request) shouldReturn IO.pure(Json.obj())
           client.putAcls(path, acl).ioValue shouldEqual (())
@@ -155,7 +157,7 @@ class IamClientSpec
           )
 
           val entity  = HttpEntity(ContentTypes.`application/json`, jsonContentOf("/acls/replace.json").noSpaces)
-          val request = Put("http://example.com/some/v1/acls/my/path?rev=1", entity).addCredentials(token)
+          val request = Put("http://internal.example.com/some/v1/acls/my/path?rev=1", entity).addCredentials(token)
 
           jsonClient(request) shouldReturn IO.raiseError(Unauthorized("{}"))
           client.putAcls(path, acl, Some(1L)).failed[Unauthorized]
@@ -166,7 +168,7 @@ class IamClientSpec
         implicit val tokenOpt: Option[AuthToken] = None
         val expected                             = new RuntimeException()
 
-        aclsClient(Get("http://example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
+        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=false&self=true")) shouldReturn
           IO.raiseError(expected)
         client.acls("a" / "b", ancestors = false, self = true).failed[RuntimeException] shouldEqual expected
       }
@@ -180,7 +182,8 @@ class IamClientSpec
         val user              = User("mysubject", "myrealm")
         val expected          = Caller(user, Set(user, Anonymous))
 
-        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn IO.pure(expected)
+        callerClient(Get("http://internal.example.com/some/v1/identities").addCredentials(token)) shouldReturn IO.pure(
+          expected)
         client.identities.ioValue shouldEqual expected
       }
 
@@ -193,7 +196,7 @@ class IamClientSpec
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
 
-        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
+        callerClient(Get("http://internal.example.com/some/v1/identities").addCredentials(token)) shouldReturn
           IO.raiseError(Unauthorized("{}"))
         client.identities.failed[Unauthorized]
       }
@@ -202,7 +205,7 @@ class IamClientSpec
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
 
-        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
+        callerClient(Get("http://internal.example.com/some/v1/identities").addCredentials(token)) shouldReturn
           IO.raiseError(Forbidden("{}"))
         client.identities.failed[Forbidden]
       }
@@ -212,7 +215,7 @@ class IamClientSpec
         val token             = OAuth2BearerToken("token")
         val expected          = new RuntimeException()
 
-        callerClient(Get("http://example.com/some/v1/identities").addCredentials(token)) shouldReturn
+        callerClient(Get("http://internal.example.com/some/v1/identities").addCredentials(token)) shouldReturn
           IO.raiseError(expected)
         client.identities.failed[RuntimeException] shouldEqual expected
       }
@@ -224,7 +227,7 @@ class IamClientSpec
         val token               = OAuth2BearerToken("token")
         val expectedPermissions = Set(Permission.unsafe("test/perm1"), Permission.unsafe("test/perm2"))
 
-        permissionsClient(Get("http://example.com/some/v1/permissions").addCredentials(token)) shouldReturn
+        permissionsClient(Get("http://internal.example.com/some/v1/permissions").addCredentials(token)) shouldReturn
           IO.pure(Permissions(expectedPermissions))
         client.permissions.ioValue shouldEqual expectedPermissions
 
@@ -233,7 +236,7 @@ class IamClientSpec
       "fail when user is not authorized" in {
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
-        permissionsClient(Get("http://example.com/some/v1/permissions").addCredentials(token)) shouldReturn
+        permissionsClient(Get("http://internal.example.com/some/v1/permissions").addCredentials(token)) shouldReturn
           IO.raiseError(Unauthorized("{}"))
         client.permissions.failed[Unauthorized]
       }
@@ -241,7 +244,7 @@ class IamClientSpec
       "fail when user is forbidden" in {
         implicit val tokenOpt = Option(AuthToken("token"))
         val token             = OAuth2BearerToken("token")
-        permissionsClient(Get("http://example.com/some/v1/permissions").addCredentials(token)) shouldReturn
+        permissionsClient(Get("http://internal.example.com/some/v1/permissions").addCredentials(token)) shouldReturn
           IO.raiseError(Forbidden("{}"))
         client.permissions.failed[Forbidden]
       }
