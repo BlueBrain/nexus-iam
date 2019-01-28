@@ -21,11 +21,12 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.{RealmCreated, RealmDepreca
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
-import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, InternalError, UnexpectedInitialState}
+import ch.epfl.bluebrain.nexus.iam.types.IamError._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig, OnKeyValueStoreChange}
+import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStoreError._
+import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig, KeyValueStoreError}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
@@ -233,27 +234,19 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
 
 object Realms {
 
+  private def mapError(cacheError: KeyValueStoreError): IamError =
+    cacheError match {
+      case e: ReadWriteConsistencyTimeout =>
+        OperationTimedOut(s"Timeout while interacting with the cache due to '${e.timeout}'")
+      case e: DistributedDataError => InternalError(e.reason)
+    }
+
   /**
     * Creates a new realm index.
     */
   def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
     implicit val cfg: KeyValueStoreConfig = rc.keyValueStore
-    new RealmIndex[F] {
-      val underlying: RealmIndex[F] = KeyValueStore.distributed("realms", (_, resource) => resource.rev)
-
-      override def put(key: Label, value: Resource): F[Unit] =
-        underlying.put(key, value).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
-      override def entries: F[Map[Label, Resource]] =
-        underlying.entries.recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
-      override def remove(key: Label): F[Unit] =
-        underlying.remove(key).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
-      override def subscribe(value: OnKeyValueStoreChange[Label, Resource]): F[KeyValueStore.Subscription] =
-        underlying.subscribe(value).recoverWith { case err => F.raiseError(InternalError(err.getMessage): IamError) }
-      override def unsubscribe(subscription: KeyValueStore.Subscription): F[Unit] =
-        underlying.unsubscribe(subscription).recoverWith {
-          case err => F.raiseError(InternalError(err.getMessage): IamError)
-        }
-    }
+    KeyValueStore.distributed("realms", (_, resource) => resource.rev, mapError)
   }
 
   /**

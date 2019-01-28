@@ -7,14 +7,13 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives.authenticator
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
-import ch.epfl.bluebrain.nexus.iam.permissions.{Permissions, Resource}
+import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions
 import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions.{Append, Replace, Subtract}
-import ch.epfl.bluebrain.nexus.iam.types.ResourceF.resourceMetaEncoder
+import ch.epfl.bluebrain.nexus.iam.types.ResourceF._
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
-import io.circe.syntax._
-import io.circe.{Decoder, DecodingFailure, Encoder, Json}
+import io.circe.{Decoder, DecodingFailure}
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -25,12 +24,6 @@ import monix.execution.Scheduler.Implicits.global
   * @param realms      the realms api
   */
 class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(implicit http: HttpConfig) {
-
-  private implicit val resourceEncoder: Encoder[Resource] =
-    Encoder.encodeJson.contramap { r =>
-      resourceMetaEncoder.apply(r.discard) deepMerge Json.obj(
-        "permissions" -> Json.fromValues(r.value.toList.sortBy(_.value).map(_.asJson)))
-    }
 
   def routes: Route =
     pathPrefix("permissions") {

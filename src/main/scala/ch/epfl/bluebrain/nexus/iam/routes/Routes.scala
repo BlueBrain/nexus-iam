@@ -28,13 +28,12 @@ object Routes {
   private[this] val logger = Logger[this.type]
 
   private def iamErrorStatusFrom: StatusFrom[IamError] = StatusFrom {
-    case _: IamError.AccessDenied                => StatusCodes.Forbidden
-    case _: IamError.UnexpectedInitialState      => StatusCodes.InternalServerError
-    case _: IamError.ReadWriteConsistencyTimeout => StatusCodes.InternalServerError
-    case _: IamError.DistributedDataError        => StatusCodes.InternalServerError
-    case _: IamError.InternalError               => StatusCodes.InternalServerError
-    case _: IamError.InvalidAccessToken          => StatusCodes.Unauthorized
-    case IamError.NotFound                       => StatusCodes.NotFound
+    case _: IamError.AccessDenied           => StatusCodes.Forbidden
+    case _: IamError.UnexpectedInitialState => StatusCodes.InternalServerError
+    case _: IamError.OperationTimedOut      => StatusCodes.InternalServerError
+    case _: IamError.InternalError          => StatusCodes.InternalServerError
+    case _: IamError.InvalidAccessToken     => StatusCodes.Unauthorized
+    case IamError.NotFound                  => StatusCodes.NotFound
   }
 
   /**
