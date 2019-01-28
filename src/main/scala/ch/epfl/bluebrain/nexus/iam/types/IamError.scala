@@ -2,15 +2,12 @@ package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection
 import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
-import ch.epfl.bluebrain.nexus.iam.marshallers.instances.finiteDurationEncoder
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.instances.absoluteIriEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.{Encoder, Json}
-
-import scala.concurrent.duration.FiniteDuration
 
 /**
   * Generic error types global to the entire service.
@@ -44,18 +41,11 @@ object IamError {
       extends IamError(s"Unexpected state on resource '${resource.asUri}'.")
 
   /**
-    * Signals that a timeout occurred while waiting for the desired read or write consistency across nodes.
+    * Signals an internal timeout.
     *
-    * @param timeout the timeout duration
+    * @param reason a descriptive message on the operation that timed out
     */
-  final case class ReadWriteConsistencyTimeout(timeout: FiniteDuration)
-      extends IamError(s"Timed out after '${timeout.toMillis} ms' while waiting for a consistent read or write.")
-
-  /**
-    * Signals that an error occurred when trying to perform a distributed data operation.
-    */
-  final case class DistributedDataError(reason: String)
-      extends IamError(s"An error occurred when performing a distributed data operation, reason '$reason'.")
+  final case class OperationTimedOut(reason: String) extends IamError(reason)
 
   /**
     * Generic wrapper for iam errors that should not be exposed to clients.
