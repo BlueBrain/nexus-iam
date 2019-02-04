@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.{Applicative, Monad}
-import cats.effect.{Clock, Effect, Timer}
+import cats.effect.{Clock, Effect, LiftIO, Timer}
 import cats.effect.syntax.all._
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList.empty
@@ -25,7 +25,9 @@ import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
+import monix.eval.Task
+import monix.execution.Scheduler
 
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
@@ -171,7 +173,7 @@ object Acls {
       next,
       evaluate[F](perms),
       ac.sourcing.passivationStrategy(),
-      ac.sourcing.retryStrategy,
+      Retry(ac.sourcing.retry.retryStrategy),
       ac.sourcing.akkaSourcingConfig,
       ac.sourcing.shards
     )
@@ -226,20 +228,24 @@ object Acls {
     *
     * @param acls the acls API
     */
-  def indexer[F[_]](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
+  def indexer[F[_]](acls: Acls[F])(implicit F: Effect[F],
+                                   L: LiftIO[Task],
+                                   as: ActorSystem,
+                                   ac: AclsConfig,
+                                   sc: Scheduler): F[Unit] = {
     val indexFn = (events: List[Event]) => {
       val value = events.traverse(e => acls.updateIndex(e.path)) *> F.unit
-      value.toIO.unsafeToFuture()
+      L.liftIO(value.toIO)
     }
     val cfg = IndexerConfig.builder
       .name("acl-index")
-      .batch(ac.indexing.batch, ac.indexing.batchTimeout)
+      .offset(Volatile)
+      .batch(ac.indexing.batchChunk, ac.indexing.batchTimeout)
       .plugin(ac.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.aclEventTag)
-      .retry(ac.indexing.retry.maxCount, ac.indexing.retry.strategy)
+      .retry(ac.indexing.retry.retryStrategy)
       .index[AclEvent](indexFn)
       .build
-      .asInstanceOf[IndexerConfig[Event, Volatile]]
     F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
   }
 

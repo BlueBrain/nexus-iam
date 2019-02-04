@@ -8,10 +8,9 @@ import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStoreConfig
-import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy
-import ch.epfl.bluebrain.nexus.service.indexer.retryer.RetryStrategy.Backoff
 import ch.epfl.bluebrain.nexus.service.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig
+import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig.RetryStrategyConfig
 
 import scala.concurrent.duration._
 
@@ -96,24 +95,13 @@ object AppConfig {
   final case class PersistenceConfig(journalPlugin: String, snapshotStorePlugin: String, queryJournalPlugin: String)
 
   /**
-    * Retry configuration with Exponential backoff
-    *
-    * @param maxCount     the maximum number of times an index function is retried
-    * @param maxDuration  the maximum amount of time to wait between two retries
-    * @param randomFactor the jitter added between retries
-    */
-  final case class Retry(maxCount: Int, maxDuration: FiniteDuration, randomFactor: Double) {
-    val strategy: RetryStrategy = Backoff(maxDuration, randomFactor)
-  }
-
-  /**
     * Indexing configuration
     *
-    * @param batch        the maximum number of events taken on each batch
+    * @param batchChunk   the maximum number of events taken on each batch
     * @param batchTimeout the maximum amount of time to wait for the number of events to be taken on each batch
     * @param retry        the retry configuration when indexing failures
     */
-  final case class IndexingConfig(batch: Int, batchTimeout: FiniteDuration, retry: Retry)
+  final case class IndexingConfig(batchChunk: Int, batchTimeout: FiniteDuration, retry: RetryStrategyConfig)
 
   /**
     * ACLs configuration
