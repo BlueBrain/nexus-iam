@@ -11,7 +11,7 @@ import io.circe._
 final case class Permission private (value: String)
 
 object Permission {
-  private val valid = "[a-zA-Z-:_\\/]{1,32}".r
+  private val valid = "^[a-zA-Z-:_\\/]{1,32}$".r
 
   /**
     * Attempts to construct a [[Permission]] that passes the ''regex''
