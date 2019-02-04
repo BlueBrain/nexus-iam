@@ -341,7 +341,7 @@ object Realms {
     val cfg = IndexerConfig.builder
       .offset(Volatile)
       .name("realm-index")
-      .batch(rc.indexing.batchChunk, rc.indexing.batchTimeout)
+      .batch(rc.indexing.batch, rc.indexing.batchTimeout)
       .plugin(rc.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.realmEventTag)
       .retry(rc.indexing.retry.retryStrategy)

@@ -240,7 +240,7 @@ object Acls {
     val cfg = IndexerConfig.builder
       .name("acl-index")
       .offset(Volatile)
-      .batch(ac.indexing.batchChunk, ac.indexing.batchTimeout)
+      .batch(ac.indexing.batch, ac.indexing.batchTimeout)
       .plugin(ac.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.aclEventTag)
       .retry(ac.indexing.retry.retryStrategy)
