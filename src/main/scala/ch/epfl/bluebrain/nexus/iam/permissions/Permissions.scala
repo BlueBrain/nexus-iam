@@ -18,7 +18,7 @@ import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsState.{Current, Initia
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
 
 /**
   * Permissions API.
@@ -153,7 +153,7 @@ object Permissions {
       next(pc),
       evaluate[F](pc),
       pc.sourcing.passivationStrategy(),
-      pc.sourcing.retryStrategy,
+      Retry(pc.sourcing.retry.retryStrategy),
       pc.sourcing.akkaSourcingConfig,
       pc.sourcing.shards
     )

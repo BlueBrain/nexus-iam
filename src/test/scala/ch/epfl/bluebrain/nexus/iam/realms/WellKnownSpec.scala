@@ -72,7 +72,8 @@ class WellKnownSpec
     "fail to construct" when {
       "the client records a bad response" in {
         implicit val cl = mock[HttpClient[IO, Json]]
-        cl.apply(Get(openIdUrlString)) shouldReturn IO.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse()))
+        cl.apply(Get(openIdUrlString)) shouldReturn IO.raiseError(
+          UnexpectedUnsuccessfulHttpResponse(HttpResponse(), ""))
         val rej = WellKnown[IO](openIdUrl).rejected[UnsuccessfulOpenIdConfigResponse]
         rej.document shouldEqual openIdUrl
       }
@@ -143,7 +144,7 @@ class WellKnownSpec
       "the client returns a bad response for the jwks document" in {
         implicit val cl = mock[HttpClient[IO, Json]]
         cl.apply(Get(openIdUrlString)) shouldReturn IO.pure(validOpenIdConfig)
-        cl.apply(Get(jwksUrlString)) shouldReturn IO.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse()))
+        cl.apply(Get(jwksUrlString)) shouldReturn IO.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse(), ""))
         val rej = WellKnown[IO](openIdUrl).rejected[UnsuccessfulJwksResponse]
         rej.document shouldEqual jwksUrl
       }

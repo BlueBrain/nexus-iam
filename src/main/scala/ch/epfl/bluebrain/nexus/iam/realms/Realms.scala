@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.Monad
+import cats.{Monad, MonadError}
 import cats.data.EitherT
 import cats.effect._
 import cats.effect.syntax.all._
@@ -29,7 +29,7 @@ import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStoreError._
 import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig, KeyValueStoreError}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
@@ -37,6 +37,8 @@ import com.nimbusds.jose.proc.{JWSVerificationKeySelector, SecurityContext}
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import io.circe.Json
+import monix.eval.Task
+import monix.execution.Scheduler
 
 import scala.util.Try
 
@@ -246,7 +248,17 @@ object Realms {
     */
   def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
     implicit val cfg: KeyValueStoreConfig = rc.keyValueStore
-    KeyValueStore.distributed("realms", (_, resource) => resource.rev, mapError)
+    implicit val monadError: MonadError[F, IamError] = new MonadError[F, IamError] {
+      override def handleErrorWith[A](fa: F[A])(f: IamError => F[A]): F[A] = F.recoverWith(fa) {
+        case t: IamError => f(t)
+      }
+      override def raiseError[A](e: IamError): F[A]                    = F.raiseError(e)
+      override def pure[A](x: A): F[A]                                 = F.pure(x)
+      override def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]         = F.flatMap(fa)(f)
+      override def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B] = F.tailRecM(a)(f)
+    }
+    val clock: (Long, Resource) => Long = (_, resource) => resource.rev
+    KeyValueStore.distributed("realms", clock, mapError)
   }
 
   /**
@@ -264,7 +276,7 @@ object Realms {
       next,
       evaluate[F],
       rc.sourcing.passivationStrategy(),
-      rc.sourcing.retryStrategy,
+      Retry(rc.sourcing.retry.retryStrategy),
       rc.sourcing.akkaSourcingConfig,
       rc.sourcing.shards
     )
@@ -317,20 +329,24 @@ object Realms {
     *
     * @param realms the realms API
     */
-  def indexer[F[_]](realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig): F[Unit] = {
+  def indexer[F[_]](realms: Realms[F])(implicit F: Effect[F],
+                                       L: LiftIO[Task],
+                                       as: ActorSystem,
+                                       rc: RealmsConfig,
+                                       sc: Scheduler): F[Unit] = {
     val indexFn = (events: List[Event]) => {
       val value = events.traverse(e => realms.updateIndex(e.id)) *> F.unit
-      value.toIO.unsafeToFuture()
+      L.liftIO(value.toIO)
     }
     val cfg = IndexerConfig.builder
+      .offset(Volatile)
       .name("realm-index")
       .batch(rc.indexing.batch, rc.indexing.batchTimeout)
       .plugin(rc.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.realmEventTag)
-      .retry(rc.indexing.retry.maxCount, rc.indexing.retry.strategy)
+      .retry(rc.indexing.retry.retryStrategy)
       .index[Event](indexFn)
       .build
-      .asInstanceOf[IndexerConfig[Event, Volatile]]
     F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
   }
 
