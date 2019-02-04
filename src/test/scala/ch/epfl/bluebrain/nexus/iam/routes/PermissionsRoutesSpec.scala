@@ -5,7 +5,7 @@ import java.util.regex.Pattern.quote
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{Randomness, Resources}
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
@@ -33,7 +33,8 @@ class PermissionsRoutesSpec
     with MacroBasedMatchers
     with Resources
     with ScalaFutures
-    with IdiomaticMockito {
+    with IdiomaticMockito
+    with Randomness {
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
 
@@ -140,6 +141,16 @@ class PermissionsRoutesSpec
       Get("/permissions?rev=2") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual response(3L).sort
+      }
+    }
+
+    "return 400 when trying to create permission which is too long" in {
+      perms.append(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
+      val json =
+        Json.obj("@type"       -> Json.fromString("Append"),
+                 "permissions" -> Json.arr(Json.fromString(s"${genString()}/${genString()}")))
+      Patch("/permissions?rev=2", json) ~> routes ~> check {
+        status shouldEqual StatusCodes.BadRequest
       }
     }
   }
