@@ -1,13 +1,17 @@
 package ch.epfl.bluebrain.nexus.iam.client
 
 import java.time.{Clock, Instant, ZoneId}
+import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.{Get, Put}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
 import cats.effect.IO
+import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.test.io.IOValues
@@ -15,15 +19,19 @@ import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorize
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity.{Anonymous, User}
 import ch.epfl.bluebrain.nexus.iam.client.types._
+import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
+import ch.epfl.bluebrain.nexus.iam.client.types.events.Event._
+import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Json
 import org.mockito.Mockito
 import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfter, EitherValues, Matchers, WordSpecLike}
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.Random
 
 //noinspection ScalaUnnecessaryParentheses,TypeAnnotation,RedundantDefaultArgument
 class IamClientSpec
@@ -33,26 +41,29 @@ class IamClientSpec
     with BeforeAndAfter
     with IdiomaticMockitoFixture
     with IOValues
-    with Resources {
+    with EitherValues
+    with Resources
+    with Eventually {
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(5 seconds, 15 milliseconds)
 
-  implicit val ec: ExecutionContext = system.dispatcher
-
-  private val clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private implicit val mt: Materializer = ActorMaterializer()
+  private val clock                     = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private val config =
     IamClientConfig(url"http://example.com/some/v1".value, url"http://internal.example.com/some/v1".value)
   private val aclsClient        = mock[HttpClient[IO, AccessControlLists]]
   private val callerClient      = mock[HttpClient[IO, Caller]]
   private val permissionsClient = mock[HttpClient[IO, Permissions]]
   private val jsonClient        = mock[HttpClient[IO, Json]]
-  private val client            = new IamClient[IO](config, aclsClient, callerClient, permissionsClient, jsonClient)
+  private val source            = mock[EventSource[Event]]
+  private val client            = new IamClient[IO](source, config, aclsClient, callerClient, permissionsClient, jsonClient)
 
   before {
     Mockito.reset(aclsClient)
     Mockito.reset(callerClient)
     Mockito.reset(permissionsClient)
     Mockito.reset(jsonClient)
+    Mockito.reset(source)
   }
 
   "An IAM client" when {
@@ -247,6 +258,67 @@ class IamClientSpec
         permissionsClient(Get("http://internal.example.com/some/v1/permissions").addCredentials(token)) shouldReturn
           IO.raiseError(Forbidden("{}"))
         client.permissions.failed[Forbidden]
+      }
+    }
+
+    "reading from the events SSE" should {
+      implicit val token: Option[AuthToken] = None
+
+      abstract class Ctx {
+        val count = new AtomicInteger()
+        val resources = List(
+          "/events/acl-replaced.json",
+          "/events/acl-appended.json",
+          "/events/acl-subtracted.json",
+          "/events/acl-deleted.json",
+          "/events/permissions-replaced.json",
+          "/events/permissions-appended.json",
+          "/events/permissions-subtracted.json",
+          "/events/permissions-deleted.json",
+          "/events/realm-created.json",
+          "/events/realm-updated.json",
+          "/events/realm-deprecated.json"
+        )
+
+        val eventsSource = Source(Random.shuffle(resources).map(jsonContentOf(_).as[Event].right.value))
+      }
+
+      "apply function when new acl event is received" in new Ctx {
+        val f: AclEvent => IO[Unit] = {
+          case _: AclReplaced   => IO(count.addAndGet(1)) *> IO.unit
+          case _: AclAppended   => IO(count.addAndGet(2)) *> IO.unit
+          case _: AclSubtracted => IO(count.addAndGet(3)) *> IO.unit
+          case _: AclDeleted    => IO(count.addAndGet(4)) *> IO.unit
+        }
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/acls/events").right.value
+        source(eventsIri, None) shouldReturn eventsSource
+        client.aclEvents(f)
+        eventually(count.get() shouldEqual 10)
+      }
+
+      "apply function when new permissions event is received" in new Ctx {
+        val f: PermissionsEvent => IO[Unit] = {
+          case _: PermissionsReplaced   => IO(count.addAndGet(1)) *> IO.unit
+          case _: PermissionsAppended   => IO(count.addAndGet(2)) *> IO.unit
+          case _: PermissionsSubtracted => IO(count.addAndGet(3)) *> IO.unit
+          case _: PermissionsDeleted    => IO(count.addAndGet(4)) *> IO.unit
+        }
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/permissions/events").right.value
+        source(eventsIri, None) shouldReturn eventsSource
+        client.permissionEvents(f)
+        eventually(count.get() shouldEqual 10)
+      }
+
+      "apply function when new realms event is received" in new Ctx {
+        val f: RealmEvent => IO[Unit] = {
+          case _: RealmCreated    => IO(count.addAndGet(1)) *> IO.unit
+          case _: RealmUpdated    => IO(count.addAndGet(2)) *> IO.unit
+          case _: RealmDeprecated => IO(count.addAndGet(3)) *> IO.unit
+        }
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/realms/events").right.value
+        source(eventsIri, None) shouldReturn eventsSource
+        client.realmEvents(f)
+        eventually(count.get() shouldEqual 6)
       }
     }
   }

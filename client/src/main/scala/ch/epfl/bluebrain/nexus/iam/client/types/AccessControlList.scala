@@ -66,19 +66,19 @@ object AccessControlList {
       }
       Json.obj("acl" -> Json.arr(acl.toSeq: _*))
   }
+  private[types] def aclEntityDecoder(hcc: HCursor): Decoder.Result[(Identity, Set[Permission])] =
+    for {
+      identity <- hcc.get[Identity]("identity")
+      perms    <- hcc.get[Set[Permission]]("permissions")
+    } yield identity -> perms
 
-  implicit val aclDecoder: Decoder[AccessControlList] = {
-    def inner(hcc: HCursor): Decoder.Result[(Identity, Set[Permission])] =
-      for {
-        identity <- hcc.get[Identity]("identity")
-        perms    <- hcc.get[Set[Permission]]("permissions")
-      } yield identity -> perms
-
+  implicit val aclDecoder: Decoder[AccessControlList] =
     Decoder.instance { hc =>
       for {
         arr <- hc.downField("acl").focus.flatMap(_.asArray).toRight(DecodingFailure("acl field not found", hc.history))
-        acl <- arr.foldM(Map.empty[Identity, Set[Permission]]) { case (acc, j) => inner(j.hcursor).map(acc + _) }
+        acl <- arr.foldM(Map.empty[Identity, Set[Permission]]) {
+          case (acc, j) => aclEntityDecoder(j.hcursor).map(acc + _)
+        }
       } yield AccessControlList(acl)
     }
-  }
 }

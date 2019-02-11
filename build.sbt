@@ -25,6 +25,7 @@ scalafmt: {
  */
 
 // Dependency versions
+val alpakkaVersion             = "1.0-M2"
 val rdfVersion                 = "0.2.33"
 val commonsVersion             = "0.10.42"
 val serviceVersion             = "0.10.30"
@@ -38,10 +39,10 @@ val catsVersion                = "1.6.0"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.0.10"
+val mockitoVersion             = "1.1.2"
 val monixVersion               = "3.0.0-RC2"
-val nimbusJoseJwtVersion       = "6.8"
-val pureconfigVersion          = "0.10.1"
+val nimbusJoseJwtVersion       = "7.0"
+val pureconfigVersion          = "0.10.2"
 val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
 
@@ -70,6 +71,7 @@ lazy val akkaTestkit          = "com.typesafe.akka"       %% "akka-testkit"     
 lazy val akkaSlf4j            = "com.typesafe.akka"       %% "akka-slf4j"                 % akkaVersion
 lazy val akkaStream           = "com.typesafe.akka"       %% "akka-stream"                % akkaVersion
 lazy val akkaStreamTestKit    = "com.typesafe.akka"       %% "akka-stream-testkit"        % akkaVersion
+lazy val alpakkaSSE           = "com.lightbend.akka"      %% "akka-stream-alpakka-sse"    % alpakkaVersion
 lazy val catsCore             = "org.typelevel"           %% "cats-core"                  % catsVersion
 lazy val circeCore            = "io.circe"                %% "circe-core"                 % circeVersion
 lazy val journalCore          = "io.verizon.journal"      %% "core"                       % journalVersion
@@ -137,6 +139,7 @@ lazy val client = project
     libraryDependencies ++= Seq(
       akkaHttp,
       akkaStream,
+      alpakkaSSE,
       catsCore,
       circeCore,
       commonsHttp,
