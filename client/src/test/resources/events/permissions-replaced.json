@@ -10,5 +10,5 @@
   ],
   "_rev": 1,
   "_instant": "1970-01-01T00:00:00Z",
-  "_subject": "http://dev.nexus.ocp.bbp.epfl.ch/v1/realms/myrealm/users/myuser"
+  "_subject": "http://nexus.example.com/v1/realms/myrealm/users/myuser"
 }

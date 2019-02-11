@@ -55,29 +55,13 @@ object GrantType {
     */
   final case object RefreshToken extends GrantType
 
-  object Snake {
-
-    final implicit val grantTypeDecoder: Decoder[GrantType] = Decoder.decodeString.emap {
-      case "authorization_code" => Right(AuthorizationCode)
-      case "implicit"           => Right(Implicit)
-      case "password"           => Right(Password)
-      case "client_credentials" => Right(ClientCredentials)
-      case "device_code"        => Right(DeviceCode)
-      case "refresh_token"      => Right(RefreshToken)
-      case other                => Left(s"Unknown grant type '$other'")
-    }
-  }
-
-  object Camel {
-
-    final implicit val grantTypeDecoder: Decoder[GrantType] = Decoder.decodeString.emap {
-      case "authorizationCode" => Right(AuthorizationCode)
-      case "implicit"          => Right(Implicit)
-      case "password"          => Right(Password)
-      case "clientCredentials" => Right(ClientCredentials)
-      case "deviceCode"        => Right(DeviceCode)
-      case "refreshToken"      => Right(RefreshToken)
-      case other               => Left(s"Unknown grant type '$other'")
-    }
+  final implicit val grantTypeDecoder: Decoder[GrantType] = Decoder.decodeString.emap {
+    case "authorizationCode" => Right(AuthorizationCode)
+    case "implicit"          => Right(Implicit)
+    case "password"          => Right(Password)
+    case "clientCredentials" => Right(ClientCredentials)
+    case "deviceCode"        => Right(DeviceCode)
+    case "refreshToken"      => Right(RefreshToken)
+    case other               => Left(s"Unknown grant type '$other'")
   }
 }

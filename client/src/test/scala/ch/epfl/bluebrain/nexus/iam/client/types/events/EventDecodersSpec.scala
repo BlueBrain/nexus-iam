@@ -6,7 +6,6 @@ import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.iam.client.types.GrantType._
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity.{Anonymous, User}
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event._
-import ch.epfl.bluebrain.nexus.iam.client.types.events.decoders._
 import ch.epfl.bluebrain.nexus.iam.client.types.{AccessControlList, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._

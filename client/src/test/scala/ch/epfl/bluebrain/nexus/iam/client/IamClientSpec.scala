@@ -21,7 +21,6 @@ import ch.epfl.bluebrain.nexus.iam.client.types.Identity.{Anonymous, User}
 import ch.epfl.bluebrain.nexus.iam.client.types._
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event._
-import ch.epfl.bluebrain.nexus.iam.client.types.events.decoders._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
