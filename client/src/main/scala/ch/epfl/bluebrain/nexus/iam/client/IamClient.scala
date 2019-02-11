@@ -6,9 +6,10 @@ import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, Materializer}
 import cats.MonadError
-import cats.effect.{IO, LiftIO}
+import cats.effect.{Effect, IO, LiftIO}
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -19,6 +20,9 @@ import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized, UnknownError, UnmarshallingError}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types._
+import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
+import ch.epfl.bluebrain.nexus.iam.client.types.events.Event.{AclEvent, PermissionsEvent, RealmEvent}
+import ch.epfl.bluebrain.nexus.iam.client.types.events.decoders._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import io.circe.generic.auto._
@@ -26,16 +30,17 @@ import io.circe.syntax._
 import io.circe.{DecodingFailure, Json, ParsingFailure}
 import journal.Logger
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
 
 class IamClient[F[_]] private[client] (
+    source: EventSource[Event],
     config: IamClientConfig,
     aclsClient: HttpClient[F, AccessControlLists],
     callerClient: HttpClient[F, Caller],
     permissionsClient: HttpClient[F, Permissions],
     jsonClient: HttpClient[F, Json]
-)(implicit F: MonadError[F, Throwable]) {
+)(implicit F: MonadError[F, Throwable], mt: Materializer) {
 
   /**
     * Retrieve the current ''acls'' for some particular ''path''.
@@ -104,6 +109,68 @@ class IamClient[F[_]] private[client] (
       if (found) F.pure(true)
       else F.pure(false)
     }
+
+  /**
+    * It applies the provided function ''f'' to the ACLs Server-sent events (SSE)
+    *
+    * @param f      the function that gets executed when a new [[AclEvent]] appears
+    * @param offset the optional offset from where to start streaming the events
+    */
+  def aclEvents(f: AclEvent => F[Unit], offset: Option[String] = None)(implicit E: Effect[F],
+                                                                       cred: Option[AuthToken]): Unit = {
+    val pf: PartialFunction[Event, F[Unit]] = { case ev: AclEvent => f(ev) }
+    events(config.aclsIri + "events", pf, offset)
+  }
+
+  /**
+    * It applies the provided function ''f'' to the Permissions Server-sent events (SSE)
+    *
+    * @param f      the function that gets executed when a new [[PermissionsEvent]] appears
+    * @param offset the optional offset from where to start streaming the events
+    */
+  def permissionEvents(f: PermissionsEvent => F[Unit], offset: Option[String] = None)(implicit E: Effect[F],
+                                                                                      cred: Option[AuthToken]): Unit = {
+    val pf: PartialFunction[Event, F[Unit]] = { case ev: PermissionsEvent => f(ev) }
+    events(config.permissionsIri + "events", pf, offset)
+  }
+
+  /**
+    * It applies the provided function ''f'' to the Realms Server-sent events (SSE)
+    *
+    * @param f      the function that gets executed when a new [[RealmEvent]] appears
+    * @param offset the optional offset from where to start streaming the events
+    */
+  def realmEvents(f: RealmEvent => F[Unit], offset: Option[String] = None)(implicit E: Effect[F],
+                                                                           cred: Option[AuthToken]): Unit = {
+    val pf: PartialFunction[Event, F[Unit]] = { case ev: RealmEvent => f(ev) }
+    events(config.realmsIri + "events", pf, offset)
+  }
+
+  /**
+    * It applies the provided function ''f'' to the Server-sent events (SSE)
+    *
+    * @param f      the function that gets executed when a new [[Event]] appears
+    * @param offset the optional offset from where to start streaming the events
+    */
+  def events(f: Event => F[Unit], offset: Option[String] = None)(implicit E: Effect[F],
+                                                                 cred: Option[AuthToken]): Unit = {
+    val pf: PartialFunction[Event, F[Unit]] = { case ev: Event => f(ev) }
+    events(config.internalIri + "events", pf, offset)
+  }
+
+  private def events(iri: AbsoluteIri, f: PartialFunction[Event, F[Unit]], offset: Option[String])(
+      implicit E: Effect[F],
+      cred: Option[AuthToken]): Unit =
+    source(iri, offset)
+      .mapAsync(1) { event =>
+        f.lift(event) match {
+          case Some(evaluated) => E.toIO(evaluated).unsafeToFuture()
+          case _               => Future.unit
+        }
+      }
+      .to(Sink.ignore)
+      .mapMaterializedValue(_ => ())
+      .run()
 
   private def requestFrom(iri: AbsoluteIri, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
     val request = Get(iri.toAkkaUri.withQuery(query))
@@ -183,7 +250,8 @@ object IamClient {
     val callerClient: HttpClient[F, Caller]           = httpClient[F, Caller]
     val permissionsClient: HttpClient[F, Permissions] = httpClient[F, Permissions]
     val jsonClient: HttpClient[F, Json]               = httpClient[F, Json]
-    new IamClient(config, aclsClient, callerClient, permissionsClient, jsonClient)
+    val sse: EventSource[Event]                       = EventSource[Event](config)
+    new IamClient(sse, config, aclsClient, callerClient, permissionsClient, jsonClient)
   }
 }
 // $COVERAGE-ON$
