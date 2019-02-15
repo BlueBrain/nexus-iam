@@ -5,10 +5,9 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.{Applicative, Monad}
-import cats.effect.{Clock, Effect, LiftIO, Timer}
-import cats.effect.syntax.all._
+import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
+import cats.{Applicative, Monad}
 import ch.epfl.bluebrain.nexus.iam.acls.AccessControlList.empty
 import ch.epfl.bluebrain.nexus.iam.acls.AclCommand._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent._
@@ -23,16 +22,15 @@ import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
+import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
-import monix.eval.Task
 import monix.execution.Scheduler
 
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     agg: Agg[F],
-    index: AclsIndex[F],
+    private val index: AclsIndex[F],
 )(implicit F: MonadThrowable[F], http: HttpConfig, pc: PermissionsConfig) {
 
   /**
@@ -228,23 +226,21 @@ object Acls {
     *
     * @param acls the acls API
     */
-  def indexer[F[_]](acls: Acls[F])(implicit F: Effect[F],
-                                   L: LiftIO[Task],
-                                   as: ActorSystem,
-                                   ac: AclsConfig,
-                                   sc: Scheduler): F[Unit] = {
-    val indexFn = (events: List[Event]) => {
-      val value = events.traverse(e => acls.updateIndex(e.path)) *> F.unit
-      L.liftIO(value.toIO)
-    }
-    val cfg = IndexerConfig.builder
+  def indexer[F[_]: Timer](
+      acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig, sc: Scheduler): F[Unit] = {
+    val indexFn = (resources: List[(Path, Resource)]) =>
+      resources.traverse { case (path, res) => acls.index.replace(path, res) } *> F.unit
+
+    val cfg = IndexerConfig
+      .builder[F]
       .name("acl-index")
       .offset(Volatile)
       .batch(ac.indexing.batch, ac.indexing.batchTimeout)
       .plugin(ac.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.aclEventTag)
       .retry(ac.indexing.retry.retryStrategy)
-      .index[AclEvent](indexFn)
+      .mapping((ev: Event) => acls.fetchUnsafe(ev.path).map(_.map(ev.path -> _)))
+      .index(indexFn)
       .build
     F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
   }
