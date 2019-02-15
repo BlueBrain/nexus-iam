@@ -5,11 +5,10 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.{Monad, MonadError}
 import cats.data.EitherT
 import cats.effect._
-import cats.effect.syntax.all._
 import cats.implicits._
+import cats.{Monad, MonadError}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
@@ -37,7 +36,6 @@ import com.nimbusds.jose.proc.{JWSVerificationKeySelector, SecurityContext}
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import io.circe.Json
-import monix.eval.Task
 import monix.execution.Scheduler
 
 import scala.util.Try
@@ -329,23 +327,21 @@ object Realms {
     *
     * @param realms the realms API
     */
-  def indexer[F[_]](realms: Realms[F])(implicit F: Effect[F],
-                                       L: LiftIO[Task],
-                                       as: ActorSystem,
-                                       rc: RealmsConfig,
-                                       sc: Scheduler): F[Unit] = {
-    val indexFn = (events: List[Event]) => {
-      val value = events.traverse(e => realms.updateIndex(e.id)) *> F.unit
-      L.liftIO(value.toIO)
-    }
-    val cfg = IndexerConfig.builder
+  def indexer[F[_]: Timer](
+      realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig, sc: Scheduler): F[Unit] = {
+    val indexFn = (resources: List[(Label, Resource)]) =>
+      resources.traverse { case (label, res) => index.put(label, res) } *> F.unit
+
+    val cfg = IndexerConfig
+      .builder[F]
       .offset(Volatile)
       .name("realm-index")
       .batch(rc.indexing.batch, rc.indexing.batchTimeout)
       .plugin(rc.sourcing.queryJournalPlugin)
       .tag(TaggingAdapter.realmEventTag)
       .retry(rc.indexing.retry.retryStrategy)
-      .index[Event](indexFn)
+      .mapping((ev: Event) => realms.fetchUnsafe(ev.id).map(_.map(ev.id -> _)))
+      .index(indexFn)
       .build
     F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
   }
