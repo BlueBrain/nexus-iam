@@ -26,20 +26,20 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.0-M2"
-val rdfVersion                 = "0.2.33"
-val commonsVersion             = "0.10.43"
-val serviceVersion             = "0.10.32"
-val sourcingVersion            = "0.12.3"
+val rdfVersion                 = "0.2.34"
+val commonsVersion             = "0.10.44"
+val serviceVersion             = "0.10.34"
+val sourcingVersion            = "0.12.4"
 val akkaVersion                = "2.5.21"
 val akkaCorsVersion            = "0.3.4"
-val akkaHttpVersion            = "10.1.5"
+val akkaHttpVersion            = "10.1.7"
 val akkaPersistenceCassVersion = "0.92"
 val akkaPersistenceMemVersion  = "2.5.15.1"
 val catsVersion                = "1.6.0"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.1.3"
+val mockitoVersion             = "1.1.4"
 val monixVersion               = "3.0.0-RC2"
 val nimbusJoseJwtVersion       = "7.0"
 val pureconfigVersion          = "0.10.2"
@@ -67,7 +67,7 @@ lazy val akkaPersistence      = "com.typesafe.akka"       %% "akka-persistence" 
 lazy val akkaPersistenceCass  = "com.typesafe.akka"       %% "akka-persistence-cassandra" % akkaPersistenceCassVersion
 lazy val akkaPersistenceMem   = "com.github.dnvriend"     %% "akka-persistence-inmemory"  % akkaPersistenceMemVersion
 lazy val akkaPersistenceQuery = "com.typesafe.akka"       %% "akka-persistence-query"     % akkaVersion
-lazy val akkaTestkit          = "com.typesafe.akka"       %% "akka-testkit"               % akkaVersion
+lazy val akkaTestKit          = "com.typesafe.akka"       %% "akka-testkit"               % akkaVersion
 lazy val akkaSlf4j            = "com.typesafe.akka"       %% "akka-slf4j"                 % akkaVersion
 lazy val akkaStream           = "com.typesafe.akka"       %% "akka-stream"                % akkaVersion
 lazy val akkaStreamTestKit    = "com.typesafe.akka"       %% "akka-stream-testkit"        % akkaVersion
@@ -119,6 +119,7 @@ lazy val iam = project
       logbackClassic,
       pureconfig,
       serviceTest        % Test,
+      akkaTestKit        % Test,
       akkaHttpTestKit    % Test,
       akkaStreamTestKit  % Test,
       akkaPersistenceMem % Test,
@@ -147,7 +148,7 @@ lazy val client = project
       rdfAkka,
       rdfCirce,
       serviceHttp,
-      akkaTestkit     % Test,
+      akkaTestKit     % Test,
       akkaHttpTestKit % Test,
       commonsTest     % Test,
       mockitoScala    % Test,
