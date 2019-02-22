@@ -1,12 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, Conflict, NotFound}
+import ch.epfl.bluebrain.nexus.commons.http.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.instances._
-import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.{Encoder, Json}

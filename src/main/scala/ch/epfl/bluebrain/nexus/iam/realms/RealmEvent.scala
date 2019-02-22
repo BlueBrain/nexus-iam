@@ -2,12 +2,16 @@ package ch.epfl.bluebrain.nexus.iam.realms
 
 import java.time.Instant
 
+import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Identity, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.instances._
-import io.circe.Json
+import ch.epfl.bluebrain.nexus.rdf.syntax._
+import io.circe.generic.extras.Configuration
+import io.circe.{Encoder, Json}
 
 /**
   * Enumeration of Realm event types.
@@ -127,13 +131,8 @@ object RealmEvent {
   ) extends RealmEvent
 
   object JsonLd {
-    import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-    import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
     import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
-    import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-    import io.circe.generic.extras.Configuration
     import io.circe.generic.extras.semiauto._
-    import io.circe.{Encoder, Json}
 
     private implicit val config: Configuration = Configuration.default
       .withDiscriminator("@type")

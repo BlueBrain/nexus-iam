@@ -1,10 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.permissions
 
 import akka.http.scaladsl.model.StatusCodes._
+import ch.epfl.bluebrain.nexus.commons.http.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.{Encoder, Json}

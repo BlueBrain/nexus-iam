@@ -3,13 +3,13 @@ package ch.epfl.bluebrain.nexus.iam.io
 import java.time.Instant
 
 import akka.actor.ExtendedActorSystem
+import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.AclDeleted
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.PermissionsDeleted
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.RealmDeprecated
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import io.circe.parser._
 import org.scalatest.{EitherValues, Inspectors, Matchers}
 

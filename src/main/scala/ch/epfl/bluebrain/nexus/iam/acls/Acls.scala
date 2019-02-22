@@ -22,9 +22,10 @@ import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
-import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
+import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.persistence.OffsetStorage.Volatile
+import ch.epfl.bluebrain.nexus.sourcing.persistence.{IndexerConfig, SequentialTagIndexer}
+import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 import monix.execution.Scheduler
 
 //noinspection RedundantDefaultArgument

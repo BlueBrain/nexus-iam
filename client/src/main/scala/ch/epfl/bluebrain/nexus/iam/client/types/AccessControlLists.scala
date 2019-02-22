@@ -1,13 +1,13 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
-import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
+import ch.epfl.bluebrain.nexus.commons.circe.syntax._
 import ch.epfl.bluebrain.nexus.iam.client.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-import io.circe.syntax._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe._
+import io.circe.syntax._
 
 import scala.collection.immutable.ListMap
 

@@ -13,6 +13,7 @@ import akka.http.scaladsl.server.{Directive1, PathMatcher0, Route}
 import akka.persistence.query._
 import akka.persistence.query.scaladsl.EventsByTagQuery
 import akka.stream.scaladsl.Source
+import ch.epfl.bluebrain.nexus.commons.circe.syntax._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.JsonLd._
 import ch.epfl.bluebrain.nexus.iam.acls.{AclEvent, Acls}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
@@ -101,7 +102,6 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
       }
 
   private def aToSse[A: Encoder](a: A, offset: Offset): ServerSentEvent = {
-    import ch.epfl.bluebrain.nexus.commons.http.syntax.circe._
     val json = a.asJson.sortKeys(AppConfig.orderedKeys)
     ServerSentEvent(
       data = json.pretty(printer),

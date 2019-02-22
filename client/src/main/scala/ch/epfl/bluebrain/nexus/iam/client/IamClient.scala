@@ -16,13 +16,13 @@ import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
+import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
 import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized, UnknownError, UnmarshallingError}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types._
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event.{AclEvent, PermissionsEvent, RealmEvent}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
-import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json, ParsingFailure}

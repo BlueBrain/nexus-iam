@@ -3,8 +3,8 @@ package ch.epfl.bluebrain.nexus.iam.directives
 import akka.http.javadsl.server.Rejections.validationRejection
 import akka.http.scaladsl.server.Directive1
 import akka.http.scaladsl.server.Directives._
+import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
 
 trait AclDirectives {
 

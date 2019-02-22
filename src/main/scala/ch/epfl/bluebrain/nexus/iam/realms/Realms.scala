@@ -9,6 +9,8 @@ import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
 import cats.{Monad, MonadError}
+import ch.epfl.bluebrain.nexus.commons.cache.KeyValueStoreError._
+import ch.epfl.bluebrain.nexus.commons.cache.{KeyValueStore, KeyValueStoreConfig, KeyValueStoreError}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
@@ -24,11 +26,10 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.indexer.cache.KeyValueStoreError._
-import ch.epfl.bluebrain.nexus.service.indexer.cache.{KeyValueStore, KeyValueStoreConfig, KeyValueStoreError}
-import ch.epfl.bluebrain.nexus.service.indexer.persistence.OffsetStorage.Volatile
-import ch.epfl.bluebrain.nexus.service.indexer.persistence.{IndexerConfig, SequentialTagIndexer}
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, Retry}
+import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.persistence.OffsetStorage.Volatile
+import ch.epfl.bluebrain.nexus.sourcing.persistence.{IndexerConfig, SequentialTagIndexer}
+import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
