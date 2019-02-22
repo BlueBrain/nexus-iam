@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.index
 import java.time.{Clock, Instant, ZoneId}
 
 import cats.Id
+import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.iam.acls.{read => readAcls, _}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
@@ -10,7 +11,6 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
-import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.scalatest._
 
 //noinspection NameBooleanParameters,TypeAnnotation

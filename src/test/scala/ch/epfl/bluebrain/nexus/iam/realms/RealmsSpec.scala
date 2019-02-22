@@ -6,6 +6,7 @@ import java.util.Date
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
+import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
@@ -18,7 +19,6 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Label, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jose.{JWSAlgorithm, JWSHeader}

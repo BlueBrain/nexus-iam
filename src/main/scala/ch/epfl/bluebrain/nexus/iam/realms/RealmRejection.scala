@@ -1,12 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import akka.http.scaladsl.model.StatusCodes.{BadRequest, Conflict}
+import ch.epfl.bluebrain.nexus.commons.http.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
 import ch.epfl.bluebrain.nexus.iam.types.{Label, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.instances._
-import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveEncoder
 import io.circe.{Encoder, Json}
@@ -23,21 +23,21 @@ object RealmRejection {
   /**
     * Rejection returned when attempting to create a realm with an id that already exists.
     *
-    * @param id the id of the realm
+    * @param label the label of the realm
     */
   final case class RealmAlreadyExists(label: Label) extends RealmRejection(s"Realm '${label.value}' already exists.")
 
   /**
     * Rejection returned when attempting to update a realm with an id that doesnt exist.
     *
-    * @param id the id of the realm
+    * @param label the label of the realm
     */
   final case class RealmNotFound(label: Label) extends RealmRejection(s"Realm '${label.value}' not found.")
 
   /**
     * Rejection returned when attempting to deprecate a realm that is already deprecated.
     *
-    * @param id the id of the realm
+    * @param label the label of the realm
     */
   final case class RealmAlreadyDeprecated(label: Label)
       extends RealmRejection(s"Realm '${label.value}' is already deprecated.")

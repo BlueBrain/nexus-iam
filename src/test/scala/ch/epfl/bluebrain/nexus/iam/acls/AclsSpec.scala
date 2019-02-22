@@ -4,6 +4,7 @@ import java.time.Instant
 
 import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
+import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclRejection._
@@ -18,7 +19,6 @@ import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.service.test.ActorSystemFixture
 import org.mockito.IdiomaticMockito
 import org.scalatest._
 

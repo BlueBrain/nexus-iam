@@ -11,7 +11,7 @@ import akka.stream.scaladsl.Source
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.AuthToken
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.syntax.akka._
+import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
 import io.circe.Decoder
 import io.circe.parser.decode
 import journal.Logger

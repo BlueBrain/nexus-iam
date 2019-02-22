@@ -26,10 +26,9 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.0-M2"
-val rdfVersion                 = "0.2.34"
-val commonsVersion             = "0.10.44"
-val serviceVersion             = "0.10.34"
-val sourcingVersion            = "0.12.4"
+val rdfVersion                 = "0.3.0"
+val commonsVersion             = "0.11.0"
+val sourcingVersion            = "0.13.0"
 val akkaVersion                = "2.5.21"
 val akkaCorsVersion            = "0.3.4"
 val akkaHttpVersion            = "10.1.7"
@@ -47,17 +46,11 @@ val scalaTestVersion           = "3.0.5"
 val kryoVersion                = "0.5.2"
 
 // Dependencies modules
-lazy val rdfJena              = "ch.epfl.bluebrain.nexus" %% "rdf-jena"                   % rdfVersion
-lazy val rdfCirce             = "ch.epfl.bluebrain.nexus" %% "rdf-circe"                  % rdfVersion
-lazy val rdfAkka              = "ch.epfl.bluebrain.nexus" %% "rdf-akka"                   % rdfVersion
-lazy val rdfNexus             = "ch.epfl.bluebrain.nexus" %% "rdf-nexus"                  % rdfVersion
-lazy val serviceIndexing      = "ch.epfl.bluebrain.nexus" %% "service-indexing"           % serviceVersion
-lazy val serviceKamon         = "ch.epfl.bluebrain.nexus" %% "service-kamon"              % serviceVersion
-lazy val serviceHttp          = "ch.epfl.bluebrain.nexus" %% "service-http"               % serviceVersion
-lazy val sourcingAkka         = "ch.epfl.bluebrain.nexus" %% "sourcing-akka"              % sourcingVersion
-lazy val commonsHttp          = "ch.epfl.bluebrain.nexus" %% "commons-http"               % commonsVersion
+lazy val rdf                  = "ch.epfl.bluebrain.nexus" %% "rdf"                        % rdfVersion
+lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
+lazy val sourcingStream       = "ch.epfl.bluebrain.nexus" %% "sourcing-stream"            % sourcingVersion
+lazy val commonsCore          = "ch.epfl.bluebrain.nexus" %% "commons-core"               % commonsVersion
 lazy val commonsTest          = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
-lazy val serviceTest          = "ch.epfl.bluebrain.nexus" %% "service-test"               % serviceVersion
 lazy val akkaCluster          = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
 lazy val akkaClusterSharding  = "com.typesafe.akka"       %% "akka-cluster-sharding"      % akkaVersion
 lazy val akkaHttp             = "com.typesafe.akka"       %% "akka-http"                  % akkaHttpVersion
@@ -92,15 +85,10 @@ lazy val iam = project
     name       := "iam",
     moduleName := "iam",
     libraryDependencies ++= Seq(
-      commonsHttp,
-      rdfAkka,
-      rdfCirce,
-      rdfJena,
-      rdfNexus,
-      serviceIndexing,
-      sourcingAkka,
-      serviceHttp,
-      serviceKamon,
+      commonsCore,
+      rdf,
+      sourcingCore,
+      sourcingStream,
       akkaHttp,
       akkaHttpCors,
       akkaPersistence,
@@ -118,7 +106,6 @@ lazy val iam = project
       nimbusJoseJwt,
       logbackClassic,
       pureconfig,
-      serviceTest        % Test,
       akkaTestKit        % Test,
       akkaHttpTestKit    % Test,
       akkaStreamTestKit  % Test,
@@ -143,11 +130,9 @@ lazy val client = project
       alpakkaSSE,
       catsCore,
       circeCore,
-      commonsHttp,
+      commonsCore,
       logbackClassic,
-      rdfAkka,
-      rdfCirce,
-      serviceHttp,
+      rdf,
       akkaTestKit     % Test,
       akkaHttpTestKit % Test,
       commonsTest     % Test,

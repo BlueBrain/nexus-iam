@@ -1,7 +1,9 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
+import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Subject}
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.{Encoder, Json}
 
 /**
@@ -24,10 +26,7 @@ object Caller {
         implicit
         I: Encoder[Identity],
         http: HttpConfig
-    ): Encoder[Caller] = {
-      import ch.epfl.bluebrain.nexus.iam.config.Contexts.{iamCtxUri, resourceCtxUri}
-      import ch.epfl.bluebrain.nexus.rdf.syntax.circe.context._
-
+    ): Encoder[Caller] =
       Encoder.instance[Caller] { caller =>
         Json
           .obj(
@@ -36,6 +35,5 @@ object Caller {
           .addContext(iamCtxUri)
           .addContext(resourceCtxUri)
       }
-    }
   }
 }

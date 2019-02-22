@@ -7,6 +7,9 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.Location
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import ch.epfl.bluebrain.nexus.commons.http.RejectionHandling
+import ch.epfl.bluebrain.nexus.commons.http.directives.PrefixDirectives.uriPrefix
+import ch.epfl.bluebrain.nexus.commons.http.directives.StatusFrom
 import ch.epfl.bluebrain.nexus.iam.acls.{AclRejection, Acls}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PersistenceConfig}
@@ -15,9 +18,6 @@ import ch.epfl.bluebrain.nexus.iam.permissions.{Permissions, PermissionsRejectio
 import ch.epfl.bluebrain.nexus.iam.realms.{RealmRejection, Realms}
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{InternalError, InvalidAccessToken}
 import ch.epfl.bluebrain.nexus.iam.types.{IamError, ResourceRejection}
-import ch.epfl.bluebrain.nexus.service.http.RejectionHandling
-import ch.epfl.bluebrain.nexus.service.http.directives.PrefixDirectives.uriPrefix
-import ch.epfl.bluebrain.nexus.service.http.directives.StatusFrom
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.{cors, corsRejectionHandler}
 import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import journal.Logger
