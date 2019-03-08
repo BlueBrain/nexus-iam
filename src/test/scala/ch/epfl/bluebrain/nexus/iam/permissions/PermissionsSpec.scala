@@ -76,6 +76,7 @@ class PermissionsSpec
     Permission.unsafe("views/write"),
     Permission.unsafe("schemas/write"),
     Permission.unsafe("files/write"),
+    Permission.unsafe("storages/write"),
   )
 
   val perm1: Permission = Permission.unsafe(genString())
