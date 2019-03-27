@@ -26,9 +26,9 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
-import ch.epfl.bluebrain.nexus.sourcing.persistence.OffsetStorage.Volatile
-import ch.epfl.bluebrain.nexus.sourcing.persistence.{IndexerConfig, SequentialTagIndexer}
+import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
+import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressStorage.Volatile
+import ch.epfl.bluebrain.nexus.sourcing.projections.{ProjectionConfig, TagProjection}
 import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
@@ -37,7 +37,6 @@ import com.nimbusds.jose.proc.{JWSVerificationKeySelector, SecurityContext}
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import io.circe.Json
-import monix.execution.Scheduler
 
 import scala.util.Try
 
@@ -67,7 +66,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
       openIdConfig: Url,
       logo: Option[Url]
   )(implicit caller: Caller): F[MetaOrRejection] =
-    check(write) *> eval(CreateRealm(id, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
+    check(write) >> eval(CreateRealm(id, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
 
   /**
     * Updates an existing realm using the provided configuration.
@@ -85,7 +84,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
       openIdConfig: Url,
       logo: Option[Url]
   )(implicit caller: Caller): F[MetaOrRejection] =
-    check(id, write) *> eval(UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
+    check(id, write) >> eval(UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
 
   /**
     * Deprecates an existing realm. A deprecated realm prevents clients from authenticating.
@@ -94,7 +93,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     * @param rev the revision of the realm
     */
   def deprecate(id: Label, rev: Long)(implicit caller: Caller): F[MetaOrRejection] =
-    check(id, write) *> eval(DeprecateRealm(id, rev, caller.subject)) <* updateIndex(id)
+    check(id, write) >> eval(DeprecateRealm(id, rev, caller.subject)) <* updateIndex(id)
 
   /**
     * Fetches a realm.
@@ -103,7 +102,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     * @return the realm in a Resource representation, None otherwise
     */
   def fetch(id: Label)(implicit caller: Caller): F[OptResource] =
-    check(id, read) *> fetchUnsafe(id)
+    check(id, read) >> fetchUnsafe(id)
 
   /**
     * Fetches a realm at a specific revision.
@@ -113,13 +112,13 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     * @return the realm in a Resource representation, None otherwise
     */
   def fetch(id: Label, rev: Long)(implicit caller: Caller): F[OptResource] =
-    check(id, read) *> fetchUnsafe(id, Some(rev))
+    check(id, read) >> fetchUnsafe(id, Some(rev))
 
   /**
     * @return the current realms sorted by their creation date.
     */
   def list(implicit caller: Caller): F[List[Resource]] =
-    check(read) *> index.values.map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
+    check(read) >> index.values.map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
 
   /**
     * Attempts to compute the caller from the given [[AccessToken]].
@@ -328,12 +327,13 @@ object Realms {
     *
     * @param realms the realms API
     */
-  def indexer[F[_]: Timer](
-      realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig, sc: Scheduler): F[Unit] = {
-    val indexFn = (resources: List[(Label, Resource)]) =>
-      resources.traverse { case (label, res) => index.put(label, res) } *> F.unit
+  def indexer[F[_]: Timer](realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig): F[Unit] = {
+    implicit val sc: SourcingConfig = rc.sourcing
 
-    val cfg = IndexerConfig
+    val indexFn = (resources: List[(Label, Resource)]) =>
+      resources.traverse { case (label, res) => index.put(label, res) } >> F.unit
+
+    val cfg = ProjectionConfig
       .builder[F]
       .offset(Volatile)
       .name("realm-index")
@@ -344,7 +344,7 @@ object Realms {
       .mapping((ev: Event) => realms.fetchUnsafe(ev.id).map(_.map(ev.id -> _)))
       .index(indexFn)
       .build
-    F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
+    TagProjection.start(cfg) >> F.unit
   }
 
   private[realms] def next(state: State, event: Event): State = {
