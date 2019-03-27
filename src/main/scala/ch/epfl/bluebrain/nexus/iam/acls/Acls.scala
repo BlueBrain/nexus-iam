@@ -22,11 +22,10 @@ import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
-import ch.epfl.bluebrain.nexus.sourcing.persistence.OffsetStorage.Volatile
-import ch.epfl.bluebrain.nexus.sourcing.persistence.{IndexerConfig, SequentialTagIndexer}
+import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
+import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressStorage.Volatile
+import ch.epfl.bluebrain.nexus.sourcing.projections.{ProjectionConfig, TagProjection}
 import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
-import monix.execution.Scheduler
 
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
@@ -41,7 +40,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to replace
     */
   def replace(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
-    check(path, write) *> eval(path, ReplaceAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
+    check(path, write) >> eval(path, ReplaceAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Appends ''acl'' on a ''path''.
@@ -50,7 +49,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to append
     */
   def append(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
-    check(path, write) *> eval(path, AppendAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
+    check(path, write) >> eval(path, AppendAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Subtracts ''acl'' on a ''path''.
@@ -59,7 +58,7 @@ class Acls[F[_]](
     * @param acl  the identity to permissions mapping to subtract
     */
   def subtract(path: Path, rev: Long, acl: AccessControlList)(implicit caller: Caller): F[MetaOrRejection] =
-    check(path, write) *> eval(path, SubtractAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
+    check(path, write) >> eval(path, SubtractAcl(path, acl, rev, caller.subject)) <* updateIndex(path)
 
   /**
     * Delete all ACL on a ''path''.
@@ -67,7 +66,7 @@ class Acls[F[_]](
     * @param path the target path for the ACL
     */
   def delete(path: Path, rev: Long)(implicit caller: Caller): F[MetaOrRejection] =
-    check(path, write) *> eval(path, DeleteAcl(path, rev, caller.subject)) <* updateIndex(path)
+    check(path, write) >> eval(path, DeleteAcl(path, rev, caller.subject)) <* updateIndex(path)
 
   private def eval(path: Path, cmd: AclCommand): F[MetaOrRejection] =
     agg
@@ -88,7 +87,7 @@ class Acls[F[_]](
     */
   def fetch(path: Path, rev: Long, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path, rev).map(filterSelf)
-    else check(path, read) *> fetchUnsafe(path, rev)
+    else check(path, read) >> fetchUnsafe(path, rev)
 
   /**
     * Fetches the entire ACL for a ''path''.
@@ -99,7 +98,7 @@ class Acls[F[_]](
     */
   def fetch(path: Path, self: Boolean)(implicit caller: Caller): F[ResourceOpt] =
     if (self) fetchUnsafe(path).map(filterSelf)
-    else check(path, read) *> fetchUnsafe(path)
+    else check(path, read) >> fetchUnsafe(path)
 
   /**
     * Fetches the [[AccessControlLists]] of the provided ''path'' with some filtering options.
@@ -152,7 +151,7 @@ class Acls[F[_]](
 
   private[acls] def updateIndex(path: Path): F[Unit] = {
     fetchUnsafe(path).flatMap {
-      case Some(res) => index.replace(path, res) *> F.unit
+      case Some(res) => index.replace(path, res) >> F.unit
       case None      => F.unit
     }
   }
@@ -227,12 +226,13 @@ object Acls {
     *
     * @param acls the acls API
     */
-  def indexer[F[_]: Timer](
-      acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig, sc: Scheduler): F[Unit] = {
-    val indexFn = (resources: List[(Path, Resource)]) =>
-      resources.traverse { case (path, res) => acls.index.replace(path, res) } *> F.unit
+  def indexer[F[_]: Timer](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
+    implicit val sc: SourcingConfig = ac.sourcing
 
-    val cfg = IndexerConfig
+    val indexFn = (resources: List[(Path, Resource)]) =>
+      resources.traverse { case (path, res) => acls.index.replace(path, res) } >> F.unit
+
+    val cfg = ProjectionConfig
       .builder[F]
       .name("acl-index")
       .offset(Volatile)
@@ -243,7 +243,7 @@ object Acls {
       .mapping((ev: Event) => acls.fetchUnsafe(ev.path).map(_.map(ev.path -> _)))
       .index(indexFn)
       .build
-    F.delay(SequentialTagIndexer.start(cfg)) *> F.unit
+    TagProjection.start(cfg) >> F.unit
   }
 
   private[acls] def next(state: State, event: Event): AclState = {

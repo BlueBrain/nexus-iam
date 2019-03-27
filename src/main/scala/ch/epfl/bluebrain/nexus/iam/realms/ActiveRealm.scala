@@ -1,11 +1,11 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
-import ch.epfl.bluebrain.nexus.commons.circe.syntax._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.instances._
+import ch.epfl.bluebrain.nexus.rdf.syntax._
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveEncoder

@@ -25,30 +25,30 @@ scalafmt: {
  */
 
 // Dependency versions
-val alpakkaVersion             = "1.0-M3"
-val rdfVersion                 = "0.3.1"
-val commonsVersion             = "0.11.1"
-val sourcingVersion            = "0.13.0"
+val alpakkaVersion             = "1.0-RC1"
+val rdfVersion                 = "0.3.3"
+val commonsVersion             = "0.11.8"
+val sourcingVersion            = "0.15.0"
 val akkaVersion                = "2.5.21"
-val akkaCorsVersion            = "0.3.4"
-val akkaHttpVersion            = "10.1.7"
-val akkaPersistenceCassVersion = "0.92"
+val akkaCorsVersion            = "0.4.0"
+val akkaHttpVersion            = "10.1.8"
+val akkaPersistenceCassVersion = "0.93"
 val akkaPersistenceMemVersion  = "2.5.15.1"
 val catsVersion                = "1.6.0"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.2.0"
+val mockitoVersion             = "1.2.1"
 val monixVersion               = "3.0.0-RC2"
 val nimbusJoseJwtVersion       = "7.0.1"
 val pureconfigVersion          = "0.10.2"
-val scalaTestVersion           = "3.0.6"
+val scalaTestVersion           = "3.0.7"
 val kryoVersion                = "0.5.2"
 
 // Dependencies modules
 lazy val rdf                  = "ch.epfl.bluebrain.nexus" %% "rdf"                        % rdfVersion
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
-lazy val sourcingStream       = "ch.epfl.bluebrain.nexus" %% "sourcing-stream"            % sourcingVersion
+lazy val sourcingProjections  = "ch.epfl.bluebrain.nexus" %% "sourcing-projections"       % sourcingVersion
 lazy val commonsCore          = "ch.epfl.bluebrain.nexus" %% "commons-core"               % commonsVersion
 lazy val commonsTest          = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
 lazy val akkaCluster          = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
@@ -88,7 +88,7 @@ lazy val iam = project
       commonsCore,
       rdf,
       sourcingCore,
-      sourcingStream,
+      sourcingProjections,
       akkaHttp,
       akkaHttpCors,
       akkaPersistence,

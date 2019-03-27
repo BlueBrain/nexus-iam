@@ -78,7 +78,6 @@ object Main {
     implicit val ac                = cfg.acls
     implicit val rc                = cfg.realms
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
-    implicit val sc: Scheduler     = Scheduler.global
     Acls.indexer[Task](acls).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
     Realms.indexer[Task](realms).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
   }
