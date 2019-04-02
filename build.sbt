@@ -28,7 +28,7 @@ scalafmt: {
 val alpakkaVersion             = "1.0-RC1"
 val rdfVersion                 = "0.3.3"
 val commonsVersion             = "0.11.8"
-val sourcingVersion            = "0.15.0"
+val sourcingVersion            = "0.16.0"
 val akkaVersion                = "2.5.21"
 val akkaCorsVersion            = "0.4.0"
 val akkaHttpVersion            = "10.1.8"
