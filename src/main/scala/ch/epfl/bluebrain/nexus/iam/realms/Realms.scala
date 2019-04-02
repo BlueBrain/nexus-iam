@@ -344,7 +344,7 @@ object Realms {
       .mapping((ev: Event) => realms.fetchUnsafe(ev.id).map(_.map(ev.id -> _)))
       .index(indexFn)
       .build
-    TagProjection.start(cfg) >> F.unit
+    TagProjection.delay(cfg) >> F.unit
   }
 
   private[realms] def next(state: State, event: Event): State = {

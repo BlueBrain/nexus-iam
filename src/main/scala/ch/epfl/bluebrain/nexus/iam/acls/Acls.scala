@@ -243,7 +243,7 @@ object Acls {
       .mapping((ev: Event) => acls.fetchUnsafe(ev.path).map(_.map(ev.path -> _)))
       .index(indexFn)
       .build
-    TagProjection.start(cfg) >> F.unit
+    TagProjection.delay(cfg) >> F.unit
   }
 
   private[acls] def next(state: State, event: Event): AclState = {
