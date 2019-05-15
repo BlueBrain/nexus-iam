@@ -58,9 +58,9 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
     pathPrefix("realms") {
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         concat(
-          (get & pathEndOrSingleSlash) {
+          (get & searchParams & pathEndOrSingleSlash) { params =>
             trace("listRealms") {
-              complete(realms.list.runToFuture)
+              complete(realms.list(params).runToFuture)
             }
           },
           (put & label & pathEndOrSingleSlash) { id =>

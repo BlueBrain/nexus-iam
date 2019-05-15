@@ -15,6 +15,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
+import ch.epfl.bluebrain.nexus.iam.routes.SearchParams
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, IamError, Label, ResourceF}
@@ -144,56 +145,59 @@ class RealmsSpec
     }
     "list existing realms" in {
       realms.create(second, secondName, openIdUrl, None).accepted
-      realms.list.ioValue.toSet shouldEqual Set(
-        ResourceF(
-          first.toIri(http.realmsIri),
-          1L,
-          types,
-          instant,
-          Anonymous,
-          instant,
-          Anonymous,
-          Right(
-            ActiveRealm(
-              first,
-              firstName,
-              openIdUrl,
-              issuer,
-              grantTypes,
-              None,
-              authorizationUrl,
-              tokenUrl,
-              userInfoUrl,
-              Some(revocationUrl),
-              Some(endSessionUrl),
-              Set(publicKeyJson)
-            ))
-        ),
-        ResourceF(
-          second.toIri(http.realmsIri),
-          1L,
-          types,
-          instant,
-          Anonymous,
-          instant,
-          Anonymous,
-          Right(
-            ActiveRealm(
-              second,
-              secondName,
-              openIdUrl,
-              issuer,
-              grantTypes,
-              None,
-              authorizationUrl,
-              tokenUrl,
-              userInfoUrl,
-              Some(revocationUrl),
-              Some(endSessionUrl),
-              Set(publicKeyJson)
-            ))
+      val params = SearchParams(deprecated = Some(false), rev = Some(1L), createdBy = Some(Anonymous.id), types = types)
+      realms.list(SearchParams(deprecated = Some(true))).ioValue shouldEqual List.empty
+      realms.list(params).ioValue.toSet shouldEqual
+        Set(
+          ResourceF(
+            first.toIri(http.realmsIri),
+            1L,
+            types,
+            instant,
+            Anonymous,
+            instant,
+            Anonymous,
+            Right(
+              ActiveRealm(
+                first,
+                firstName,
+                openIdUrl,
+                issuer,
+                grantTypes,
+                None,
+                authorizationUrl,
+                tokenUrl,
+                userInfoUrl,
+                Some(revocationUrl),
+                Some(endSessionUrl),
+                Set(publicKeyJson)
+              ))
+          ),
+          ResourceF(
+            second.toIri(http.realmsIri),
+            1L,
+            types,
+            instant,
+            Anonymous,
+            instant,
+            Anonymous,
+            Right(
+              ActiveRealm(
+                second,
+                secondName,
+                openIdUrl,
+                issuer,
+                grantTypes,
+                None,
+                authorizationUrl,
+                tokenUrl,
+                userInfoUrl,
+                Some(revocationUrl),
+                Some(endSessionUrl),
+                Set(publicKeyJson)
+              ))
+          )
         )
-      )
     }
     "update an existing realm" in {
       realms.update(first, 1L, firstName + "x", openIdUrl, Some(logoUrl)).accepted
@@ -261,6 +265,21 @@ class RealmsSpec
         Left(DeprecatedRealm(first, firstName + "x", openIdUrl, Some(logoUrl)))
       )
     }
+
+    "list deprecated realms" in {
+      realms.list(SearchParams(deprecated = Some(true))).ioValue shouldEqual List(
+        ResourceF(
+          first.toIri(http.realmsIri),
+          3L,
+          types,
+          instant,
+          Anonymous,
+          instant,
+          Anonymous,
+          Left(DeprecatedRealm(first, firstName + "x", openIdUrl, Some(logoUrl)))
+        ))
+    }
+
     "fail to deprecate twice a realm" in {
       realms.deprecate(first, 3L).rejected[RealmAlreadyDeprecated]
     }
@@ -428,7 +447,7 @@ class RealmsSpec
     }
 
     "fail to list realms with no permissions" in {
-      realms.list.failed[AccessDenied]
+      realms.list(SearchParams.empty).failed[AccessDenied]
     }
   }
 }

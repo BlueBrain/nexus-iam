@@ -22,6 +22,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.{RealmCreated, RealmDepreca
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecated, Initial}
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
+import ch.epfl.bluebrain.nexus.iam.routes.SearchParams
 import ch.epfl.bluebrain.nexus.iam.types.IamError._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
 import ch.epfl.bluebrain.nexus.iam.types._
@@ -115,10 +116,24 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     check(id, read) >> fetchUnsafe(id, Some(rev))
 
   /**
+    * @param params filter parameters of the realms
     * @return the current realms sorted by their creation date.
     */
-  def list(implicit caller: Caller): F[List[Resource]] =
-    check(read) >> index.values.map(set => set.toList.sortBy(_.createdAt.toEpochMilli))
+  def list(params: SearchParams)(implicit caller: Caller): F[List[Resource]] =
+    check(read) >> index.values.map(set => filter(set, params).toList.sortBy(_.createdAt.toEpochMilli))
+
+  private def filter(resources: Set[Resource], params: SearchParams): Set[Resource] =
+    resources.filter {
+      case ResourceF(_, rev, types, _, createdBy, _, updatedBy, value) =>
+        params.createdBy.forall(_ == createdBy.id) &&
+          params.updatedBy.forall(_ == updatedBy.id) &&
+          params.rev.forall(_ == rev) &&
+          params.types.subsetOf(types) &&
+          params.deprecated.forall {
+            case true  => value.isLeft
+            case false => value.isRight
+          }
+    }
 
   /**
     * Attempts to compute the caller from the given [[AccessToken]].

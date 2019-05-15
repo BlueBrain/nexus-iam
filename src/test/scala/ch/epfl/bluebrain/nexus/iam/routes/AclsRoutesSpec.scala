@@ -25,8 +25,7 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import monix.eval.Task
-import org.mockito.Mockito
-import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
+import org.mockito.{ArgumentMatchersSugar, IdiomaticMockito, Mockito}
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 
@@ -38,7 +37,8 @@ class AclsRoutesSpec
     with Matchers
     with EitherValues
     with OptionValues
-    with IdiomaticMockitoFixture
+    with IdiomaticMockito
+    with ArgumentMatchersSugar
     with BeforeAndAfter
     with ScalatestRouteTest
     with test.Resources
