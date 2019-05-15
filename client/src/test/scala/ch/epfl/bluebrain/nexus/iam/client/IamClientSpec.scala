@@ -25,8 +25,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Json
-import org.mockito.Mockito
-import org.mockito.integrations.scalatest.IdiomaticMockitoFixture
+import org.mockito.{ArgumentMatchersSugar, IdiomaticMockito, Mockito}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfter, EitherValues, Matchers, WordSpecLike}
 
@@ -39,7 +38,8 @@ class IamClientSpec
     with WordSpecLike
     with Matchers
     with BeforeAndAfter
-    with IdiomaticMockitoFixture
+    with IdiomaticMockito
+    with ArgumentMatchersSugar
     with IOValues
     with EitherValues
     with Resources

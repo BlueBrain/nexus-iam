@@ -155,8 +155,9 @@ class RealmsRoutesSpec
       }
     }
     "list realms" in {
-      realms.list(any[Caller]) shouldReturn Task.pure(List(resource(label, 1L, realm)))
-      Get("/realms") ~> routes ~> check {
+      realms.list(SearchParams(deprecated = Some(true), rev = Some(2L)))(any[Caller]) shouldReturn Task.pure(
+        List(resource(label, 1L, realm)))
+      Get("/realms?deprecated=true&rev=2") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual listResponse(label, false).sort
       }
