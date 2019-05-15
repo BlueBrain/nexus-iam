@@ -28,6 +28,15 @@ object RealmRejection {
   final case class RealmAlreadyExists(label: Label) extends RealmRejection(s"Realm '${label.value}' already exists.")
 
   /**
+    * Rejection returned when attempting to create a realm with an openIdConfig that already exists.
+    *
+    * @param label        the label of the realm
+    * @param openIdConfig the already existing openIdConfig
+    */
+  final case class RealmOpenIdConfigAlreadyExists(label: Label, openIdConfig: Url)
+      extends RealmRejection(s"Realm '${label.value}' with openIdConfig '${openIdConfig.asString}' already exists.")
+
+  /**
     * Rejection returned when attempting to update a realm with an id that doesnt exist.
     *
     * @param label the label of the realm
@@ -135,6 +144,7 @@ object RealmRejection {
   implicit val realmRejectionStatusFrom: StatusFrom[RealmRejection] =
     StatusFrom {
       case _: RealmAlreadyExists               => BadRequest
+      case _: RealmOpenIdConfigAlreadyExists   => BadRequest
       case _: RealmNotFound                    => BadRequest
       case _: RealmAlreadyDeprecated           => BadRequest
       case _: IncorrectRev                     => Conflict

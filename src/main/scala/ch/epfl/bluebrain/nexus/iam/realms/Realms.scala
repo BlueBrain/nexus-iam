@@ -66,8 +66,10 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
       name: String,
       openIdConfig: Url,
       logo: Option[Url]
-  )(implicit caller: Caller): F[MetaOrRejection] =
-    check(write) >> eval(CreateRealm(id, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
+  )(implicit caller: Caller): F[MetaOrRejection] = {
+    val command = CreateRealm(id, name, openIdConfig, logo, caller.subject)
+    check(write) >> openIdConfigAlreadyExistsOr(id, openIdConfig)(eval(command)) <* updateIndex(id)
+  }
 
   /**
     * Updates an existing realm using the provided configuration.
@@ -84,8 +86,24 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
       name: String,
       openIdConfig: Url,
       logo: Option[Url]
-  )(implicit caller: Caller): F[MetaOrRejection] =
-    check(id, write) >> eval(UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)) <* updateIndex(id)
+  )(implicit caller: Caller): F[MetaOrRejection] = {
+    val command = UpdateRealm(id, rev, name, openIdConfig, logo, caller.subject)
+    check(id, write) >> openIdConfigAlreadyExistsOr(id, openIdConfig)(eval(command)) <* updateIndex(id)
+  }
+
+  private def openIdConfigAlreadyExistsOr(id: Label, openIdConfig: Url)(eval: => F[MetaOrRejection])(
+      implicit caller: Caller): F[MetaOrRejection] =
+    list().flatMap {
+      case realms if openIdConfigExists(id, openIdConfig, realms) =>
+        F.pure(Left(RealmOpenIdConfigAlreadyExists(id, openIdConfig)))
+      case _ => eval
+    }
+
+  private def openIdConfigExists(excludeLabel: Label, matchOpenIdConfig: Url, resources: List[Resource]): Boolean =
+    resources.exists(_.value match {
+      case Left(realm)  => realm.id != excludeLabel && realm.openIdConfig == matchOpenIdConfig
+      case Right(realm) => realm.id != excludeLabel && realm.openIdConfig == matchOpenIdConfig
+    })
 
   /**
     * Deprecates an existing realm. A deprecated realm prevents clients from authenticating.
@@ -119,7 +137,7 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     * @param params filter parameters of the realms
     * @return the current realms sorted by their creation date.
     */
-  def list(params: SearchParams)(implicit caller: Caller): F[List[Resource]] =
+  def list(params: SearchParams = SearchParams.empty)(implicit caller: Caller): F[List[Resource]] =
     check(read) >> index.values.map(set => filter(set, params).toList.sortBy(_.createdAt.toEpochMilli))
 
   private def filter(resources: Set[Resource], params: SearchParams): Set[Resource] =
