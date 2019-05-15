@@ -61,6 +61,8 @@ class RealmsSpec
   implicit val httpClient: HttpJsonClient[IO] = {
     val m = mock[HttpJsonClient[IO]]
     m.apply(Get(openIdUrlString)) shouldReturn IO.pure(fullOpenIdConfig)
+    m.apply(Get(openIdUrl2.asString)) shouldReturn IO.pure(fullOpenIdConfig)
+    m.apply(Get(openIdUrl3.asString)) shouldReturn IO.pure(fullOpenIdConfig)
     m.apply(Get(jwksUrlString)) shouldReturn IO.pure(validJwks)
     m.apply(Get(deprUrlString)) shouldReturn IO.pure(deprecatedOpenIdConfig)
     m
@@ -143,8 +145,11 @@ class RealmsSpec
     "fail to create an existing realm" in {
       realms.create(first, firstName, openIdUrl, None).rejected[RealmAlreadyExists]
     }
+    "fail to create a realm with the same openIdConfig" in {
+      realms.create(second, firstName, openIdUrl, None).rejected[RealmOpenIdConfigAlreadyExists]
+    }
     "list existing realms" in {
-      realms.create(second, secondName, openIdUrl, None).accepted
+      realms.create(second, secondName, openIdUrl2, None).accepted
       val params = SearchParams(deprecated = Some(false), rev = Some(1L), createdBy = Some(Anonymous.id), types = types)
       realms.list(SearchParams(deprecated = Some(true))).ioValue shouldEqual List.empty
       realms.list(params).ioValue.toSet shouldEqual
@@ -185,7 +190,7 @@ class RealmsSpec
               ActiveRealm(
                 second,
                 secondName,
-                openIdUrl,
+                openIdUrl2,
                 issuer,
                 grantTypes,
                 None,
@@ -317,7 +322,7 @@ class RealmsSpec
       realms.update(first, 10L, firstName, openIdUrl, Some(logoUrl)).rejected[IncorrectRev]
     }
     "fail to update a realm that does not exist" in {
-      realms.update(Label.unsafe("blah"), 10L, firstName, openIdUrl, Some(logoUrl)).rejected[RealmNotFound]
+      realms.update(Label.unsafe("blah"), 10L, firstName, genUrl, Some(logoUrl)).rejected[RealmNotFound]
     }
     "fail to deprecate a realm with incorrect revision" in {
       realms.deprecate(first, 10L).rejected[IncorrectRev]
@@ -394,7 +399,7 @@ class RealmsSpec
         realms.caller(token("sub", nbf = nbf)).failed[IamError.InvalidAccessToken]
       }
       "the realm for which the issuer matches is deprecated" in {
-        realms.create(depr, deprName, openIdUrl, None).accepted
+        realms.create(depr, deprName, openIdUrl3, None).accepted
         realms.deprecate(depr, 1L).accepted
         val csb = new JWTClaimsSet.Builder()
           .subject("sub")

@@ -1,5 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
+import java.util.UUID
+
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.HttpResponse
 import cats.effect.IO
@@ -172,9 +174,12 @@ class WellKnownSpec
 //noinspection TypeAnnotation
 object WellKnownSpec {
   import EitherValues._
+  def genUrl = Url(s"https://localhost/auth/realms/master/.well-known/${UUID.randomUUID()}").right.value
 
   val openIdUrlString = "https://localhost/auth/realms/master/.well-known/openid-configuration"
   val openIdUrl       = Url(openIdUrlString).right.value
+  val openIdUrl2      = genUrl
+  val openIdUrl3      = genUrl
   val jwksUrlString   = "https://localhost/auth/realms/master/protocol/openid-connect/certs"
   val jwksUrl         = Url(jwksUrlString).right.value
   val issuer          = "https://localhost/auth/realms/master"
