@@ -25,11 +25,10 @@ scalafmt: {
  */
 
 // Dependency versions
-val alpakkaVersion             = "1.0.0"
-val rdfVersion                 = "0.3.7"
-val commonsVersion             = "0.12.5"
+val alpakkaVersion             = "1.0.1"
+val commonsVersion             = "0.12.6"
 val sourcingVersion            = "0.16.1"
-val akkaVersion                = "2.5.22"
+val akkaVersion                = "2.5.23"
 val akkaCorsVersion            = "0.4.0"
 val akkaHttpVersion            = "10.1.8"
 val akkaPersistenceCassVersion = "0.97"
@@ -38,7 +37,7 @@ val catsVersion                = "1.6.0"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.4.1"
+val mockitoVersion             = "1.4.6"
 val monixVersion               = "3.0.0-RC2"
 val nimbusJoseJwtVersion       = "7.1"
 val pureconfigVersion          = "0.11.0"
@@ -46,7 +45,6 @@ val scalaTestVersion           = "3.0.7"
 val kryoVersion                = "0.5.2"
 
 // Dependencies modules
-lazy val rdf                  = "ch.epfl.bluebrain.nexus" %% "rdf"                        % rdfVersion
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
 lazy val sourcingProjections  = "ch.epfl.bluebrain.nexus" %% "sourcing-projections"       % sourcingVersion
 lazy val commonsCore          = "ch.epfl.bluebrain.nexus" %% "commons-core"               % commonsVersion
@@ -86,7 +84,6 @@ lazy val iam = project
     moduleName := "iam",
     libraryDependencies ++= Seq(
       commonsCore,
-      rdf,
       sourcingCore,
       sourcingProjections,
       akkaHttp,
@@ -132,7 +129,6 @@ lazy val client = project
       circeCore,
       commonsCore,
       logbackClassic,
-      rdf,
       akkaTestKit     % Test,
       akkaHttpTestKit % Test,
       commonsTest     % Test,
