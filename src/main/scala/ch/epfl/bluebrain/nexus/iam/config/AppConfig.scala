@@ -25,6 +25,7 @@ import scala.concurrent.duration._
   * @param acls        configuration for acls
   * @param permissions configuration for permissions
   * @param realms      configuration for realms
+  * @param groups      configuration for groups
   */
 final case class AppConfig(description: Description,
                            http: HttpConfig,
@@ -33,7 +34,8 @@ final case class AppConfig(description: Description,
                            indexing: IndexingConfig,
                            acls: AclsConfig,
                            permissions: PermissionsConfig,
-                           realms: RealmsConfig)
+                           realms: RealmsConfig,
+                           groups: GroupsConfig)
 
 object AppConfig {
 
@@ -127,6 +129,21 @@ object AppConfig {
     * @param indexing      the indexing configuration
     */
   final case class RealmsConfig(sourcing: SourcingConfig, keyValueStore: KeyValueStoreConfig, indexing: IndexingConfig)
+
+  /**
+    * Group cache configuration.
+    *
+    * @param passivationTimeout actor passivation timeout
+    * @param askTimeout         timeout for the message exchange with the actor
+    * @param shards             the number of shards for the groups config
+    * @param retry              the retry strategy for getting the user information
+    */
+  final case class GroupsConfig(
+      passivationTimeout: FiniteDuration,
+      askTimeout: FiniteDuration,
+      shards: Int,
+      retry: RetryStrategyConfig
+  )
 
   val orderedKeys = OrderedKeys(
     List(
