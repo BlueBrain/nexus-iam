@@ -14,6 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, RealmsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
+import ch.epfl.bluebrain.nexus.iam.realms.RealmsSpec.token
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
 import ch.epfl.bluebrain.nexus.iam.routes.SearchParams
 import ch.epfl.bluebrain.nexus.iam.types.IamError.AccessDenied
@@ -75,6 +76,13 @@ class RealmsSpec
     (m, IO.pure(m))
   }
 
+  val groups = {
+    val m = mock[Groups[IO]]
+    m.groups(isA[AccessToken], isA[JWTClaimsSet], isA[ActiveRealm], isA[Option[Instant]]) shouldReturn IO.pure(
+      Set.empty[Group])
+    m
+  }
+
   val first      = Label.unsafe("first")
   val firstName  = "The First"
   val logoUrl    = Url("http://localhost/some/logo").right.value
@@ -83,37 +91,8 @@ class RealmsSpec
   val depr       = Label.unsafe("deprecated")
   val deprName   = "The deprecated realm"
 
-  def token(
-      subject: String,
-      exp: Date = Date.from(Instant.now().plusSeconds(3600)),
-      nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
-      groups: Option[Set[String]] = None,
-      useCommas: Boolean = false,
-      preferredUsername: Option[String] = None,
-  ): AccessToken = {
-    val signer = new RSASSASigner(privateKey)
-    val csb = new JWTClaimsSet.Builder()
-      .issuer(issuer)
-      .subject(subject)
-      .expirationTime(exp)
-      .notBeforeTime(nbf)
-
-    groups.map { set =>
-      if (useCommas) csb.claim("groups", set.mkString(","))
-      else csb.claim("groups", set.toArray)
-    }
-
-    preferredUsername.map { pu =>
-      csb.claim("preferred_username", pu)
-    }
-
-    val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
-    jwt.sign(signer)
-    AccessToken(jwt.serialize())
-  }
-
   "The Realms API" should {
-    val realms = Realms[IO](acls).ioValue
+    val realms = Realms[IO](acls, groups).ioValue
     "create a new realm" in {
       realms.create(first, firstName, openIdUrl, None).accepted
       realms.fetch(first).some shouldEqual ResourceF(
@@ -332,23 +311,12 @@ class RealmsSpec
     }
 
     "correctly extract the caller" when {
-      val subject      = "sub"
-      val preferred    = "preferred"
-      val user         = User(subject, first.value)
-      val groupStrings = Set("g1", "g2")
-      val groups       = groupStrings.map(str => Group(str, first.value))
-      val auth         = Authenticated(first.value)
+      val subject   = "sub"
+      val preferred = "preferred"
+      val auth      = Authenticated(first.value)
       "the claimset contains no groups" in {
         val user = User(subject, first.value)
         realms.caller(token(subject)).ioValue shouldEqual Caller(user, Set(user, Anonymous, auth))
-      }
-      "the claimset contains comma separated group values" in {
-        val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
-        realms.caller(token(subject, groups = Some(groupStrings), useCommas = true)).ioValue shouldEqual expected
-      }
-      "the claimset contains array group values" in {
-        val expected = Caller(user, Set(user, Anonymous, auth) ++ groups)
-        realms.caller(token(subject, groups = Some(groupStrings), useCommas = false)).ioValue shouldEqual expected
       }
       "the claimset contains a preferred_username entry" in {
         val user     = User(preferred, first.value)
@@ -454,5 +422,36 @@ class RealmsSpec
     "fail to list realms with no permissions" in {
       realms.list(SearchParams.empty).failed[AccessDenied]
     }
+  }
+}
+
+object RealmsSpec {
+  def token(
+      subject: String,
+      exp: Date = Date.from(Instant.now().plusSeconds(3600)),
+      nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
+      groups: Option[Set[String]] = None,
+      useCommas: Boolean = false,
+      preferredUsername: Option[String] = None,
+  ): AccessToken = {
+    val signer = new RSASSASigner(privateKey)
+    val csb = new JWTClaimsSet.Builder()
+      .issuer(issuer)
+      .subject(subject)
+      .expirationTime(exp)
+      .notBeforeTime(nbf)
+
+    groups.map { set =>
+      if (useCommas) csb.claim("groups", set.mkString(","))
+      else csb.claim("groups", set.toArray)
+    }
+
+    preferredUsername.map { pu =>
+      csb.claim("preferred_username", pu)
+    }
+
+    val jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build(), csb.build())
+    jwt.sign(signer)
+    AccessToken(jwt.serialize())
   }
 }

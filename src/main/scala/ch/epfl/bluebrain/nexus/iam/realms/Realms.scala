@@ -24,7 +24,7 @@ import ch.epfl.bluebrain.nexus.iam.realms.RealmState.{Active, Current, Deprecate
 import ch.epfl.bluebrain.nexus.iam.realms.Realms.next
 import ch.epfl.bluebrain.nexus.iam.routes.SearchParams
 import ch.epfl.bluebrain.nexus.iam.types.IamError._
-import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Group, User}
+import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
@@ -49,7 +49,8 @@ import scala.util.Try
   * @param index an index implementation for realms
   * @tparam F    the effect type
   */
-class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F])(implicit http: HttpConfig) {
+class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
+    implicit http: HttpConfig) {
 
   private val F = implicitly[MonadThrowable[F]]
 
@@ -184,20 +185,15 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
         .catchNonFatal(proc.process(jwt, null))
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
-    def caller(claimsSet: JWTClaimsSet, realmId: Label): Either[TokenRejection, Caller] = {
-      val authenticated     = Authenticated(realmId.value)
+    def caller(claimsSet: JWTClaimsSet, realm: ActiveRealm, exp: Option[Instant]): F[Either[TokenRejection, Caller]] = {
+      val authenticated     = Authenticated(realm.id.value)
       val preferredUsername = Try(claimsSet.getStringClaim("preferred_username")).filter(_ != null).toOption
       val subject           = (preferredUsername orElse Option(claimsSet.getSubject)).toRight(AccessTokenDoesNotContainSubject)
-      val groups = Try(claimsSet.getStringArrayClaim("groups"))
-        .filter(_ != null)
-        .recoverWith { case _ => Try(claimsSet.getStringClaim("groups").split(",").map(_.trim)) }
-        .toOption
-        .map(_.toSet)
-        .getOrElse(Set.empty)
-      subject.map { sub =>
-        val user                    = User(sub, realmId.value)
-        val groupSet: Set[Identity] = groups.map(g => Group(g, realmId.value))
-        Caller(user, groupSet + Anonymous + user + authenticated)
+      groups.groups(token, claimsSet, realm, exp).map { gs =>
+        subject.map { sub =>
+          val user = User(sub, realm.id.value)
+          Caller(user, gs.toSet[Identity] + Anonymous + user + authenticated)
+        }
       }
     }
 
@@ -210,9 +206,10 @@ class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIn
     val eitherCaller = for {
       t <- EitherT.fromEither[F](triple)
       (signed, cs, iss) = t
-      realm  <- EitherT(activeRealm(iss))
-      _      <- EitherT.fromEither[F](valid(signed, realm.keySet))
-      result <- EitherT.fromEither[F](caller(cs, realm.id))
+      realm <- EitherT(activeRealm(iss))
+      _     <- EitherT.fromEither[F](valid(signed, realm.keySet))
+      exp = Try(signed.getJWTClaimsSet.getExpirationTime.toInstant).toOption
+      result <- EitherT(caller(cs, realm, exp))
     } yield result
 
     eitherCaller.value.flatMap {
@@ -315,23 +312,26 @@ object Realms {
   /**
     * Creates a new realms api using the provided aggregate, a lazy reference to the ACL api and a realm index reference.
     *
-    * @param agg   the permissions aggregate
-    * @param acls  a lazy reference to the ACL api
-    * @param index a realm index reference
+    * @param agg    the permissions aggregate
+    * @param acls   a lazy reference to the ACL api
+    * @param index  a realm index reference
+    * @param groups a groups provider reference
     */
   def apply[F[_]: MonadThrowable](
       agg: Agg[F],
       acls: F[Acls[F]],
-      index: RealmIndex[F]
+      index: RealmIndex[F],
+      groups: Groups[F]
   )(implicit http: HttpConfig): Realms[F] =
-    new Realms(agg, acls, index)
+    new Realms(agg, acls, index, groups)
 
   /**
     * Creates a new permissions api using the default aggregate and a lazy reference to the ACL api.
     *
-    * @param acls a lazy reference to the ACL api
+    * @param acls   a lazy reference to the ACL api
+    * @param groups a groups provider reference
     */
-  def apply[F[_]: Effect: Timer: Clock](acls: F[Acls[F]])(
+  def apply[F[_]: Effect: Timer: Clock](acls: F[Acls[F]], groups: Groups[F])(
       implicit
       as: ActorSystem,
       mt: ActorMaterializer,
@@ -339,21 +339,23 @@ object Realms {
       hc: HttpClient[F, Json],
       rc: RealmsConfig
   ): F[Realms[F]] =
-    delay(aggregate, acls, index)
+    delay(aggregate, acls, index, groups)
 
   /**
     * Creates a new realms api using the provided aggregate, a lazy reference to the ACL api and a realm index.
     *
-    * @param agg  a lazy reference to the permissions aggregate
-    * @param acls a lazy reference to the ACL api
-    * @param index a realm index reference
+    * @param agg    a lazy reference to the permissions aggregate
+    * @param acls   a lazy reference to the ACL api
+    * @param index  a realm index reference
+    * @param groups a groups provider reference
     */
   def delay[F[_]: MonadThrowable](
       agg: F[Agg[F]],
       acls: F[Acls[F]],
-      index: RealmIndex[F]
+      index: RealmIndex[F],
+      groups: Groups[F]
   )(implicit http: HttpConfig): F[Realms[F]] =
-    agg.map(apply(_, acls, index))
+    agg.map(apply(_, acls, index, groups))
 
   /**
     * Builds a process for automatically updating the realm index with the latest events logged.

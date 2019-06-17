@@ -15,7 +15,7 @@ import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
-import ch.epfl.bluebrain.nexus.iam.realms.Realms
+import ch.epfl.bluebrain.nexus.iam.realms.{Groups, Realms}
 import ch.epfl.bluebrain.nexus.iam.routes._
 import com.github.jsonldjava.core.DocumentLoader
 import com.typesafe.config.{Config, ConfigFactory}
@@ -55,6 +55,7 @@ object Main {
     implicit val pc     = cfg.permissions
     implicit val ac     = cfg.acls
     implicit val rc     = cfg.realms
+    implicit val gc     = cfg.groups
     implicit val pm     = CanBlock.permit
     implicit val cl     = HttpClient.untyped[Task]
     import as.dispatcher
@@ -64,9 +65,10 @@ object Main {
       ps <- Deferred[Task, Permissions[Task]]
       as <- Deferred[Task, Acls[Task]]
       rs <- Deferred[Task, Realms[Task]]
+      gt <- Groups[Task]()
       pt <- Permissions[Task](as.get)
       at <- Acls[Task](ps.get)
-      rt <- Realms[Task](as.get)
+      rt <- Realms[Task](as.get, gt)
       _  <- ps.complete(pt)
       _  <- as.complete(at)
       _  <- rs.complete(rt)
