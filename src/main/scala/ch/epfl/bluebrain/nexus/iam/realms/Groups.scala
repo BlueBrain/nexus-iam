@@ -156,6 +156,12 @@ object Groups {
     //noinspection ActorMutableStateInspection
     private var groups: Option[Set[Group]] = None
 
+    // shutdown actor automatically after the default timeout
+    override def preStart(): Unit = {
+      super.preStart()
+      context.setReceiveTimeout(cfg.passivationTimeout)
+    }
+
     def receive: Receive = {
       case Read(token) =>
         sender() ! Response(token, groups)
