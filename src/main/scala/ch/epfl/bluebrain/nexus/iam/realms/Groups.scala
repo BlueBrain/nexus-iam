@@ -7,18 +7,19 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId, Passivate}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import akka.http.scaladsl.client.RequestBuilding._
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import cats.effect.{Async, IO, Timer}
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.http.HttpClient
-import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
+import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.GroupsConfig
 import ch.epfl.bluebrain.nexus.iam.realms.Groups._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{InternalError, OperationTimedOut}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
-import ch.epfl.bluebrain.nexus.iam.types.Label
+import ch.epfl.bluebrain.nexus.iam.types.{IamError, Label}
 import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 import ch.epfl.bluebrain.nexus.sourcing.retry.syntax._
 import com.nimbusds.jwt.JWTClaimsSet
@@ -93,10 +94,22 @@ class Groups[F[_]](ref: ActorRef)(implicit cfg: GroupsConfig, hc: HttpClient[F, 
       cursor.get[String]("groups").map(_.split(",").map(_.trim).filterNot(_.isEmpty).toSet)
 
     val req = Get(realm.userInfoEndpoint.asUri).addCredentials(OAuth2BearerToken(token.value))
-    hc(req).map { json =>
-      val stringGroups = fromSet(json.hcursor) orElse fromCsv(json.hcursor) getOrElse Set.empty[String]
-      stringGroups.map(str => Group(str, realm.id.value))
-    }
+    hc(req)
+      .map { json =>
+        val stringGroups = fromSet(json.hcursor) orElse fromCsv(json.hcursor) getOrElse Set.empty[String]
+        stringGroups.map(str => Group(str, realm.id.value))
+      }
+      .recoverWith {
+        case UnexpectedUnsuccessfulHttpResponse(resp, body) =>
+          if (resp.status == StatusCodes.Unauthorized || resp.status == StatusCodes.Forbidden) {
+            logger.warn(s"A provided client token was rejected by the OIDC provider, reason: '$body'")
+            F.raiseError(IamError.InvalidAccessToken(TokenRejection.InvalidAccessToken))
+          } else {
+            logger.warn(
+              s"A call to get the groups from the OIDC provider failed unexpectedly, status '${resp.status}', reason: '$body'")
+            F.raiseError(IamError.InternalError("Unable to extract group information from the OIDC provider."))
+          }
+      }
   }
 
   private def send[Reply, A](msg: Msg, f: Reply => A)(implicit Reply: ClassTag[Reply]): F[A] = {
