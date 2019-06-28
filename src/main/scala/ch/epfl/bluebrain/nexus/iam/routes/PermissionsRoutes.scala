@@ -4,7 +4,6 @@ import akka.http.javadsl.server.Rejections._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives.authenticator
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
@@ -30,41 +29,29 @@ class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(im
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         concat(
           (get & pathEndOrSingleSlash) {
-            parameter("rev".as[Long].?) { optRev =>
-              trace("fetchPermissions") {
-                optRev match {
-                  case Some(rev) => complete(permissions.fetchAt(rev).runNotFound)
-                  case None      => complete(permissions.fetch.runToFuture)
-                }
-              }
+            parameter("rev".as[Long].?) {
+              case Some(rev) => complete(permissions.fetchAt(rev).runNotFound)
+              case None      => complete(permissions.fetch.runToFuture)
             }
           },
           (put & parameter("rev" ? 0L)) { rev =>
             entity(as[PatchPermissions]) {
               case Replace(set) =>
-                trace("replacePermissions") {
-                  complete(permissions.replace(set, rev).runToFuture)
-                }
+                complete(permissions.replace(set, rev).runToFuture)
               case _ => reject(validationRejection("Only @type 'Replace' is permitted when using 'put'."))
             }
           },
           delete {
             parameter("rev".as[Long]) { rev =>
-              trace("deletePermissions") {
-                complete(permissions.delete(rev).runToFuture)
-              }
+              complete(permissions.delete(rev).runToFuture)
             }
           },
           (patch & parameter("rev" ? 0L)) { rev =>
             entity(as[PatchPermissions]) {
               case Append(set) =>
-                trace("appendPermissions") {
-                  complete(permissions.append(set, rev).runToFuture)
-                }
+                complete(permissions.append(set, rev).runToFuture)
               case Subtract(set) =>
-                trace("subtractPermissions") {
-                  complete(permissions.subtract(set, rev).runToFuture)
-                }
+                complete(permissions.subtract(set, rev).runToFuture)
               case _ =>
                 reject(validationRejection("Only @type 'Append' or 'Subtract' is permitted when using 'patch'."))
             }

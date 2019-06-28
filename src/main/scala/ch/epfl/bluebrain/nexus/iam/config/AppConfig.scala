@@ -3,7 +3,6 @@ package ch.epfl.bluebrain.nexus.iam.config
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.commons.cache.KeyValueStoreConfig
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport.OrderedKeys
-import ch.epfl.bluebrain.nexus.commons.kamon.directives.TracingDirectives
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
@@ -178,8 +177,6 @@ object AppConfig {
       nxv.instant.prefix,
       nxv.subject.prefix,
     ))
-
-  val tracing = new TracingDirectives()
 
   implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig      = appConfig.persistence
   implicit def toHttp(implicit appConfig: AppConfig): HttpConfig                    = appConfig.http

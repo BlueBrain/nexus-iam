@@ -26,10 +26,10 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.0.2"
-val commonsVersion             = "0.12.10"
+val commonsVersion             = "0.14.0"
 val sourcingVersion            = "0.16.3"
 val akkaVersion                = "2.5.23"
-val akkaCorsVersion            = "0.4.0"
+val akkaCorsVersion            = "0.4.1"
 val akkaHttpVersion            = "10.1.8"
 val akkaPersistenceCassVersion = "0.98"
 val akkaPersistenceMemVersion  = "2.5.15.1"
@@ -37,12 +37,16 @@ val catsVersion                = "1.6.1"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.5.7"
-val monixVersion               = "3.0.0-RC2"
-val nimbusJoseJwtVersion       = "7.2.1"
+val mockitoVersion             = "1.5.11"
+val monixVersion               = "3.0.0-RC3"
+val nimbusJoseJwtVersion       = "7.3"
 val pureconfigVersion          = "0.11.0"
-val scalaTestVersion           = "3.0.7"
+val scalaTestVersion           = "3.0.8"
 val kryoVersion                = "0.5.2"
+
+val kamonBundleVersion     = "2.0.0-RC2"
+val kamonPrometheusVersion = "2.0.0-RC1"
+val kamonJaegerVersion     = "2.0.0-RC1"
 
 // Dependencies modules
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
@@ -74,6 +78,10 @@ lazy val pureconfig           = "com.github.pureconfig"   %% "pureconfig"       
 lazy val scalaTest            = "org.scalatest"           %% "scalatest"                  % scalaTestVersion
 lazy val kryo                 = "com.github.romix.akka"   %% "akka-kryo-serialization"    % kryoVersion
 
+lazy val kamonBundle     = "io.kamon" %% "kamon-bundle"     % kamonBundleVersion
+lazy val kamonPrometheus = "io.kamon" %% "kamon-prometheus" % kamonPrometheusVersion
+lazy val kamonJaeger     = "io.kamon" %% "kamon-jaeger"     % kamonJaegerVersion
+
 lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
@@ -98,6 +106,9 @@ lazy val iam = project
       catsCore,
       circeCore,
       journalCore,
+      kamonBundle,
+      kamonPrometheus,
+      kamonJaeger,
       kryo,
       monixEval,
       nimbusJoseJwt,

@@ -5,7 +5,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{MalformedQueryParamRejection, Route}
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AclDirectives._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives._
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
@@ -15,6 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.routes.AclsRoutes._
 import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import io.circe.{Decoder, DecodingFailure}
+import kamon.instrumentation.akka.http.TracingDirectives._
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -32,55 +32,41 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit hc: HttpConfig
     pathPrefix("acls") {
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         extractResourcePath { path =>
-          concat(
-            parameter("rev" ? 0L) { rev =>
-              val status = if (rev == 0L) Created else OK
-              concat(
-                (put & entity(as[AccessControlList])) { acl =>
-                  trace("replaceAcl") {
+          operationName(s"/${hc.prefix}/acls" + path.segments.map(_ => "/{}").mkString("")) { // /v1/acls/{}/{}
+            concat(
+              parameter("rev" ? 0L) { rev =>
+                val status = if (rev == 0L) Created else OK
+                concat(
+                  (put & entity(as[AccessControlList])) { acl =>
                     complete(acls.replace(path, rev, acl).runWithStatus(status))
-                  }
-                },
-                (patch & entity(as[PatchAcl])) {
-                  case AppendAcl(acl) =>
-                    trace("appendAcl") {
+                  },
+                  (patch & entity(as[PatchAcl])) {
+                    case AppendAcl(acl) =>
                       complete(acls.append(path, rev, acl).runWithStatus(status))
-                    }
-                  case SubtractAcl(acl) =>
-                    trace("subtractAcl") {
+                    case SubtractAcl(acl) =>
                       complete(acls.subtract(path, rev, acl).runToFuture)
-                    }
-                },
-                delete {
-                  trace("deleteAcl") {
+                  },
+                  delete {
                     complete(acls.delete(path, rev).runToFuture)
                   }
-                }
-              )
-            },
-            (get & parameter("rev".as[Long] ?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
-              case (Some(_), true, _) =>
-                reject(simultaneousRevAndAncestorsRejection)
-              case (Some(_), _, _) if path.segments.contains(any) =>
-                reject(simultaneousRevAndAnyRejection)
-              case (_, ancestors, self) if path.segments.contains(any) =>
-                trace("listAcls") {
+                )
+              },
+              (get & parameter("rev".as[Long] ?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
+                case (Some(_), true, _) =>
+                  reject(simultaneousRevAndAncestorsRejection)
+                case (Some(_), _, _) if path.segments.contains(any) =>
+                  reject(simultaneousRevAndAnyRejection)
+                case (_, ancestors, self) if path.segments.contains(any) =>
                   complete(acls.list(path, ancestors, self).runToFuture)
-                }
-              case (Some(rev), false, self) =>
-                trace("fetchAcl") {
+                case (Some(rev), false, self) =>
                   complete(acls.fetch(path, rev, self).toSingleList(path).runToFuture)
-                }
-              case (_, false, self) =>
-                trace("fetchAcl") {
+                case (_, false, self) =>
                   complete(acls.fetch(path, self).toSingleList(path).runToFuture)
-                }
-              case (_, true, self) =>
-                trace("listAcls") {
+                case (_, true, self) =>
                   complete(acls.list(path, ancestors = true, self).runToFuture)
-                }
-            }
-          )
+              }
+            )
+          }
         }
       }
     }
