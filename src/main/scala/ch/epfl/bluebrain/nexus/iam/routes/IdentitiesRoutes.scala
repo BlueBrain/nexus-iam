@@ -3,7 +3,6 @@ package ch.epfl.bluebrain.nexus.iam.routes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives.authenticator
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
@@ -23,9 +22,7 @@ class IdentitiesRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
     (pathPrefix("identities") & pathEndOrSingleSlash) {
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         get {
-          trace("listIdentities") {
-            complete(caller)
-          }
+          complete(caller)
         }
       }
     }

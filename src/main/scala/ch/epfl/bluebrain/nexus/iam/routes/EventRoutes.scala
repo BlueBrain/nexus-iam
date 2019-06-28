@@ -17,7 +17,6 @@ import ch.epfl.bluebrain.nexus.commons.circe.syntax._
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.JsonLd._
 import ch.epfl.bluebrain.nexus.iam.acls.{AclEvent, Acls}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.tracing._
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PersistenceConfig}
 import ch.epfl.bluebrain.nexus.iam.directives.AuthDirectives._
 import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter._
@@ -71,9 +70,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
       authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
         authorizeFor(permission).apply {
           lastEventId { offset =>
-            trace(s"${tag}Events") {
-              complete(source(tag, offset, toSse))
-            }
+            complete(source(tag, offset, toSse))
           }
         }
       }
