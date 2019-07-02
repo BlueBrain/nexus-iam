@@ -26,7 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.0.2"
-val commonsVersion             = "0.14.0"
+val commonsVersion             = "0.15.0"
 val sourcingVersion            = "0.16.3"
 val akkaVersion                = "2.5.23"
 val akkaCorsVersion            = "0.4.1"
@@ -44,14 +44,11 @@ val pureconfigVersion          = "0.11.0"
 val scalaTestVersion           = "3.0.8"
 val kryoVersion                = "0.5.2"
 
-val kamonBundleVersion     = "2.0.0-RC2"
-val kamonPrometheusVersion = "2.0.0-RC1"
-val kamonJaegerVersion     = "2.0.0-RC1"
-
 // Dependencies modules
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
 lazy val sourcingProjections  = "ch.epfl.bluebrain.nexus" %% "sourcing-projections"       % sourcingVersion
 lazy val commonsCore          = "ch.epfl.bluebrain.nexus" %% "commons-core"               % commonsVersion
+lazy val commonsKamon         = "ch.epfl.bluebrain.nexus" %% "commons-kamon"              % commonsVersion
 lazy val commonsTest          = "ch.epfl.bluebrain.nexus" %% "commons-test"               % commonsVersion
 lazy val akkaCluster          = "com.typesafe.akka"       %% "akka-cluster"               % akkaVersion
 lazy val akkaClusterSharding  = "com.typesafe.akka"       %% "akka-cluster-sharding"      % akkaVersion
@@ -78,10 +75,6 @@ lazy val pureconfig           = "com.github.pureconfig"   %% "pureconfig"       
 lazy val scalaTest            = "org.scalatest"           %% "scalatest"                  % scalaTestVersion
 lazy val kryo                 = "com.github.romix.akka"   %% "akka-kryo-serialization"    % kryoVersion
 
-lazy val kamonBundle     = "io.kamon" %% "kamon-bundle"     % kamonBundleVersion
-lazy val kamonPrometheus = "io.kamon" %% "kamon-prometheus" % kamonPrometheusVersion
-lazy val kamonJaeger     = "io.kamon" %% "kamon-jaeger"     % kamonJaegerVersion
-
 lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
@@ -92,6 +85,7 @@ lazy val iam = project
     moduleName := "iam",
     libraryDependencies ++= Seq(
       commonsCore,
+      commonsKamon,
       sourcingCore,
       sourcingProjections,
       akkaHttp,
@@ -106,9 +100,6 @@ lazy val iam = project
       catsCore,
       circeCore,
       journalCore,
-      kamonBundle,
-      kamonPrometheus,
-      kamonJaeger,
       kryo,
       monixEval,
       nimbusJoseJwt,
@@ -122,7 +113,8 @@ lazy val iam = project
       mockitoScala       % Test,
       scalaTest          % Test,
     ),
-    resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
+    resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven",
+    resolvers += "bogdanromanx" at "http://dl.bintray.com/bogdanromanx/maven"
   )
 
 lazy val client = project
