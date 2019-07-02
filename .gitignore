@@ -20,6 +20,8 @@ project/.bloop
 **/nbproject/
 **/logs/
 **/nbactions.xml
+.bloop
+.metals
 
 # Packages #
 ############
