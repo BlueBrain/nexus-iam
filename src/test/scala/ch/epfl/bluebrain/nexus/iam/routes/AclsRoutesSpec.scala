@@ -114,7 +114,7 @@ class AclsRoutesSpec
     "create ACL" in {
       acls.replace(path, 0L, acl) shouldReturn Task.pure[MetaOrRejection](Right(responseMeta))
 
-      Put(s"/acls/myorg/myproj", aclJson) ~> addCredentials(token) ~> routes ~> check {
+      Put(s"/acls/myorg/myproj/", aclJson) ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual response(1L, user, user, path)
         status shouldEqual StatusCodes.Created
       }
@@ -148,7 +148,7 @@ class AclsRoutesSpec
 
     "get ACL self = true" in {
       acls.fetch(path, self = true) shouldReturn Task.pure(Option(resourceAcl1))
-      Get(s"/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
+      Get(s"/acls/myorg/myproj/") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls-routes.json")
         status shouldEqual StatusCodes.OK
       }
