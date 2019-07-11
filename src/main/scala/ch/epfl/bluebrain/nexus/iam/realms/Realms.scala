@@ -49,7 +49,7 @@ import scala.util.Try
   * @param index an index implementation for realms
   * @tparam F    the effect type
   */
-class Realms[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
+class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
     implicit http: HttpConfig) {
 
   private val F = implicitly[MonadThrowable[F]]

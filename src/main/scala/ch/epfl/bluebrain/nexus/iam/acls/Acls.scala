@@ -29,7 +29,7 @@ import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
-    agg: Agg[F],
+    val agg: Agg[F],
     private val index: AclsIndex[F],
 )(implicit F: MonadThrowable[F], http: HttpConfig, pc: PermissionsConfig) {
 
