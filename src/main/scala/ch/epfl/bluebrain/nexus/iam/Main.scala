@@ -109,6 +109,11 @@ object Main {
 
     cluster.registerOnMemberUp {
       logger.info("==== Cluster is Live ====")
+
+      if (sys.env.getOrElse("REPAIR_FROM_MESSAGES", "false").toBoolean) {
+        RepairFromMessages.repair(perms, realms, acls)(as, mt, Scheduler.global, CanBlock.permit)
+      }
+
       bootstrapIndexers(acls, realms)
       val routes = Routes(acls, realms, perms)
 

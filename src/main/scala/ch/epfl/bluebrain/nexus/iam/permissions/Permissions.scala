@@ -30,11 +30,15 @@ import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
   * @tparam F   the effect type
   */
 class Permissions[F[_]: MonadThrowable](
-    agg: Agg[F],
+    val agg: Agg[F],
     acls: F[Acls[F]]
 )(implicit http: HttpConfig, pc: PermissionsConfig) {
-  private val F   = implicitly[MonadThrowable[F]]
-  private val pid = "permissions"
+  private val F = implicitly[MonadThrowable[F]]
+
+  /**
+    * The persistence id of the permissions singleton.
+    */
+  val persistenceId: String = "permissions"
 
   /**
     * @return the minimum set of permissions
@@ -54,7 +58,7 @@ class Permissions[F[_]: MonadThrowable](
     */
   def fetchAt(rev: Long)(implicit caller: Caller): F[OptResource] =
     check(read) >> agg
-      .foldLeft[State](pid, Initial) {
+      .foldLeft[State](persistenceId, Initial) {
         case (state, event) if event.rev <= rev => next(pc)(state, event)
         case (state, _)                         => state
       }
@@ -74,7 +78,7 @@ class Permissions[F[_]: MonadThrowable](
     * @return the current permissions as a resource without checking permissions
     */
   def fetchUnsafe: F[Resource] =
-    agg.currentState(pid).map(_.resource)
+    agg.currentState(persistenceId).map(_.resource)
 
   /**
     * @return the current permissions collection without checking permissions
@@ -123,7 +127,7 @@ class Permissions[F[_]: MonadThrowable](
 
   private def eval(cmd: Command): F[MetaOrRejection] =
     agg
-      .evaluateS(pid, cmd)
+      .evaluateS(persistenceId, cmd)
       .flatMap {
         case Left(rej) => F.pure(Left(rej))
         // $COVERAGE-OFF$
