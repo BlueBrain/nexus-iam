@@ -20,7 +20,7 @@ import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder, Json}
-import kamon.instrumentation.akka.http.TracingDirectives._
+import kamon.instrumentation.akka.http.TracingDirectives.operationName
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -56,47 +56,55 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
 
   def routes: Route =
     pathPrefix("realms") {
-      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-        concat(
-          (get & searchParams & pathEndOrSingleSlash) { params =>
-            complete(realms.list(params).runToFuture)
-          },
-          (label & pathEndOrSingleSlash) { id =>
-            operationName(s"/${http.prefix}/realms/{}") {
-              concat(
-                put {
-                  parameter("rev".as[Long].?) {
-                    case Some(rev) =>
-                      entity(as[Realm]) {
-                        case Realm(name, openIdConfig, logo) =>
-                          complete(realms.update(id, rev, name, openIdConfig, logo).runToFuture)
-                      }
-                    case None =>
-                      entity(as[Realm]) {
-                        case Realm(name, openIdConfig, logo) =>
-                          complete(realms.create(id, name, openIdConfig, logo).runWithStatus(StatusCodes.Created))
-                      }
-                  }
-                },
-                get {
-                  parameter("rev".as[Long].?) {
-                    case Some(rev) =>
-                      complete(realms.fetch(id, rev).runNotFound)
-                    case None =>
-                      complete(realms.fetch(id).runNotFound)
-                  }
-                },
-                delete {
-                  parameter("rev".as[Long]) { rev =>
-                    complete(realms.deprecate(id, rev).runToFuture)
-                  }
-                }
-              )
+      concat(
+        (get & searchParams & pathEndOrSingleSlash) { params =>
+          operationName(s"/${http.prefix}/realms") {
+            caller { implicit c =>
+              complete(realms.list(params).runToFuture)
             }
           }
-        )
-      }
+        },
+        (label & pathEndOrSingleSlash) { id =>
+          operationName(s"/${http.prefix}/realms/{}") {
+            caller {
+              implicit c =>
+                concat(
+                  put {
+                    parameter("rev".as[Long].?) {
+                      case Some(rev) =>
+                        entity(as[Realm]) {
+                          case Realm(name, openIdConfig, logo) =>
+                            complete(realms.update(id, rev, name, openIdConfig, logo).runToFuture)
+                        }
+                      case None =>
+                        entity(as[Realm]) {
+                          case Realm(name, openIdConfig, logo) =>
+                            complete(realms.create(id, name, openIdConfig, logo).runWithStatus(StatusCodes.Created))
+                        }
+                    }
+                  },
+                  get {
+                    parameter("rev".as[Long].?) {
+                      case Some(rev) =>
+                        complete(realms.fetch(id, rev).runNotFound)
+                      case None =>
+                        complete(realms.fetch(id).runNotFound)
+                    }
+                  },
+                  delete {
+                    parameter("rev".as[Long]) { rev =>
+                      complete(realms.deprecate(id, rev).runToFuture)
+                    }
+                  }
+                )
+            }
+          }
+        }
+      )
     }
+
+  private def caller: Directive1[Caller] =
+    authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous)
 }
 
 object RealmsRoutes {

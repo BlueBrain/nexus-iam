@@ -8,6 +8,7 @@ import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.types.Caller
 import ch.epfl.bluebrain.nexus.iam.types.Caller.JsonLd._
+import kamon.instrumentation.akka.http.TracingDirectives.operationName
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -20,9 +21,11 @@ class IdentitiesRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
 
   def routes: Route = {
     (pathPrefix("identities") & pathEndOrSingleSlash) {
-      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-        get {
-          complete(caller)
+      operationName(s"/${http.prefix}/identities") {
+        authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
+          get {
+            complete(caller)
+          }
         }
       }
     }

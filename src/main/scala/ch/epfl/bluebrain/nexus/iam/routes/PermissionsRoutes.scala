@@ -13,6 +13,7 @@ import ch.epfl.bluebrain.nexus.iam.routes.PermissionsRoutes.PatchPermissions.{Ap
 import ch.epfl.bluebrain.nexus.iam.types.ResourceF._
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import io.circe.{Decoder, DecodingFailure}
+import kamon.instrumentation.akka.http.TracingDirectives.operationName
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -25,38 +26,40 @@ import monix.execution.Scheduler.Implicits.global
 class PermissionsRoutes(permissions: Permissions[Task], realms: Realms[Task])(implicit http: HttpConfig) {
 
   def routes: Route =
-    pathPrefix("permissions") {
-      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-        concat(
-          (get & pathEndOrSingleSlash) {
-            parameter("rev".as[Long].?) {
-              case Some(rev) => complete(permissions.fetchAt(rev).runNotFound)
-              case None      => complete(permissions.fetch.runToFuture)
+    (pathPrefix("permissions") & pathEndOrSingleSlash) {
+      operationName(s"/${http.prefix}/permissions") {
+        authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
+          concat(
+            get {
+              parameter("rev".as[Long].?) {
+                case Some(rev) => complete(permissions.fetchAt(rev).runNotFound)
+                case None      => complete(permissions.fetch.runToFuture)
+              }
+            },
+            (put & parameter("rev" ? 0L)) { rev =>
+              entity(as[PatchPermissions]) {
+                case Replace(set) =>
+                  complete(permissions.replace(set, rev).runToFuture)
+                case _ => reject(validationRejection("Only @type 'Replace' is permitted when using 'put'."))
+              }
+            },
+            delete {
+              parameter("rev".as[Long]) { rev =>
+                complete(permissions.delete(rev).runToFuture)
+              }
+            },
+            (patch & parameter("rev" ? 0L)) { rev =>
+              entity(as[PatchPermissions]) {
+                case Append(set) =>
+                  complete(permissions.append(set, rev).runToFuture)
+                case Subtract(set) =>
+                  complete(permissions.subtract(set, rev).runToFuture)
+                case _ =>
+                  reject(validationRejection("Only @type 'Append' or 'Subtract' is permitted when using 'patch'."))
+              }
             }
-          },
-          (put & parameter("rev" ? 0L)) { rev =>
-            entity(as[PatchPermissions]) {
-              case Replace(set) =>
-                complete(permissions.replace(set, rev).runToFuture)
-              case _ => reject(validationRejection("Only @type 'Replace' is permitted when using 'put'."))
-            }
-          },
-          delete {
-            parameter("rev".as[Long]) { rev =>
-              complete(permissions.delete(rev).runToFuture)
-            }
-          },
-          (patch & parameter("rev" ? 0L)) { rev =>
-            entity(as[PatchPermissions]) {
-              case Append(set) =>
-                complete(permissions.append(set, rev).runToFuture)
-              case Subtract(set) =>
-                complete(permissions.subtract(set, rev).runToFuture)
-              case _ =>
-                reject(validationRejection("Only @type 'Append' or 'Subtract' is permitted when using 'patch'."))
-            }
-          }
-        )
+          )
+        }
       }
     }
 }

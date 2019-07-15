@@ -37,7 +37,7 @@ object AuthDirectives {
     * Extracts the current selected resource address.
     */
   def extractResourceAddress(implicit hc: HttpConfig): Directive1[AbsoluteIri] =
-    extractMatchedPath.map(p => hc.prefixIri + p.toIriPath)
+    extractMatchedPath.map(p => hc.publicIri + p.toIriPath)
 
   /**
     * Tests whether the caller has the argument permission positioned at the root level '/'.
