@@ -9,6 +9,7 @@ import ch.epfl.bluebrain.nexus.iam.routes.AppInfoRoutes.Status.{Inaccessible, Up
 import ch.epfl.bluebrain.nexus.iam.routes.AppInfoRoutes.{Health, ServiceDescription, Status}
 import io.circe.Encoder
 import io.circe.generic.auto._
+import kamon.instrumentation.akka.http.TracingDirectives.operationName
 
 import scala.util._
 
@@ -25,12 +26,16 @@ class AppInfoRoutes(serviceDescription: ServiceDescription, cluster: Cluster, ca
 
   def routes: Route = concat(
     (get & pathEndOrSingleSlash) {
-      complete(serviceDescription)
+      operationName("/") {
+        complete(serviceDescription)
+      }
     },
     (pathPrefix("health") & get & pathEndOrSingleSlash) {
-      onComplete(cassandraHealth.check) {
-        case Success(true) => complete(Health(cluster = clusterStatus, cassandra = Up))
-        case _             => complete(Health(cluster = clusterStatus, cassandra = Inaccessible))
+      operationName("/health") {
+        onComplete(cassandraHealth.check) {
+          case Success(true) => complete(Health(cluster = clusterStatus, cassandra = Up))
+          case _             => complete(Health(cluster = clusterStatus, cassandra = Inaccessible))
+        }
       }
     }
   )

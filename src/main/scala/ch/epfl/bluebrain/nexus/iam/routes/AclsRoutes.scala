@@ -30,9 +30,9 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit hc: HttpConfig
 
   def routes: Route =
     pathPrefix("acls") {
-      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-        extractResourcePath { path =>
-          operationName(s"/${hc.prefix}/acls" + path.segments.map(_ => "/{}").mkString("")) { // /v1/acls/{}/{}
+      extractResourcePath { path =>
+        operationName(s"/${hc.prefix}/acls" + path.segments.map(_ => "/{}").mkString("")) { // /v1/acls/{}/{}
+          authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
             concat(
               parameter("rev" ? 0L) { rev =>
                 val status = if (rev == 0L) Created else OK

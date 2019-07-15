@@ -30,6 +30,7 @@ import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.iam.{acls => aclsp, permissions => permissionsp, realms => realmsp}
 import io.circe.syntax._
 import io.circe.{Encoder, Printer}
+import kamon.instrumentation.akka.http.TracingDirectives.operationName
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 
@@ -53,24 +54,29 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
   private implicit val implAcls: Acls[Task] = acls
 
   def routes: Route =
+    // format: off
     concat(
-      routesFor("acls" / "events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
-      routesFor("permissions" / "events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
-      routesFor("realms" / "events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
-      routesFor("events", eventTag, eventsRead, eventToSse),
+      routesFor("acls" / "events", s"/${hc.prefix}/acls/events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
+      routesFor("permissions" / "events", s"/${hc.prefix}/permissions/events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
+      routesFor("realms" / "events", s"/${hc.prefix}/realms/events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
+      routesFor("events", s"/${hc.prefix}/events", eventTag, eventsRead, eventToSse),
     )
+  // format: on
 
   private def routesFor(
       pm: PathMatcher0,
+      opName: String,
       tag: String,
       permission: Permission,
       toSse: EventEnvelope => Option[ServerSentEvent]
   ): Route =
     (pathPrefix(pm) & pathEndOrSingleSlash) {
-      authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
-        authorizeFor(permission).apply {
-          lastEventId { offset =>
-            complete(source(tag, offset, toSse))
+      operationName(opName) {
+        authenticateOAuth2Async("*", authenticator(realms)).withAnonymousUser(Caller.anonymous) { implicit caller =>
+          authorizeFor(permission).apply {
+            lastEventId { offset =>
+              complete(source(tag, offset, toSse))
+            }
           }
         }
       }
