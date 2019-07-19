@@ -26,7 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.1.0"
-val commonsVersion             = "0.16.1"
+val commonsVersion             = "0.17.0"
 val sourcingVersion            = "0.16.3"
 val akkaVersion                = "2.5.23"
 val akkaCorsVersion            = "0.4.1"
@@ -116,7 +116,15 @@ lazy val iam = project
       scalaTest          % Test,
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven",
-    resolvers += "bogdanromanx" at "http://dl.bintray.com/bogdanromanx/maven"
+    mappings in Universal := {
+      val universalMappings = (mappings in Universal).value
+      universalMappings.foldLeft(Vector.empty[(File, String)]) {
+        case (acc, (file, filename)) if filename.contains("kanela-agent") =>
+          acc :+ (file, "lib/instrumentation-agent.jar")
+        case (acc, other) =>
+          acc :+ other
+      }
+    }
   )
 
 lazy val client = project
