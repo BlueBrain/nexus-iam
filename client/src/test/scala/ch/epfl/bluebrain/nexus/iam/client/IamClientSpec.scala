@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.{Get, Put}
-import akka.http.scaladsl.model.StatusCodes.InternalServerError
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.stream.scaladsl.Source
@@ -13,7 +12,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
 import cats.effect.IO
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.test.Resources
 import ch.epfl.bluebrain.nexus.commons.test.io.IOValues
 import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized}
@@ -108,14 +107,6 @@ class IamClientSpec
           IO.raiseError(Unauthorized("{}"))
         client.acls("a" / "b", ancestors = true, self = true).failed[Unauthorized]
         client.hasPermission("a" / "b", Permission.unsafe("read")).failed[Unauthorized]
-      }
-
-      "fail with UnexpectedUnsuccessfulHttpResponse" in {
-        implicit val tokenOpt: Option[AuthToken] = None
-        aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn
-          IO.raiseError(UnexpectedUnsuccessfulHttpResponse(HttpResponse(status = InternalServerError), "none"))
-        client.acls("a" / "b", ancestors = true, self = true).failed[IamClientError.UnknownError]
-        client.hasPermission("a" / "b", Permission.unsafe("read")).failed[IamClientError.UnknownError]
       }
 
       "fail with Forbidden" in {

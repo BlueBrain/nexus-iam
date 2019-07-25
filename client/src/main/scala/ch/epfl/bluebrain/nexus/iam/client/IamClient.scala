@@ -13,7 +13,7 @@ import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
 import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
@@ -41,8 +41,6 @@ class IamClient[F[_]] private[client] (
     jsonClient: HttpClient[F, Json]
 )(implicit F: Effect[F], mt: Materializer) {
 
-  private val log = Logger[this.type]
-
   /**
     * Retrieve the current ''acls'' for some particular ''path''.
     *
@@ -55,7 +53,7 @@ class IamClient[F[_]] private[client] (
       implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
     val endpoint = config.aclsIri + path
     val req      = requestFrom(endpoint, Query("ancestors" -> ancestors.toString, "self" -> self.toString))
-    aclsClient(req).handleErrorWith(handleError(req, "acls fetch"))
+    aclsClient(req)
   }
 
   /**
@@ -64,10 +62,7 @@ class IamClient[F[_]] private[client] (
     */
   def identities(implicit credentials: Option[AuthToken]): F[Caller] = {
     credentials
-      .map { _ =>
-        val req = requestFrom(config.identitiesIri)
-        callerClient(req).handleErrorWith(handleError(req, "identities fetch"))
-      }
+      .map(_ => callerClient(requestFrom(config.identitiesIri)))
       .getOrElse(F.pure(Caller.anonymous))
   }
 
@@ -77,10 +72,8 @@ class IamClient[F[_]] private[client] (
     * @param credentials an optionally available token
     * @return available permissions
     */
-  def permissions(implicit credentials: Option[AuthToken]): F[Set[Permission]] = {
-    val req = requestFrom(config.permissionsIri)
-    permissionsClient(req).map(_.permissions).handleErrorWith(handleError(req, "permissions fetch"))
-  }
+  def permissions(implicit credentials: Option[AuthToken]): F[Set[Permission]] =
+    permissionsClient(requestFrom(config.permissionsIri)).map(_.permissions)
 
   /**
     * Replace ACL at a given path.
@@ -96,10 +89,10 @@ class IamClient[F[_]] private[client] (
     val endpoint   = config.aclsIri + path
     val entity     = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
     val query      = rev.map(r => Query("rev" -> r.toString)).getOrElse(Query.Empty)
-    val req        = Put(endpoint.toAkkaUri.withQuery(query), entity)
-    val reqWithCredentials =
-      credentials.map(token => req.addCredentials(OAuth2BearerToken(token.value))).getOrElse(req)
-    jsonClient(reqWithCredentials).handleErrorWith(handleError(req, "acls replace")) *> F.unit
+    val request    = Put(endpoint.toAkkaUri.withQuery(query), entity)
+    val requestWithCredentials =
+      credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
+    jsonClient(requestWithCredentials) *> F.unit
   }
 
   /**
@@ -174,14 +167,6 @@ class IamClient[F[_]] private[client] (
       .mapMaterializedValue(_ => ())
       .run()
 
-  private def handleError[A](req: HttpRequest, intent: String): Throwable => F[A] = {
-    case UnexpectedUnsuccessfulHttpResponse(response, body) =>
-      F.raiseError(UnknownError(response.status, body))
-    case NonFatal(th) =>
-      log.error(s"Unexpected response for IAM '$intent' call. Request: '${req.method} ${req.uri}'", th)
-      F.raiseError(UnknownError(StatusCodes.InternalServerError, th.getMessage))
-  }
-
   private def requestFrom(iri: AbsoluteIri, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
     val request = Get(iri.toAkkaUri.withQuery(query))
     credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
@@ -202,8 +187,14 @@ object IamClient {
   ): HttpClient[F, A] = new HttpClient[F, A] {
     private val logger = Logger(s"IamHttpClient[${implicitly[ClassTag[A]]}]")
 
+    private def handleError[B](req: HttpRequest): Throwable => F[B] = {
+      case NonFatal(th) =>
+        logger.error(s"Unexpected response for IAM call. Request: '${req.method} ${req.uri}'", th)
+        F.raiseError(UnknownError(StatusCodes.InternalServerError, th.getMessage))
+    }
+
     override def apply(req: HttpRequest): F[A] =
-      cl.apply(req).flatMap { resp =>
+      cl(req).handleErrorWith(handleError(req)).flatMap { resp =>
         resp.status match {
           case StatusCodes.Unauthorized =>
             cl.toString(resp.entity).flatMap { entityAsString =>
