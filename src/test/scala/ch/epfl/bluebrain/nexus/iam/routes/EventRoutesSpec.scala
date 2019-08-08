@@ -67,11 +67,11 @@ class EventRoutesSpec
   }
 
   val path    = Path.Empty / "myorg" / "myproj"
-  val rev     = 1l
+  val rev     = 1L
   val subject = User("uuid", "myrealm")
   val acl = AccessControlList(
     Group("mygroup", "myrealm") -> Set(aclp.write),
-    subject                     -> Set(aclp.write),
+    subject                     -> Set(aclp.write)
   )
   val instant      = Instant.EPOCH
   val name         = "The Realm"
@@ -91,7 +91,7 @@ class EventRoutesSpec
     AclReplaced(path, acl, rev, instant, subject),
     AclAppended(path, acl, rev, instant, subject),
     AclSubtracted(path, acl, rev, instant, subject),
-    AclDeleted(path, rev, instant, subject),
+    AclDeleted(path, rev, instant, subject)
   )
 
   val realmEvents = List(
@@ -129,14 +129,14 @@ class EventRoutesSpec
       instant,
       subject
     ),
-    RealmDeprecated(Label.unsafe("myrealm"), rev, instant, subject),
+    RealmDeprecated(Label.unsafe("myrealm"), rev, instant, subject)
   )
 
   val permissionsEvents = List(
     PermissionsAppended(rev, Set(aclp.write), instant, subject),
     PermissionsSubtracted(rev, Set(aclp.write), instant, subject),
     PermissionsReplaced(rev, Set(aclp.write), instant, subject),
-    PermissionsDeleted(rev, instant, subject),
+    PermissionsDeleted(rev, instant, subject)
   )
 
   def eventStreamFor(jsons: Vector[Json], drop: Int = 0): String =
@@ -233,7 +233,7 @@ object EventRoutesSpec {
 
     private val envelopes = events.zipWithIndex.map {
       case (ev, idx) =>
-        EventEnvelope(Sequence(idx.toLong), "persistenceid", 1l, ev)
+        EventEnvelope(Sequence(idx.toLong), "persistenceid", 1L, ev)
     }
 
     override protected def source(

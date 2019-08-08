@@ -147,8 +147,10 @@ class PermissionsRoutesSpec
     "return 400 when trying to create permission which is too long" in {
       perms.append(any[Set[Permission]], 2L)(any[Caller]) shouldReturn Task.pure(Right(meta(0L)))
       val json =
-        Json.obj("@type"       -> Json.fromString("Append"),
-                 "permissions" -> Json.arr(Json.fromString(s"${genString()}/${genString()}")))
+        Json.obj(
+          "@type"       -> Json.fromString("Append"),
+          "permissions" -> Json.arr(Json.fromString(s"${genString()}/${genString()}"))
+        )
       Patch("/permissions?rev=2", json) ~> routes ~> check {
         status shouldEqual StatusCodes.BadRequest
       }

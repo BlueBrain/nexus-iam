@@ -20,7 +20,8 @@ object IamClientError {
 
   final case class UnmarshallingError[A: ClassTag](reason: String)
       extends IamClientError(
-        s"Unable to parse or decode the response from IAM to a '${implicitly[ClassTag[A]]}' due to '$reason'.")
+        s"Unable to parse or decode the response from IAM to a '${implicitly[ClassTag[A]]}' due to '$reason'."
+      )
 
   final case class UnknownError(status: StatusCode, entityAsString: String)
       extends IamClientError("The request did not complete successfully.")

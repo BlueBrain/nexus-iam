@@ -60,7 +60,8 @@ object RealmRejection {
     */
   final case class IncorrectRev(provided: Long, expected: Long)
       extends RealmRejection(
-        s"Incorrect revision '$provided' provided, expected '$expected', the realm may have been updated since last seen.")
+        s"Incorrect revision '$provided' provided, expected '$expected', the realm may have been updated since last seen."
+      )
 
   /**
     * Rejection returned when attempting to parse an openid configuration document, but the grant types are not properly
@@ -71,7 +72,8 @@ object RealmRejection {
     */
   final case class IllegalGrantTypeFormat(document: Url, location: String)
       extends RealmRejection(
-        s"Failed to parse '$location' from '${document.asUri}' as a collection of supported grant types.")
+        s"Failed to parse '$location' from '${document.asUri}' as a collection of supported grant types."
+      )
 
   /**
     * Rejection returned when attempting to parse an openid configuration document, but the issuer is not properly

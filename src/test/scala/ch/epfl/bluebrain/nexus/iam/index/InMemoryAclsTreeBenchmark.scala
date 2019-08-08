@@ -58,11 +58,13 @@ class InMemoryAclsTreeBenchmark
 
   ingest(orgs1, projects1, users1, index1, 1000)
 
-  def ingest(orgs: List[String],
-             projects: List[String],
-             users: List[User],
-             index: InMemoryAclsTree[Id],
-             total: Int): Unit =
+  def ingest(
+      orgs: List[String],
+      projects: List[String],
+      users: List[User],
+      index: InMemoryAclsTree[Id],
+      total: Int
+  ): Unit =
     (0 until total).foreach { v =>
       val org     = orgs(genInt(max = orgs.size - 1))
       val project = projects(genInt(max = projects.size - 1))
@@ -70,14 +72,16 @@ class InMemoryAclsTreeBenchmark
       val user2   = users(genInt(max = users.size - 1))
       val perm    = Random.shuffle(permissions).take(4).toSet
       val perm2   = Random.shuffle(permissions).take(4).toSet
-      val acl = ResourceF(http.aclsIri + "id3",
-                          3L,
-                          Set.empty,
-                          instant,
-                          user,
-                          instant,
-                          user2,
-                          AccessControlList(user -> perm, user2 -> perm2))
+      val acl = ResourceF(
+        http.aclsIri + "id3",
+        3L,
+        Set.empty,
+        instant,
+        user,
+        instant,
+        user2,
+        AccessControlList(user -> perm, user2 -> perm2)
+      )
       genInt(max = 2) match {
         case 0 => index.replace(/, acl.copy(rev = v.toLong))
         case 1 => index.replace(Path(org).right.value, acl.copy(rev = v.toLong))

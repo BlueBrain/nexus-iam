@@ -22,7 +22,8 @@ class AppInfoRoutes(serviceDescription: ServiceDescription, cluster: Cluster, ca
     Status(
       !cluster.isTerminated &&
         cluster.state.leader.isDefined && cluster.state.members.nonEmpty &&
-        !cluster.state.members.exists(_.status != MemberStatus.Up) && cluster.state.unreachable.isEmpty)
+        !cluster.state.members.exists(_.status != MemberStatus.Up) && cluster.state.unreachable.isEmpty
+    )
 
   def routes: Route = concat(
     (get & pathEndOrSingleSlash) {

@@ -26,15 +26,17 @@ import scala.concurrent.duration._
   * @param realms      configuration for realms
   * @param groups      configuration for groups
   */
-final case class AppConfig(description: Description,
-                           http: HttpConfig,
-                           cluster: ClusterConfig,
-                           persistence: PersistenceConfig,
-                           indexing: IndexingConfig,
-                           acls: AclsConfig,
-                           permissions: PermissionsConfig,
-                           realms: RealmsConfig,
-                           groups: GroupsConfig)
+final case class AppConfig(
+    description: Description,
+    http: HttpConfig,
+    cluster: ClusterConfig,
+    persistence: PersistenceConfig,
+    indexing: IndexingConfig,
+    acls: AclsConfig,
+    permissions: PermissionsConfig,
+    realms: RealmsConfig,
+    groups: GroupsConfig
+)
 
 object AppConfig {
 
@@ -81,10 +83,12 @@ object AppConfig {
     * @param shards             number of shards in the cluster
     * @param seeds              seed nodes in the cluster
     */
-  final case class ClusterConfig(passivationTimeout: FiniteDuration,
-                                 replicationTimeout: FiniteDuration,
-                                 shards: Int,
-                                 seeds: Option[String])
+  final case class ClusterConfig(
+      passivationTimeout: FiniteDuration,
+      replicationTimeout: FiniteDuration,
+      shards: Int,
+      seeds: Option[String]
+  )
 
   /**
     * Persistence configuration
@@ -175,8 +179,9 @@ object AppConfig {
       nxv.updatedAt.prefix,
       nxv.updatedBy.prefix,
       nxv.instant.prefix,
-      nxv.subject.prefix,
-    ))
+      nxv.subject.prefix
+    )
+  )
 
   implicit def toPersistence(implicit appConfig: AppConfig): PersistenceConfig      = appConfig.persistence
   implicit def toHttp(implicit appConfig: AppConfig): HttpConfig                    = appConfig.http

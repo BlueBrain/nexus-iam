@@ -113,7 +113,7 @@ lazy val iam = project
       akkaPersistenceMem % Test,
       commonsTest        % Test,
       mockitoScala       % Test,
-      scalaTest          % Test,
+      scalaTest          % Test
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven",
     mappings in Universal := {
@@ -146,7 +146,7 @@ lazy val client = project
       akkaHttpTestKit % Test,
       commonsTest     % Test,
       mockitoScala    % Test,
-      scalaTest       % Test,
+      scalaTest       % Test
     )
   )
 
@@ -159,7 +159,7 @@ lazy val testSettings = Seq(
   dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
   // rewire tasks, so that 'jmh:run' automatically invokes 'jmh:compile' (otherwise a clean 'jmh:run' would fail)
   compile in Jmh := (compile in Jmh).dependsOn(compile in Test).value,
-  run in Jmh     := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated,
+  run in Jmh     := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated
 )
 
 lazy val buildInfoSettings = Seq(

@@ -29,7 +29,8 @@ object PermissionsRejection {
     */
   final case class CannotSubtractFromMinimumCollection(permissions: Set[Permission])
       extends PermissionsRejection(
-        s"Cannot subtract permissions from the minimum collection of permissions: '${permissions.mkString("\"", ", ", "\"")}'")
+        s"Cannot subtract permissions from the minimum collection of permissions: '${permissions.mkString("\"", ", ", "\"")}'"
+      )
 
   /**
     * Rejection returned when a subject intends to subtract permissions when the current collection is empty.
@@ -42,7 +43,8 @@ object PermissionsRejection {
     */
   final case class CannotSubtractUndefinedPermissions(permissions: Set[Permission])
       extends PermissionsRejection(
-        s"Cannot subtract permissions not present in the collection: '${permissions.mkString("\"", ", ", "\"")}'.")
+        s"Cannot subtract permissions not present in the collection: '${permissions.mkString("\"", ", ", "\"")}'."
+      )
 
   /**
     * Rejection returned when a subject intends to append an empty collection of permissions.
@@ -72,7 +74,8 @@ object PermissionsRejection {
     */
   final case class IncorrectRev(provided: Long, expected: Long)
       extends PermissionsRejection(
-        s"Incorrect revision '$provided' provided, expected '$expected', permissions may have been updated since last seen.")
+        s"Incorrect revision '$provided' provided, expected '$expected', permissions may have been updated since last seen."
+      )
 
   implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")

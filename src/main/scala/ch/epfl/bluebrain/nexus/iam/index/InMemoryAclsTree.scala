@@ -24,8 +24,8 @@ import scala.annotation.tailrec
 class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], acls: ConcurrentHashMap[Path, Resource])(
     implicit F: Applicative[F],
     pc: PermissionsConfig,
-    http: HttpConfig)
-    extends AclsIndex[F] {
+    http: HttpConfig
+) extends AclsIndex[F] {
 
   private val any = "*"
 
@@ -43,7 +43,7 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
       curr match {
         case c if rev > c.rev => aclResource
         case other            => other
-    }
+      }
     val updated = acls.merge(path, aclResource, f)
 
     val update = updated == aclResource
@@ -52,7 +52,8 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
   }
 
   override def get(path: Path, ancestors: Boolean, self: Boolean)(
-      implicit identities: Set[Identity]): F[AccessControlLists] = {
+      implicit identities: Set[Identity]
+  ): F[AccessControlLists] = {
 
     def removeNotOwn(currentAcls: AccessControlLists): AccessControlLists = {
       def containsAclsRead(acl: AccessControlList): Boolean =

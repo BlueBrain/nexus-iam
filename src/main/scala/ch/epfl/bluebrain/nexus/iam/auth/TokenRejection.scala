@@ -18,7 +18,8 @@ object TokenRejection {
     */
   final case object InvalidAccessTokenFormat
       extends TokenRejection(
-        "Access token is invalid; possible causes are: JWT not signed, encoded parts are not properly encoded or each part is not a valid json.")
+        "Access token is invalid; possible causes are: JWT not signed, encoded parts are not properly encoded or each part is not a valid json."
+      )
 
   /**
     * Rejection for cases where the access token does not contain a subject in the claim set.
@@ -42,7 +43,8 @@ object TokenRejection {
     */
   final case object InvalidAccessToken
       extends TokenRejection(
-        "The token is invalid; possible causes are: incorrect signature, the token is expired or the 'nbf' value was not met.")
+        "The token is invalid; possible causes are: incorrect signature, the token is expired or the 'nbf' value was not met."
+      )
 
   implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")

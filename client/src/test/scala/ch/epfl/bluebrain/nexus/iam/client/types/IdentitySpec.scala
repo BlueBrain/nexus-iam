@@ -32,7 +32,7 @@ class IdentitySpec
         url"http://nexus.example.com/v1/realms/myrealm/authenticated".value   -> authenticated,
         url"https://random.com/v1/realms/myrealm/authenticated".value         -> authenticated,
         url"http://nexus.example.com/v1/anonymous".value                      -> Anonymous,
-        url"https://random.com/v1/anonymous".value                            -> Anonymous,
+        url"https://random.com/v1/anonymous".value                            -> Anonymous
       )
       forAll(cases) {
         case (iri, identity) => Identity(iri).value shouldEqual identity

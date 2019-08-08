@@ -75,7 +75,8 @@ class WellKnownSpec
       "the client records a bad response" in {
         implicit val cl = mock[HttpClient[IO, Json]]
         cl.apply(Get(openIdUrlString)) shouldReturn IO.raiseError(
-          UnexpectedUnsuccessfulHttpResponse(HttpResponse(), ""))
+          UnexpectedUnsuccessfulHttpResponse(HttpResponse(), "")
+        )
         val rej = WellKnown[IO](openIdUrl).rejected[UnsuccessfulOpenIdConfigResponse]
         rej.document shouldEqual openIdUrl
       }
@@ -107,8 +108,10 @@ class WellKnownSpec
       }
       "the openid contains a invalid grant_types" in {
         implicit val cl =
-          httpMock(validOpenIdConfig.deepMerge(Json.obj("grant_types_supported" -> Json.fromString("incorrect"))),
-                   validJwks)
+          httpMock(
+            validOpenIdConfig.deepMerge(Json.obj("grant_types_supported" -> Json.fromString("incorrect"))),
+            validJwks
+          )
         val rej = WellKnown[IO](openIdUrl).rejected[IllegalGrantTypeFormat]
         rej.document shouldEqual openIdUrl
         rej.location shouldEqual ".grant_types_supported"
@@ -116,18 +119,22 @@ class WellKnownSpec
       "the openid contains no valid grant_types" in {
         implicit val cl = httpMock(
           validOpenIdConfig.deepMerge(Json.obj("grant_types_supported" -> Json.arr(Json.fromString("incorrect")))),
-          validJwks)
+          validJwks
+        )
         val rej = WellKnown[IO](openIdUrl).rejected[IllegalGrantTypeFormat]
         rej.document shouldEqual openIdUrl
         rej.location shouldEqual ".grant_types_supported[0]"
       }
       "the openid contains an incorrect endpoint" in {
         forAll(
-          List("authorization_endpoint",
-               "token_endpoint",
-               "userinfo_endpoint",
-               "revocation_endpoint",
-               "end_session_endpoint")) { key =>
+          List(
+            "authorization_endpoint",
+            "token_endpoint",
+            "userinfo_endpoint",
+            "revocation_endpoint",
+            "end_session_endpoint"
+          )
+        ) { key =>
           implicit val cl = httpMock(fullOpenIdConfig.deepMerge(Json.obj(key -> Json.fromInt(3))), validJwks)
           val rej         = WellKnown[IO](openIdUrl).rejected[IllegalEndpointFormat]
           rej.document shouldEqual openIdUrl

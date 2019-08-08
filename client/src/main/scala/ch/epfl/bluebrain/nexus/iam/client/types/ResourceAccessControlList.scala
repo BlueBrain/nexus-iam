@@ -26,14 +26,16 @@ import io.circe.syntax._
   * @param updatedBy the subject that performed the last update to the resource
   * @param value     the Access Control List
   */
-final case class ResourceAccessControlList(id: AbsoluteIri,
-                                           rev: Long,
-                                           types: Set[AbsoluteIri],
-                                           createdAt: Instant,
-                                           createdBy: Subject,
-                                           updatedAt: Instant,
-                                           updatedBy: Subject,
-                                           value: AccessControlList)
+final case class ResourceAccessControlList(
+    id: AbsoluteIri,
+    rev: Long,
+    types: Set[AbsoluteIri],
+    createdAt: Instant,
+    createdBy: Subject,
+    updatedAt: Instant,
+    updatedBy: Subject,
+    value: AccessControlList
+)
 object ResourceAccessControlList {
 
   implicit def resourceAccessControlListEncoder(implicit config: IamClientConfig): Encoder[ResourceAccessControlList] =

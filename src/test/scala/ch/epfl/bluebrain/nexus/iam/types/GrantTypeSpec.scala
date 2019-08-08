@@ -15,7 +15,7 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
         Password          -> "password",
         ClientCredentials -> "clientCredentials",
         DeviceCode        -> "deviceCode",
-        RefreshToken      -> "refreshToken",
+        RefreshToken      -> "refreshToken"
       )
       "be encoded properly" in {
         val encoder = implicitly[Encoder[GrantType]]
@@ -44,7 +44,7 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
         Password          -> "password",
         ClientCredentials -> "client_credentials",
         DeviceCode        -> "device_code",
-        RefreshToken      -> "refresh_token",
+        RefreshToken      -> "refresh_token"
       )
       "be encoded properly" in {
         val encoder = implicitly[Encoder[GrantType]]
