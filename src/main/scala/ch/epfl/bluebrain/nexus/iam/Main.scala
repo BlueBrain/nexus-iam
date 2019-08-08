@@ -53,8 +53,9 @@ object Main {
     }
   }
 
-  def bootstrap(as: ActorSystem)(implicit cfg: AppConfig,
-                                 mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
+  def bootstrap(
+      as: ActorSystem
+  )(implicit cfg: AppConfig, mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
     import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
     implicit val system = as

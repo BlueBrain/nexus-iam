@@ -50,7 +50,8 @@ class IamClient[F[_]] private[client] (
     * @param credentials an optionally available token
     */
   def acls(path: Path, ancestors: Boolean = false, self: Boolean = false)(
-      implicit credentials: Option[AuthToken]): F[AccessControlLists] = {
+      implicit credentials: Option[AuthToken]
+  ): F[AccessControlLists] = {
     val endpoint = config.aclsIri + path
     val req      = requestFrom(endpoint, Query("ancestors" -> ancestors.toString, "self" -> self.toString))
     aclsClient(req)
@@ -84,7 +85,8 @@ class IamClient[F[_]] private[client] (
     * @param credentials an optionally available token
     */
   def putAcls(path: Path, acl: AccessControlList, rev: Option[Long] = None)(
-      implicit credentials: Option[AuthToken]): F[Unit] = {
+      implicit credentials: Option[AuthToken]
+  ): F[Unit] = {
     implicit val _ = config
     val endpoint   = config.aclsIri + path
     val entity     = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
@@ -127,7 +129,8 @@ class IamClient[F[_]] private[client] (
     * @param offset the optional offset from where to start streaming the events
     */
   def permissionEvents(f: PermissionsEvent => F[Unit], offset: Option[String] = None)(
-      implicit cred: Option[AuthToken]): Unit = {
+      implicit cred: Option[AuthToken]
+  ): Unit = {
     val pf: PartialFunction[Event, F[Unit]] = { case ev: PermissionsEvent => f(ev) }
     events(config.permissionsIri + "events", pf, offset)
   }
@@ -155,7 +158,8 @@ class IamClient[F[_]] private[client] (
   }
 
   private def events(iri: AbsoluteIri, f: PartialFunction[Event, F[Unit]], offset: Option[String])(
-      implicit cred: Option[AuthToken]): Unit =
+      implicit cred: Option[AuthToken]
+  ): Unit =
     source(iri, offset)
       .mapAsync(1) { event =>
         f.lift(event) match {
@@ -209,18 +213,19 @@ object IamClient {
             val value = L.liftIO(IO.fromFuture(IO(um(resp.entity))))
             value.recoverWith {
               case pf: ParsingFailure =>
-                logger.error(
-                  s"Failed to parse a successful response of '${req.method.name()} ${req.getUri().toString}'.")
+                logger
+                  .error(s"Failed to parse a successful response of '${req.method.name()} ${req.getUri().toString}'.")
                 F.raiseError[A](UnmarshallingError(pf.getMessage()))
               case df: DecodingFailure =>
-                logger.error(
-                  s"Failed to decode a successful response of '${req.method.name()} ${req.getUri().toString}'.")
+                logger
+                  .error(s"Failed to decode a successful response of '${req.method.name()} ${req.getUri().toString}'.")
                 F.raiseError(UnmarshallingError(df.getMessage()))
             }
           case other =>
             cl.toString(resp.entity).flatMap { entityAsString =>
               logger.error(
-                s"Received '${other.value}' when accessing '${req.method.name()} ${req.uri.toString()}', response entity as string: '$entityAsString.'")
+                s"Received '${other.value}' when accessing '${req.method.name()} ${req.uri.toString()}', response entity as string: '$entityAsString.'"
+              )
               F.raiseError[A](UnknownError(other, entityAsString))
             }
         }

@@ -11,10 +11,12 @@ class CallerDecoderSpec extends WordSpecLike with Matchers with Resources with E
 
       jsonContentOf("/identities/caller.json").as[Caller].right.value shouldEqual Caller(
         User("nexus-test-user", "nexusdev"),
-        Set(Anonymous,
-            Authenticated("nexusdev"),
-            Group("nexus-test-group", "nexusdev"),
-            User("nexus-test-user", "nexusdev"))
+        Set(
+          Anonymous,
+          Authenticated("nexusdev"),
+          Group("nexus-test-group", "nexusdev"),
+          User("nexus-test-user", "nexusdev")
+        )
       )
 
     }

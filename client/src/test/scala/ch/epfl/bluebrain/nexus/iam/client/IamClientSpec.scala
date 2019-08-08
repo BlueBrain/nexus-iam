@@ -70,14 +70,16 @@ class IamClientSpec
 
     "fetching ACLs and authorizing" should {
       val acl = AccessControlList(Anonymous -> Set(Permission.unsafe("create"), Permission.unsafe("read")))
-      val aclWithMeta = ResourceAccessControlList(url"http://example.com/id".value,
-                                                  7L,
-                                                  Set.empty,
-                                                  clock.instant(),
-                                                  Anonymous,
-                                                  clock.instant(),
-                                                  Anonymous,
-                                                  acl)
+      val aclWithMeta = ResourceAccessControlList(
+        url"http://example.com/id".value,
+        7L,
+        Set.empty,
+        clock.instant(),
+        Anonymous,
+        clock.instant(),
+        Anonymous,
+        acl
+      )
 
       "succeed with token" in {
         implicit val tokenOpt = Option(AuthToken("token"))
@@ -96,7 +98,8 @@ class IamClientSpec
         val expected                             = AccessControlLists(/ -> aclWithMeta)
 
         aclsClient(Get("http://internal.example.com/some/v1/acls/a/b?ancestors=true&self=true")) shouldReturn IO(
-          expected)
+          expected
+        )
         client.acls("a" / "b", ancestors = true, self = true).ioValue shouldEqual expected
         client.hasPermission("a" / "b", Permission.unsafe("read")).ioValue shouldEqual true
       }
@@ -194,7 +197,8 @@ class IamClientSpec
         val expected          = Caller(user, Set(user, Anonymous))
 
         callerClient(Get("http://internal.example.com/some/v1/identities").addCredentials(token)) shouldReturn IO.pure(
-          expected)
+          expected
+        )
         client.identities.ioValue shouldEqual expected
       }
 

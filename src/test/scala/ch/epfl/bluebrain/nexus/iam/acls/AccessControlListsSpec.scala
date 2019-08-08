@@ -34,54 +34,68 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
     val tpes = Set[AbsoluteIri](nxv.AccessControlList)
 
     val acl =
-      ResourceF(http.aclsIri + "id1",
-                1L,
-                tpes,
-                instant,
-                user,
-                instant,
-                user2,
-                AccessControlList(user -> Set(read, write), group -> Set(other)))
+      ResourceF(
+        http.aclsIri + "id1",
+        1L,
+        tpes,
+        instant,
+        user,
+        instant,
+        user2,
+        AccessControlList(user -> Set(read, write), group -> Set(other))
+      )
     val acl2 =
       ResourceF(http.aclsIri + "id2", 2L, tpes, instant, user, instant, user, AccessControlList(group -> Set(read)))
     val acl3 =
       ResourceF(http.aclsIri + "id3", 3L, tpes, instant, user, instant, user2, AccessControlList(group -> Set(other)))
 
     "merge two ACLs" in {
-      AccessControlLists(/           -> acl) ++ AccessControlLists(/ -> acl2, "a" / "b" -> acl3) shouldEqual
-        AccessControlLists(/         -> acl.map(_ => AccessControlList(user -> Set(read, write), group -> Set(read, other))),
-                           "a" / "b" -> acl3)
+      AccessControlLists(/ -> acl) ++ AccessControlLists(/ -> acl2, "a" / "b" -> acl3) shouldEqual
+        AccessControlLists(
+          /         -> acl.map(_ => AccessControlList(user -> Set(read, write), group -> Set(read, other))),
+          "a" / "b" -> acl3
+        )
 
       AccessControlLists(/   -> acl) ++ AccessControlLists("a" / "b" -> acl2) shouldEqual
         AccessControlLists(/ -> acl, "a" / "b"                       -> acl2)
     }
 
     "add ACL" in {
-      AccessControlLists(/           -> acl) + (/ -> acl2) + ("a" / "b" -> acl3) shouldEqual
-        AccessControlLists(/         -> acl2.map(_ => AccessControlList(user -> Set(read, write), group -> Set(read, other))),
-                           "a" / "b" -> acl3)
+      AccessControlLists(/ -> acl) + (/ -> acl2) + ("a" / "b" -> acl3) shouldEqual
+        AccessControlLists(
+          /         -> acl2.map(_ => AccessControlList(user -> Set(read, write), group -> Set(read, other))),
+          "a" / "b" -> acl3
+        )
     }
     "sort ACLs" in {
-      AccessControlLists("aa" / "bb"            -> acl,
-                         /                      -> acl3,
-                         "a" / "b"              -> acl.map(_ => AccessControlList.empty),
-                         Path("/a").right.value -> acl2).sorted shouldEqual
-        AccessControlLists(/                      -> acl3,
-                           Path("/a").right.value -> acl2,
-                           "a" / "b"              -> acl.map(_ => AccessControlList.empty),
-                           "aa" / "bb"            -> acl)
+      AccessControlLists(
+        "aa" / "bb"            -> acl,
+        /                      -> acl3,
+        "a" / "b"              -> acl.map(_ => AccessControlList.empty),
+        Path("/a").right.value -> acl2
+      ).sorted shouldEqual
+        AccessControlLists(
+          /                      -> acl3,
+          Path("/a").right.value -> acl2,
+          "a" / "b"              -> acl.map(_ => AccessControlList.empty),
+          "aa" / "bb"            -> acl
+        )
     }
 
     "filter identities" in {
       AccessControlLists("a" / "b" -> acl, / -> acl2, "a" / "c" -> acl3).filter(Set(user)) shouldEqual
-        AccessControlLists("a" / "b" -> acl.map(_ => AccessControlList(user -> Set(read, write))),
-                           /         -> acl2.map(_ => AccessControlList.empty),
-                           "a" / "c" -> acl3.map(_ => AccessControlList.empty))
+        AccessControlLists(
+          "a" / "b" -> acl.map(_ => AccessControlList(user -> Set(read, write))),
+          /         -> acl2.map(_ => AccessControlList.empty),
+          "a" / "c" -> acl3.map(_ => AccessControlList.empty)
+        )
 
       AccessControlLists("a" / "b" -> acl, / -> acl2, "a" / "c" -> acl3).filter(Set(group)) shouldEqual
-        AccessControlLists("a" / "b" -> acl.map(_ => AccessControlList(group -> Set(other))),
-                           /         -> acl2,
-                           "a" / "c" -> acl3)
+        AccessControlLists(
+          "a" / "b" -> acl.map(_ => AccessControlList(group -> Set(other))),
+          /         -> acl2,
+          "a" / "c" -> acl3
+        )
     }
 
     "remove empty ACL" in {

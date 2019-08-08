@@ -63,7 +63,7 @@ class RealmsRoutesSpec
         quote("{label}")      -> label.value,
         quote("{createdBy}")  -> Anonymous.id.asString,
         quote("{updatedBy}")  -> Anonymous.id.asString,
-        quote("{deprecated}") -> deprecated.toString,
+        quote("{deprecated}") -> deprecated.toString
       )
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
@@ -74,7 +74,7 @@ class RealmsRoutesSpec
         quote("{label}")      -> label.value,
         quote("{createdBy}")  -> Anonymous.id.asString,
         quote("{updatedBy}")  -> Anonymous.id.asString,
-        quote("{deprecated}") -> deprecated.toString,
+        quote("{deprecated}") -> deprecated.toString
       )
     )
 
@@ -88,7 +88,7 @@ class RealmsRoutesSpec
         quote("{label}")      -> label.value,
         quote("{createdBy}")  -> Anonymous.id.asString,
         quote("{updatedBy}")  -> Anonymous.id.asString,
-        quote("{deprecated}") -> deprecated.toString,
+        quote("{deprecated}") -> deprecated.toString
       )
     ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
@@ -112,7 +112,8 @@ class RealmsRoutesSpec
     val logo         = Url("http://localhost:8080/realm/logo").right.get
     "create a new realm" in {
       realms.create(any[Label], any[String], any[Url], any[Option[Url]])(any[Caller]) shouldReturn Task.pure(
-        Right(meta(label, 1L, false)))
+        Right(meta(label, 1L, false))
+      )
       Put("/realms/therealm", jsonContentOf("/realms/create-realm.json")) ~> routes ~> check {
         status shouldEqual StatusCodes.Created
         responseAs[Json].sort shouldEqual metaResponse(label, 1L, false).sort
@@ -156,7 +157,8 @@ class RealmsRoutesSpec
     }
     "list realms" in {
       realms.list(SearchParams(deprecated = Some(true), rev = Some(2L)))(any[Caller]) shouldReturn Task.pure(
-        List(resource(label, 1L, realm)))
+        List(resource(label, 1L, realm))
+      )
       Get("/realms?deprecated=true&rev=2") ~> routes ~> check {
         status shouldEqual StatusCodes.OK
         responseAs[Json].sort shouldEqual listResponse(label, false).sort

@@ -52,7 +52,8 @@ class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringM
     case _: RealmEvent       => "realm-event"
     case other =>
       throw new IllegalArgumentException(
-        s"Cannot determine manifest for unknown type: '${other.getClass.getCanonicalName}'")
+        s"Cannot determine manifest for unknown type: '${other.getClass.getCanonicalName}'"
+      )
   }
   override def toBinary(o: AnyRef): Array[Byte] = o match {
     case ev: PermissionsEvent => ev.asJson.pretty(printer).getBytes(utf8)
