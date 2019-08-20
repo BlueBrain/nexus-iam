@@ -26,7 +26,7 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.1.0"
-val commonsVersion             = "0.17.3"
+val commonsVersion             = "0.17.4"
 val sourcingVersion            = "0.16.4"
 val akkaVersion                = "2.5.23"
 val akkaCorsVersion            = "0.4.1"
