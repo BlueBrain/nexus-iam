@@ -25,10 +25,10 @@ scalafmt: {
  */
 
 // Dependency versions
-val alpakkaVersion             = "1.1.0"
-val commonsVersion             = "0.17.4"
-val sourcingVersion            = "0.16.4"
-val akkaVersion                = "2.5.23"
+val alpakkaVersion             = "1.1.1"
+val commonsVersion             = "0.17.5"
+val sourcingVersion            = "0.16.5"
+val akkaVersion                = "2.5.25"
 val akkaCorsVersion            = "0.4.1"
 val akkaHttpVersion            = "10.1.9"
 val akkaPersistenceCassVersion = "0.99"
@@ -37,7 +37,7 @@ val catsVersion                = "1.6.1"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.5.13"
+val mockitoVersion             = "1.5.14"
 val monixVersion               = "3.0.0-RC3"
 val nimbusJoseJwtVersion       = "7.7"
 val pureconfigVersion          = "0.11.1"
