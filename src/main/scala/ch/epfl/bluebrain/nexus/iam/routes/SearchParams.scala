@@ -11,11 +11,13 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
   * @param updatedBy         the optional identity id who updated the resource
   * @param types             the optional types of the resources
   */
-final case class SearchParams(deprecated: Option[Boolean] = None,
-                              rev: Option[Long] = None,
-                              createdBy: Option[AbsoluteIri] = None,
-                              updatedBy: Option[AbsoluteIri] = None,
-                              types: Set[AbsoluteIri] = Set.empty)
+final case class SearchParams(
+    deprecated: Option[Boolean] = None,
+    rev: Option[Long] = None,
+    createdBy: Option[AbsoluteIri] = None,
+    updatedBy: Option[AbsoluteIri] = None,
+    types: Set[AbsoluteIri] = Set.empty
+)
 
 object SearchParams {
   val empty = SearchParams()

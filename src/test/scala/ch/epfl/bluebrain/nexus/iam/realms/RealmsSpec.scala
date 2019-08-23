@@ -52,7 +52,7 @@ class RealmsSpec
   implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
   implicit val caller: Caller         = Caller.anonymous
 
-  val instant: Instant = Instant.ofEpochMilli(5l)
+  val instant: Instant = Instant.ofEpochMilli(5L)
   implicit val clock: Clock[IO] = {
     val m = mock[Clock[IO]]
     m.realTime(MILLISECONDS) shouldReturn IO.pure(instant.toEpochMilli)
@@ -79,7 +79,8 @@ class RealmsSpec
   val groups = {
     val m = mock[Groups[IO]]
     m.groups(isA[AccessToken], isA[JWTClaimsSet], isA[ActiveRealm], isA[Option[Instant]]) shouldReturn IO.pure(
-      Set.empty[Group])
+      Set.empty[Group]
+    )
     m
   }
 
@@ -117,7 +118,8 @@ class RealmsSpec
             Some(revocationUrl),
             Some(endSessionUrl),
             Set(publicKeyJson)
-          ))
+          )
+        )
       )
     }
 
@@ -155,7 +157,8 @@ class RealmsSpec
                 Some(revocationUrl),
                 Some(endSessionUrl),
                 Set(publicKeyJson)
-              ))
+              )
+            )
           ),
           ResourceF(
             second.toIri(http.realmsIri),
@@ -179,7 +182,8 @@ class RealmsSpec
                 Some(revocationUrl),
                 Some(endSessionUrl),
                 Set(publicKeyJson)
-              ))
+              )
+            )
           )
         )
     }
@@ -207,7 +211,8 @@ class RealmsSpec
             Some(revocationUrl),
             Some(endSessionUrl),
             Set(publicKeyJson)
-          ))
+          )
+        )
       )
     }
     "fetch a realm at revision" in {
@@ -233,7 +238,8 @@ class RealmsSpec
             Some(revocationUrl),
             Some(endSessionUrl),
             Set(publicKeyJson)
-          ))
+          )
+        )
       )
     }
     "deprecate an existing realm" in {
@@ -261,7 +267,8 @@ class RealmsSpec
           instant,
           Anonymous,
           Left(DeprecatedRealm(first, firstName + "x", openIdUrl, Some(logoUrl)))
-        ))
+        )
+      )
     }
 
     "fail to deprecate twice a realm" in {
@@ -294,7 +301,8 @@ class RealmsSpec
             Some(revocationUrl),
             Some(endSessionUrl),
             Set(publicKeyJson)
-          ))
+          )
+        )
       )
     }
     "fail to update a realm with incorrect revision" in {
@@ -432,7 +440,7 @@ object RealmsSpec {
       nbf: Date = Date.from(Instant.now().minusSeconds(3600)),
       groups: Option[Set[String]] = None,
       useCommas: Boolean = false,
-      preferredUsername: Option[String] = None,
+      preferredUsername: Option[String] = None
   ): AccessToken = {
     val signer = new RSASSASigner(privateKey)
     val csb = new JWTClaimsSet.Builder()

@@ -12,9 +12,11 @@ import scala.concurrent.duration._
   * @param internalIri         base URL for all the HTTP calls, including prefix.
   * @param sseRetryDelay       delay for retrying after completion on SSE. 1 second by default.
   */
-final case class IamClientConfig(publicIri: AbsoluteIri,
-                                 internalIri: AbsoluteIri,
-                                 sseRetryDelay: FiniteDuration = 1 second) {
+final case class IamClientConfig(
+    publicIri: AbsoluteIri,
+    internalIri: AbsoluteIri,
+    sseRetryDelay: FiniteDuration = 1 second
+) {
   lazy val identitiesIri: AbsoluteIri  = internalIri + "identities"
   lazy val aclsIri: AbsoluteIri        = internalIri + "acls"
   lazy val permissionsIri: AbsoluteIri = internalIri + "permissions"

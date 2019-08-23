@@ -91,19 +91,25 @@ object Identity {
 
   implicit def identityEncoder(implicit config: IamClientConfig): Encoder[Identity] = {
     case i @ User(subject, realm) =>
-      Json.obj("@id"              -> i.id.asJson,
-               "@type"            -> Json.fromString("User"),
-               nxv.realm.prefix   -> Json.fromString(realm),
-               nxv.subject.prefix -> Json.fromString(subject))
+      Json.obj(
+        "@id"              -> i.id.asJson,
+        "@type"            -> Json.fromString("User"),
+        nxv.realm.prefix   -> Json.fromString(realm),
+        nxv.subject.prefix -> Json.fromString(subject)
+      )
     case i @ Group(group, realm) =>
-      Json.obj("@id"            -> i.id.asJson,
-               "@type"          -> Json.fromString("Group"),
-               nxv.realm.prefix -> Json.fromString(realm),
-               nxv.group.prefix -> Json.fromString(group))
+      Json.obj(
+        "@id"            -> i.id.asJson,
+        "@type"          -> Json.fromString("Group"),
+        nxv.realm.prefix -> Json.fromString(realm),
+        nxv.group.prefix -> Json.fromString(group)
+      )
     case i @ Authenticated(realm) =>
-      Json.obj("@id"            -> i.id.asJson,
-               "@type"          -> Json.fromString("Authenticated"),
-               nxv.realm.prefix -> Json.fromString(realm))
+      Json.obj(
+        "@id"            -> i.id.asJson,
+        "@type"          -> Json.fromString("Authenticated"),
+        nxv.realm.prefix -> Json.fromString(realm)
+      )
     case i @ Anonymous =>
       Json.obj("@id" -> i.id.asJson, "@type" -> Json.fromString("Anonymous"))
   }

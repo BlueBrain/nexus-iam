@@ -84,7 +84,7 @@ object PermissionsState {
       createdAt: Instant,
       createdBy: Subject,
       updatedAt: Instant,
-      updatedBy: Subject,
+      updatedBy: Subject
   ) extends PermissionsState {
 
     override def resource(implicit http: HttpConfig, @silent pc: PermissionsConfig): Resource =

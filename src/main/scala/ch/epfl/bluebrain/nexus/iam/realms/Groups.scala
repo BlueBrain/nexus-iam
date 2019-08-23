@@ -106,7 +106,8 @@ class Groups[F[_]](ref: ActorRef)(implicit cfg: GroupsConfig, hc: HttpClient[F, 
             F.raiseError(IamError.InvalidAccessToken(TokenRejection.InvalidAccessToken))
           } else {
             logger.warn(
-              s"A call to get the groups from the OIDC provider failed unexpectedly, status '${resp.status}', reason: '$body'")
+              s"A call to get the groups from the OIDC provider failed unexpectedly, status '${resp.status}', reason: '$body'"
+            )
             F.raiseError(IamError.InternalError("Unable to extract group information from the OIDC provider."))
           }
       }

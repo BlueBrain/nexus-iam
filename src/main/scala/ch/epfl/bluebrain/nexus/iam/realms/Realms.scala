@@ -50,7 +50,8 @@ import scala.util.Try
   * @tparam F    the effect type
   */
 class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
-    implicit http: HttpConfig) {
+    implicit http: HttpConfig
+) {
 
   private val F = implicitly[MonadThrowable[F]]
 
@@ -92,8 +93,9 @@ class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: Rea
     check(id, write) >> openIdConfigAlreadyExistsOr(id, openIdConfig)(eval(command)) <* updateIndex(id)
   }
 
-  private def openIdConfigAlreadyExistsOr(id: Label, openIdConfig: Url)(eval: => F[MetaOrRejection])(
-      implicit caller: Caller): F[MetaOrRejection] =
+  private def openIdConfigAlreadyExistsOr(id: Label, openIdConfig: Url)(
+      eval: => F[MetaOrRejection]
+  )(implicit caller: Caller): F[MetaOrRejection] =
     list().flatMap {
       case realms if openIdConfigExists(id, openIdConfig, realms) =>
         F.pure(Left(RealmOpenIdConfigAlreadyExists(id, openIdConfig)))

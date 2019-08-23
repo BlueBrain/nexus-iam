@@ -160,18 +160,20 @@ object RealmState {
       * @return the current state in an [[ActiveRealm]] representation
       */
     def activeRealm: ActiveRealm =
-      ActiveRealm(id,
-                  name,
-                  openIdConfig,
-                  issuer,
-                  grantTypes,
-                  logo,
-                  authorizationEndpoint,
-                  tokenEndpoint,
-                  userInfoEndpoint,
-                  revocationEndpoint,
-                  endSessionEndpoint,
-                  keys)
+      ActiveRealm(
+        id,
+        name,
+        openIdConfig,
+        issuer,
+        grantTypes,
+        logo,
+        authorizationEndpoint,
+        tokenEndpoint,
+        userInfoEndpoint,
+        revocationEndpoint,
+        endSessionEndpoint,
+        keys
+      )
 
     /**
       * @return the current state in a [[ResourceF]] representation

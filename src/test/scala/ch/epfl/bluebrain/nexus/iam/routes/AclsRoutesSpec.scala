@@ -86,14 +86,16 @@ class AclsRoutesSpec
       user2,
       AccessControlList(user -> readWrite, group -> manage)
     )
-    val resourceAcl2 = ResourceF(http.aclsIri + "id2",
-                                 2L,
-                                 Set[AbsoluteIri](nxv.AccessControlList),
-                                 clock.instant(),
-                                 user,
-                                 clock.instant(),
-                                 user,
-                                 AccessControlList(user -> readWrite))
+    val resourceAcl2 = ResourceF(
+      http.aclsIri + "id2",
+      2L,
+      Set[AbsoluteIri](nxv.AccessControlList),
+      clock.instant(),
+      user,
+      clock.instant(),
+      user,
+      AccessControlList(user -> readWrite)
+    )
 
     val aclsFetch =
       AccessControlLists(Path("/one/two").right.value -> resourceAcl1, Path("/one").right.value -> resourceAcl2)
@@ -101,9 +103,11 @@ class AclsRoutesSpec
     def response(rev: Long, createdBy: Identity, updatedBty: Identity, path: Path): Json =
       jsonContentOf(
         "/resources/write-response-routes.json",
-        Map(quote("{path}")      -> path.asString.drop(1),
-            quote("{createdBy}") -> createdBy.id.asString,
-            quote("{updatedBy}") -> updatedBty.id.asString)
+        Map(
+          quote("{path}")      -> path.asString.drop(1),
+          quote("{createdBy}") -> createdBy.id.asString,
+          quote("{updatedBy}") -> updatedBty.id.asString
+        )
       ) deepMerge Json.obj("_rev" -> Json.fromLong(rev))
 
     realms.caller(AccessToken(token.token)) shouldReturn Task.pure(caller)
@@ -238,8 +242,11 @@ class AclsRoutesSpec
       Get(s"/acls/myorg/myproj") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "InternalError",
-              quote("{msg}")  -> "The system experienced an unexpected error, please try again later."))
+          Map(
+            quote("{code}") -> "InternalError",
+            quote("{msg}")  -> "The system experienced an unexpected error, please try again later."
+          )
+        )
         status shouldEqual StatusCodes.InternalServerError
       }
     }
@@ -248,17 +255,21 @@ class AclsRoutesSpec
       Get(s"/acls/myorg//") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf(
           "/acls/error.json",
-          Map(quote("{code}") -> "ValidationRejection",
-              quote("{msg}")  -> "Path '/myorg//' cannot contain double slash."))
+          Map(
+            quote("{code}") -> "ValidationRejection",
+            quote("{msg}")  -> "Path '/myorg//' cannot contain double slash."
+          )
+        )
         status shouldEqual StatusCodes.BadRequest
       }
     }
 
     "return a not found" in {
       Get(s"/random/a") ~> addCredentials(token) ~> routes ~> check {
-        responseAs[Json] shouldEqual jsonContentOf("/acls/error.json",
-                                                   Map(quote("{code}") -> "NotFound",
-                                                       quote("{msg}")  -> "The requested resource could not be found."))
+        responseAs[Json] shouldEqual jsonContentOf(
+          "/acls/error.json",
+          Map(quote("{code}") -> "NotFound", quote("{msg}") -> "The requested resource could not be found.")
+        )
         status shouldEqual StatusCodes.NotFound
       }
     }

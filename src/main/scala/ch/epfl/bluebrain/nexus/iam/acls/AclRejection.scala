@@ -46,7 +46,8 @@ object AclRejection {
     */
   final case class IncorrectRev(path: Path, provided: Long, expected: Long)
       extends AclRejection(
-        s"Incorrect revision '$provided' provided, expected '$expected', the ACL on path '${path.asString}' may have been updated since last seen.")
+        s"Incorrect revision '$provided' provided, expected '$expected', the ACL on path '${path.asString}' may have been updated since last seen."
+      )
 
   /**
     * Signals an attempt to create/replace/append/subtract ACL collection which contains void permissions.
@@ -63,7 +64,8 @@ object AclRejection {
     */
   final case class UnknownPermissions(permissions: Set[Permission])
       extends AclRejection(
-        s"Some of the permissions specified are not known: '${permissions.mkString("\"", ", ", "\"")}'")
+        s"Some of the permissions specified are not known: '${permissions.mkString("\"", ", ", "\"")}'"
+      )
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")

@@ -56,10 +56,12 @@ object instances extends FailFastCirceSupport {
       implicit printer: Printer = Printer.noSpaces.copy(dropNullValues = true),
       keys: OrderedKeys = orderedKeys
   ): ToEntityMarshaller[Json] = {
-    val marshallers = Seq(`application/ld+json`, `application/json`).map(contentType =>
-      Marshaller.withFixedContentType[Json, MessageEntity](contentType) { json =>
-        HttpEntity(`application/ld+json`, printer.pretty(json.sortKeys))
-    })
+    val marshallers = Seq(`application/ld+json`, `application/json`).map(
+      contentType =>
+        Marshaller.withFixedContentType[Json, MessageEntity](contentType) { json =>
+          HttpEntity(`application/ld+json`, printer.pretty(json.sortKeys))
+        }
+    )
     Marshaller.oneOf(marshallers: _*)
   }
 
@@ -95,12 +97,14 @@ object instances extends FailFastCirceSupport {
   implicit final def rejection[A <: ResourceRejection: Encoder](
       implicit statusFrom: StatusFrom[A],
       printer: Printer = Printer.noSpaces.copy(dropNullValues = true),
-      ordered: OrderedKeys = orderedKeys,
+      ordered: OrderedKeys = orderedKeys
   ): ToResponseMarshaller[A] = {
     val marshallers = Seq(`application/ld+json`, `application/json`).map { contentType =>
       Marshaller.withFixedContentType[A, HttpResponse](contentType) { rejection =>
-        HttpResponse(status = statusFrom(rejection),
-                     entity = HttpEntity(contentType, printer.pretty(rejection.asJson.sortKeys)))
+        HttpResponse(
+          status = statusFrom(rejection),
+          entity = HttpEntity(contentType, printer.pretty(rejection.asJson.sortKeys))
+        )
       }
     }
     Marshaller.oneOf(marshallers: _*)

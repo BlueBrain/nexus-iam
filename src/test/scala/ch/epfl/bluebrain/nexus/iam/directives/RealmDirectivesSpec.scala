@@ -39,13 +39,16 @@ class RealmDirectivesSpec
       val updatedBy: AbsoluteIri = url"http://example.com/updated".value
       val tpe: AbsoluteIri       = url"http://example.com/tpe".value
       val tpe2: AbsoluteIri      = url"http://example.com/tpe2".value
-      Get(s"/?rev=2&deprecated=true&type=${encode(tpe)}&type=${encode(tpe2)}&createdBy=${encode(createdBy)}&updatedBy=${encode(
-        updatedBy)}") ~> route ~> check {
-        responseAs[SearchParams] shouldEqual SearchParams(Some(true),
-                                                          Some(2L),
-                                                          Some(createdBy),
-                                                          Some(updatedBy),
-                                                          Set(tpe, tpe2))
+      Get(
+        s"/?rev=2&deprecated=true&type=${encode(tpe)}&type=${encode(tpe2)}&createdBy=${encode(createdBy)}&updatedBy=${encode(updatedBy)}"
+      ) ~> route ~> check {
+        responseAs[SearchParams] shouldEqual SearchParams(
+          Some(true),
+          Some(2L),
+          Some(createdBy),
+          Some(updatedBy),
+          Set(tpe, tpe2)
+        )
       }
     }
   }

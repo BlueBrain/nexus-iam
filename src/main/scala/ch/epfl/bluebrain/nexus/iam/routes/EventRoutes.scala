@@ -44,9 +44,11 @@ import scala.util.{Failure, Success, Try}
   * @param acls   the acls api
   * @param realms the realms api
   */
-class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSystem,
-                                                          hc: HttpConfig,
-                                                          pc: PersistenceConfig) {
+class EventRoutes(acls: Acls[Task], realms: Realms[Task])(
+    implicit as: ActorSystem,
+    hc: HttpConfig,
+    pc: PersistenceConfig
+) {
 
   private val pq: EventsByTagQuery = PersistenceQuery(as).readJournalFor[EventsByTagQuery](pc.queryJournalPlugin)
   private val printer: Printer     = Printer.noSpaces.copy(dropNullValues = true)
@@ -59,7 +61,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSyst
       routesFor("acls" / "events", s"/${hc.prefix}/acls/events", aclEventTag, aclsp.read, typedEventToSse[AclEvent]),
       routesFor("permissions" / "events", s"/${hc.prefix}/permissions/events", permissionsEventTag, permissionsp.read, typedEventToSse[PermissionsEvent]),
       routesFor("realms" / "events", s"/${hc.prefix}/realms/events", realmEventTag, realmsp.read, typedEventToSse[RealmEvent]),
-      routesFor("events", s"/${hc.prefix}/events", eventTag, eventsRead, eventToSse),
+      routesFor("events", s"/${hc.prefix}/events", eventTag, eventsRead, eventToSse)
     )
   // format: on
 

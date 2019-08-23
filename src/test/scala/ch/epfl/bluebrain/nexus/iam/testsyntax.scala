@@ -29,9 +29,11 @@ object testsyntax {
           }
         }
       def canonicalJson(json: Json): Json =
-        json.arrayOrObject[Json](json,
-                                 arr => Json.fromValues(sortStrings(arr.map(canonicalJson))),
-                                 obj => sorted(obj).asJson)
+        json.arrayOrObject[Json](
+          json,
+          arr => Json.fromValues(sortStrings(arr.map(canonicalJson))),
+          obj => sorted(obj).asJson
+        )
 
       def sorted(jObj: JsonObject): JsonObject =
         JsonObject.fromIterable(jObj.toVector.sortBy(_._1).map { case (k, v) => k -> canonicalJson(v) })

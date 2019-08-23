@@ -41,7 +41,7 @@ class PermissionsSpec
   implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
   implicit val caller: Caller         = Caller.anonymous
 
-  val instant: Instant = Instant.ofEpochMilli(5l)
+  val instant: Instant = Instant.ofEpochMilli(5L)
   implicit val clock: Clock[IO] = {
     val m = mock[Clock[IO]]
     m.realTime(MILLISECONDS) shouldReturn IO.pure(instant.toEpochMilli)
@@ -76,7 +76,7 @@ class PermissionsSpec
     Permission.unsafe("views/write"),
     Permission.unsafe("schemas/write"),
     Permission.unsafe("files/write"),
-    Permission.unsafe("storages/write"),
+    Permission.unsafe("storages/write")
   )
 
   val perm1: Permission = Permission.unsafe(genString())
