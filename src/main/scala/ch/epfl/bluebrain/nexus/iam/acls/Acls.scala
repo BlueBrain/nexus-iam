@@ -30,7 +30,7 @@ import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     val agg: Agg[F],
-    private val index: AclsIndex[F],
+    private val index: AclsIndex[F]
 )(implicit F: MonadThrowable[F], http: HttpConfig, pc: PermissionsConfig) {
 
   /**
@@ -164,7 +164,8 @@ object Acls {
     * Constructs a new acls aggregate.
     */
   def aggregate[F[_]: Effect: Timer: Clock](
-      perms: F[Permissions[F]])(implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
+      perms: F[Permissions[F]]
+  )(implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
     AkkaAggregate.sharded[F](
       "acls",
       AclState.Initial,
@@ -271,8 +272,9 @@ object Acls {
     }
   }
 
-  private def evaluate[F[_]: Monad: Clock](perms: F[Permissions[F]])(state: State,
-                                                                     cmd: Command): F[EventOrRejection] = {
+  private def evaluate[F[_]: Monad: Clock](
+      perms: F[Permissions[F]]
+  )(state: State, cmd: Command): F[EventOrRejection] = {
     val F = implicitly[Monad[F]]
     val C = implicitly[Clock[F]]
     def accept(f: Instant => Event): F[EventOrRejection] =

@@ -40,7 +40,8 @@ object EventSource {
     * @tparam A the type of the data parameter on the SSE, attempted to convert using Json
     */
   def apply[A: Decoder](
-      config: IamClientConfig)(implicit as: ActorSystem, mt: Materializer, ec: ExecutionContext): EventSource[A] =
+      config: IamClientConfig
+  )(implicit as: ActorSystem, mt: Materializer, ec: ExecutionContext): EventSource[A] =
     new EventSource[A] {
       private val logger = Logger[this.type]
       private val http   = Http()
@@ -56,7 +57,8 @@ object EventSource {
         }
 
       override def apply(iri: AbsoluteIri, offset: Option[String])(
-          implicit cred: Option[AuthToken]): Source[A, NotUsed] =
+          implicit cred: Option[AuthToken]
+      ): Source[A, NotUsed] =
         SSESource(iri.toAkkaUri, send, offset, config.sseRetryDelay).flatMapConcat { sse =>
           decode[A](sse.data) match {
             case Right(ev) => Source.single(ev)

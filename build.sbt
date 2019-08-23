@@ -25,10 +25,10 @@ scalafmt: {
  */
 
 // Dependency versions
-val alpakkaVersion             = "1.1.0"
-val commonsVersion             = "0.17.0"
-val sourcingVersion            = "0.16.3"
-val akkaVersion                = "2.5.23"
+val alpakkaVersion             = "1.1.1"
+val commonsVersion             = "0.17.6"
+val sourcingVersion            = "0.16.5"
+val akkaVersion                = "2.5.25"
 val akkaCorsVersion            = "0.4.1"
 val akkaHttpVersion            = "10.1.9"
 val akkaPersistenceCassVersion = "0.99"
@@ -37,9 +37,9 @@ val catsVersion                = "1.6.1"
 val circeVersion               = "0.11.1"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.5.12"
+val mockitoVersion             = "1.5.14"
 val monixVersion               = "3.0.0-RC3"
-val nimbusJoseJwtVersion       = "7.5.1"
+val nimbusJoseJwtVersion       = "7.7"
 val pureconfigVersion          = "0.11.1"
 val scalaTestVersion           = "3.0.8"
 val kryoVersion                = "0.5.2"
@@ -113,7 +113,7 @@ lazy val iam = project
       akkaPersistenceMem % Test,
       commonsTest        % Test,
       mockitoScala       % Test,
-      scalaTest          % Test,
+      scalaTest          % Test
     ),
     resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven",
     mappings in Universal := {
@@ -146,7 +146,7 @@ lazy val client = project
       akkaHttpTestKit % Test,
       commonsTest     % Test,
       mockitoScala    % Test,
-      scalaTest       % Test,
+      scalaTest       % Test
     )
   )
 
@@ -159,7 +159,7 @@ lazy val testSettings = Seq(
   dependencyClasspath in Jmh := (dependencyClasspath in Test).value,
   // rewire tasks, so that 'jmh:run' automatically invokes 'jmh:compile' (otherwise a clean 'jmh:run' would fail)
   compile in Jmh := (compile in Jmh).dependsOn(compile in Test).value,
-  run in Jmh     := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated,
+  run in Jmh     := (run in Jmh).dependsOn(Keys.compile in Jmh).evaluated
 )
 
 lazy val buildInfoSettings = Seq(

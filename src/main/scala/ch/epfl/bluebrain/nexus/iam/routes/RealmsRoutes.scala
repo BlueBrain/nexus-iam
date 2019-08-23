@@ -40,15 +40,17 @@ class RealmsRoutes(realms: Realms[Task])(implicit http: HttpConfig) {
     Encoder.encodeJson.contramap { r =>
       resourceMetaEncoder.apply(r.discard) deepMerge Json.obj(
         nxv.label.prefix      -> Json.fromString(r.value._1.value),
-        nxv.deprecated.prefix -> Json.fromBoolean(r.value._2),
+        nxv.deprecated.prefix -> Json.fromBoolean(r.value._2)
       )
     }
 
   private implicit val resourceListEncoder: Encoder[List[Resource]] =
     Encoder.encodeJson.contramap[List[Resource]] { l =>
       Json
-        .obj(nxv.total.prefix   -> Json.fromInt(l.size),
-             nxv.results.prefix -> Json.arr(l.map(r => resourceEncoder(r).removeKeys("@context")): _*))
+        .obj(
+          nxv.total.prefix   -> Json.fromInt(l.size),
+          nxv.results.prefix -> Json.arr(l.map(r => resourceEncoder(r).removeKeys("@context")): _*)
+        )
         .addContext(resourceCtxUri)
         .addContext(iamCtxUri)
         .addContext(searchCtxUri)

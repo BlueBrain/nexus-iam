@@ -39,12 +39,14 @@ package object acls {
     * whenever there is nothing already existing on that path
     */
   def defaultResourceOnSlash(implicit http: HttpConfig, pc: PermissionsConfig): Resource =
-    ResourceF(http.aclsIri + "/",
-              0L,
-              types,
-              Instant.EPOCH,
-              Anonymous,
-              Instant.EPOCH,
-              Anonymous,
-              AccessControlList(Anonymous -> pc.minimum))
+    ResourceF(
+      http.aclsIri + "/",
+      0L,
+      types,
+      Instant.EPOCH,
+      Anonymous,
+      Instant.EPOCH,
+      Anonymous,
+      AccessControlList(Anonymous -> pc.minimum)
+    )
 }
