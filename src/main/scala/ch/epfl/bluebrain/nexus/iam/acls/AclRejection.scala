@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
 
 sealed abstract class AclRejection(val msg: String) extends ResourceRejection
@@ -69,7 +69,7 @@ object AclRejection {
 
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
+    val enc                                     = deriveConfiguredEncoder[AclRejection].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 

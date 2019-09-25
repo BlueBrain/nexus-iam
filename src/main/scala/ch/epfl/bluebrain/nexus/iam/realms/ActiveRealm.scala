@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import com.nimbusds.jose.jwk.{JWK, JWKSet}
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
 
 import scala.util.Try
@@ -65,7 +65,7 @@ object ActiveRealm {
       case "endSessionEndpoint"    => nxv.endSessionEndpoint.prefix
       case other                   => other
     })
-    val default = deriveEncoder[ActiveRealm]
+    val default = deriveConfiguredEncoder[ActiveRealm]
     Encoder
       .instance[ActiveRealm] { realm =>
         default(realm) deepMerge Json.obj(

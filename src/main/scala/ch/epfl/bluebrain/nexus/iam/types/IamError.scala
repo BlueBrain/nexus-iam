@@ -6,7 +6,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.instances.absoluteIriEncoder
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
 
 /**
@@ -69,7 +69,7 @@ object IamError {
 
   implicit val iamErrorEncoder: Encoder[IamError] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveEncoder[IamError].mapJson(_ addContext errorCtxUri)
+    val enc                                     = deriveConfiguredEncoder[IamError].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 }

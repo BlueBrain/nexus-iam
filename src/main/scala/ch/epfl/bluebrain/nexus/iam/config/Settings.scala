@@ -23,7 +23,8 @@ class Settings(config: Config) extends Extension {
   private implicit val permissionConverter: ConfigConvert[Permission] =
     ConfigConvert.viaString[Permission](optF(Permission(_)), _.toString)
 
-  val appConfig: AppConfig = loadConfigOrThrow[AppConfig](config, "app")
+  val appConfig: AppConfig =
+    ConfigSource.fromConfig(config).at("app").loadOrThrow[AppConfig]
 }
 
 object Settings extends ExtensionId[Settings] with ExtensionIdProvider {

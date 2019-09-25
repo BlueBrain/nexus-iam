@@ -155,7 +155,7 @@ object RealmEvent {
     implicit def realmEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
       Encoder.encodeJson.contramap[Event] { ev =>
         implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
-        deriveEncoder[Event]
+        deriveConfiguredEncoder[Event]
           .mapJson { json =>
             val id = Json.obj("@id" -> Json.fromString((http.realmsIri + ev.id.value).asUri))
             json

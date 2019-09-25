@@ -105,7 +105,7 @@ object PermissionsEvent {
 
     implicit def permissionsEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
       implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
-      deriveEncoder[Event]
+      deriveConfiguredEncoder[Event]
         .mapJson { json =>
           json
             .addContext(iamCtxUri)

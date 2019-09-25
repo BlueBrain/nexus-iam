@@ -37,12 +37,12 @@ class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringM
   private implicit val urlDecoder: Decoder[Url] =
     Decoder.decodeString.emap(Url.apply)
 
-  private implicit val permissionEventEncoder: Encoder[PermissionsEvent] = deriveEncoder[PermissionsEvent]
-  private implicit val permissionEventDecoder: Decoder[PermissionsEvent] = deriveDecoder[PermissionsEvent]
-  private implicit val aclEventEncoder: Encoder[AclEvent]                = deriveEncoder[AclEvent]
-  private implicit val aclEventDecoder: Decoder[AclEvent]                = deriveDecoder[AclEvent]
-  private implicit val realmEventEncoder: Encoder[RealmEvent]            = deriveEncoder[RealmEvent]
-  private implicit val realmEventDecoder: Decoder[RealmEvent]            = deriveDecoder[RealmEvent]
+  private implicit val permissionEventEncoder: Encoder[PermissionsEvent] = deriveConfiguredEncoder[PermissionsEvent]
+  private implicit val permissionEventDecoder: Decoder[PermissionsEvent] = deriveConfiguredDecoder[PermissionsEvent]
+  private implicit val aclEventEncoder: Encoder[AclEvent]                = deriveConfiguredEncoder[AclEvent]
+  private implicit val aclEventDecoder: Decoder[AclEvent]                = deriveConfiguredDecoder[AclEvent]
+  private implicit val realmEventEncoder: Encoder[RealmEvent]            = deriveConfiguredEncoder[RealmEvent]
+  private implicit val realmEventDecoder: Decoder[RealmEvent]            = deriveConfiguredDecoder[RealmEvent]
 
   override val identifier: Int = 1225
 
@@ -56,9 +56,9 @@ class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringM
       )
   }
   override def toBinary(o: AnyRef): Array[Byte] = o match {
-    case ev: PermissionsEvent => ev.asJson.pretty(printer).getBytes(utf8)
-    case ev: AclEvent         => ev.asJson.pretty(printer).getBytes(utf8)
-    case ev: RealmEvent       => ev.asJson.pretty(printer).getBytes(utf8)
+    case ev: PermissionsEvent => ev.asJson.printWith(printer).getBytes(utf8)
+    case ev: AclEvent         => ev.asJson.printWith(printer).getBytes(utf8)
+    case ev: RealmEvent       => ev.asJson.printWith(printer).getBytes(utf8)
     case other =>
       throw new IllegalArgumentException(s"Cannot serialize unknown type: '${other.getClass.getCanonicalName}'")
   }

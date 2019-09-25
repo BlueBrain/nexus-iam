@@ -29,17 +29,17 @@ class ResourceFSpec extends WordSpecLike with Matchers with Inspectors with Eith
       "using multiple types" in {
         val json  = jsonContentOf("/resources/write-response.json")
         val model = ResourceMetadata(id, 1L, Set(nxv.AccessControlList, nxv.Realm), instant, user, instant, user2)
-        model.asJson.sort.pretty(printer) shouldEqual json.pretty(printer)
+        model.asJson.sort.printWith(printer) shouldEqual json.printWith(printer)
       }
       "using a single type" in {
         val json  = jsonContentOf("/resources/write-response-singletype.json")
         val model = ResourceMetadata(id, 1L, Set(nxv.AccessControlList), instant, user, instant, user2)
-        model.asJson.sort.pretty(printer) shouldEqual json.pretty(printer)
+        model.asJson.sort.printWith(printer) shouldEqual json.printWith(printer)
       }
       "using no types" in {
         val json  = jsonContentOf("/resources/write-response-notypes.json")
         val model = ResourceMetadata(id, 1L, Set(), instant, user, instant, user2)
-        model.asJson.sort.pretty(printer) shouldEqual json.pretty(printer)
+        model.asJson.sort.printWith(printer) shouldEqual json.printWith(printer)
       }
     }
   }
