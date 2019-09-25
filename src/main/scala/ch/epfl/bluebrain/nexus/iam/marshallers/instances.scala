@@ -59,7 +59,7 @@ object instances extends FailFastCirceSupport {
     val marshallers = Seq(`application/ld+json`, `application/json`).map(
       contentType =>
         Marshaller.withFixedContentType[Json, MessageEntity](contentType) { json =>
-          HttpEntity(`application/ld+json`, printer.pretty(json.sortKeys))
+          HttpEntity(`application/ld+json`, printer.print(json.sortKeys))
         }
     )
     Marshaller.oneOf(marshallers: _*)
@@ -103,7 +103,7 @@ object instances extends FailFastCirceSupport {
       Marshaller.withFixedContentType[A, HttpResponse](contentType) { rejection =>
         HttpResponse(
           status = statusFrom(rejection),
-          entity = HttpEntity(contentType, printer.pretty(rejection.asJson.sortKeys))
+          entity = HttpEntity(contentType, printer.print(rejection.asJson.sortKeys))
         )
       }
     }

@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam.auth
 
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
 
 /**
@@ -48,7 +48,7 @@ object TokenRejection {
 
   implicit val tokenRejectionEncoder: Encoder[TokenRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveEncoder[TokenRejection]
+    val enc                                     = deriveConfiguredEncoder[TokenRejection]
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 }

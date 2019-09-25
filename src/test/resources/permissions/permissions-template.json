@@ -26,7 +26,8 @@
     "views/write",
     "schemas/write",
     "files/write",
-    "storages/write"
+    "storages/write",
+    "archives/write"
   ],
   "_createdAt": "1970-01-01T00:00:00Z",
   "_createdBy": "{createdBy}",

@@ -10,7 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveDecoder
+import io.circe.generic.extras.semiauto.deriveConfiguredDecoder
 import io.circe.{Decoder, DecodingFailure, Json}
 
 /**
@@ -303,7 +303,7 @@ object Event {
     * [[Decoder]] for [[Event]]s.
     */
   implicit val eventDecoder: Decoder[Event] =
-    deriveDecoder[Event]
+    deriveConfiguredDecoder[Event]
 
   private implicit val aclDecoder: Decoder[AccessControlList] =
     Decoder.instance { hc =>

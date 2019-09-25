@@ -8,7 +8,7 @@ import ch.epfl.bluebrain.nexus.rdf.instances._
 import io.circe.Decoder.Result
 import io.circe._
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.syntax._
 
 /**
@@ -71,7 +71,7 @@ object Identity {
   private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
 
   implicit def identityEncoder(implicit http: HttpConfig): Encoder[Identity] = {
-    val enc = deriveEncoder[Identity]
+    val enc = deriveConfiguredEncoder[Identity]
     Encoder.encodeJson.contramap { ident =>
       enc(ident) deepMerge Json.obj("@id" -> ident.id.asJson)
     }

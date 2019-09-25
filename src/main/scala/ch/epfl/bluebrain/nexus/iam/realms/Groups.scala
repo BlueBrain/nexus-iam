@@ -36,12 +36,19 @@ import scala.util.control.NonFatal
   *
   * @param ref the underlying cluster sharding actor ref proxy
   */
-class Groups[F[_]](ref: ActorRef)(implicit cfg: GroupsConfig, hc: HttpClient[F, Json], F: Async[F], T: Timer[F]) {
+class Groups[F[_]](ref: ActorRef)(
+    implicit as: ActorSystem,
+    cfg: GroupsConfig,
+    hc: HttpClient[F, Json],
+    F: Async[F],
+    T: Timer[F]
+) {
 
   private[this] val logger = Logger[this.type]
 
   private implicit val tm: Timeout                = Timeout(cfg.askTimeout)
   private implicit val retry: Retry[F, Throwable] = Retry(cfg.retry.retryStrategy)
+  private implicit val contextShift               = IO.contextShift(as.dispatcher)
 
   /**
     * Returns the caller group set either from the claimset, in cache or from the user info endpoint of the provided

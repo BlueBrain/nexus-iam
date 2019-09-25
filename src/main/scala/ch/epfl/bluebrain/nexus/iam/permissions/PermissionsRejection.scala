@@ -6,7 +6,7 @@ import ch.epfl.bluebrain.nexus.iam.config.Contexts.errorCtxUri
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveEncoder
+import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
 
 /**
@@ -79,7 +79,7 @@ object PermissionsRejection {
 
   implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+    val enc                                     = deriveConfiguredEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 
