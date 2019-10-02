@@ -18,7 +18,7 @@ class IdentitySpec
 
   "An identity" should {
     implicit val config =
-      IamClientConfig(url"http://nexus.example.com/v1".value, url"http://internal.nexus.example.com/v1".value)
+      IamClientConfig(url"http://nexus.example.com".value, url"http://internal.nexus.example.com".value, "v1")
     val user          = User("mysubject", "myrealm")
     val group         = Group("mygroup", "myrealm")
     val authenticated = Authenticated("myrealm")

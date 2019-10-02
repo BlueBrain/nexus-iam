@@ -50,23 +50,41 @@ class IamClientSpec
   private implicit val mt: Materializer = ActorMaterializer()
   private val clock                     = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private val config =
-    IamClientConfig(url"http://example.com/some/v1".value, url"http://internal.example.com/some/v1".value)
+    IamClientConfig(url"http://example.com/some/".value, url"http://internal.example.com/some/".value, "v1")
+
   private val aclsClient        = mock[HttpClient[IO, AccessControlLists]]
   private val callerClient      = mock[HttpClient[IO, Caller]]
+  private val serviceDescClient = mock[HttpClient[IO, ServiceDescription]]
   private val permissionsClient = mock[HttpClient[IO, Permissions]]
   private val jsonClient        = mock[HttpClient[IO, Json]]
   private val source            = mock[EventSource[Event]]
-  private val client            = new IamClient[IO](source, config, aclsClient, callerClient, permissionsClient, jsonClient)
+  private val client =
+    new IamClient[IO](source, config, serviceDescClient, aclsClient, callerClient, permissionsClient, jsonClient)
 
   before {
     Mockito.reset(aclsClient)
     Mockito.reset(callerClient)
+    Mockito.reset(serviceDescClient)
     Mockito.reset(permissionsClient)
     Mockito.reset(jsonClient)
     Mockito.reset(source)
   }
 
   "An IAM client" when {
+
+    "fetching service description" should {
+
+      "succeed" in {
+        val expected = ServiceDescription("iam", "0.1.0")
+        serviceDescClient(Get("http://internal.example.com/some/")) shouldReturn IO(expected)
+        client.serviceDescription.ioValue shouldEqual expected
+      }
+      "fail" in {
+        val expected = new RuntimeException()
+        serviceDescClient(Get("http://internal.example.com/some/")) shouldReturn IO.raiseError(expected)
+        client.serviceDescription.failed[RuntimeException] shouldEqual expected
+      }
+    }
 
     "fetching ACLs and authorizing" should {
       val acl = AccessControlList(Anonymous -> Set(Permission.unsafe("create"), Permission.unsafe("read")))
