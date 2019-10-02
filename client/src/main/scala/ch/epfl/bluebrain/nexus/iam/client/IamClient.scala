@@ -35,11 +35,18 @@ import scala.util.control.NonFatal
 class IamClient[F[_]] private[client] (
     source: EventSource[Event],
     config: IamClientConfig,
+    serviceDescClient: HttpClient[F, ServiceDescription],
     aclsClient: HttpClient[F, AccessControlLists],
     callerClient: HttpClient[F, Caller],
     permissionsClient: HttpClient[F, Permissions],
     jsonClient: HttpClient[F, Json]
 )(implicit F: Effect[F], mt: Materializer) {
+
+  /**
+    * Fetches the service description information (name and version)
+    */
+  def serviceDescription: F[ServiceDescription] =
+    serviceDescClient(Get(config.internalIri.toAkkaUri))
 
   /**
     * Retrieve the current ''acls'' for some particular ''path''.
@@ -154,7 +161,7 @@ class IamClient[F[_]] private[client] (
     */
   def events(f: Event => F[Unit], offset: Option[String] = None)(implicit cred: Option[AuthToken]): Unit = {
     val pf: PartialFunction[Event, F[Unit]] = { case ev: Event => f(ev) }
-    events(config.internalIri + "events", pf, offset)
+    events(config.eventsIri, pf, offset)
   }
 
   private def events(iri: AbsoluteIri, f: PartialFunction[Event, F[Unit]], offset: Option[String])(
@@ -250,12 +257,13 @@ object IamClient {
     implicit val ec: ExecutionContextExecutor = as.dispatcher
     implicit val ucl: UntypedHttpClient[F]    = HttpClient.untyped[F]
 
-    val aclsClient: HttpClient[F, AccessControlLists] = httpClient[F, AccessControlLists]
-    val callerClient: HttpClient[F, Caller]           = httpClient[F, Caller]
-    val permissionsClient: HttpClient[F, Permissions] = httpClient[F, Permissions]
-    val jsonClient: HttpClient[F, Json]               = httpClient[F, Json]
-    val sse: EventSource[Event]                       = EventSource[Event](config)
-    new IamClient(sse, config, aclsClient, callerClient, permissionsClient, jsonClient)
+    val aclsClient: HttpClient[F, AccessControlLists]        = httpClient[F, AccessControlLists]
+    val callerClient: HttpClient[F, Caller]                  = httpClient[F, Caller]
+    val permissionsClient: HttpClient[F, Permissions]        = httpClient[F, Permissions]
+    val jsonClient: HttpClient[F, Json]                      = httpClient[F, Json]
+    val serviceDescClient: HttpClient[F, ServiceDescription] = httpClient[F, ServiceDescription]
+    val sse: EventSource[Event]                              = EventSource[Event](config)
+    new IamClient(sse, config, serviceDescClient, aclsClient, callerClient, permissionsClient, jsonClient)
   }
 }
 // $COVERAGE-ON$
