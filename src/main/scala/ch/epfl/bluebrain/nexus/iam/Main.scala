@@ -72,16 +72,16 @@ object Main {
       pt <- Permissions[Task](as.get)
       at <- Acls[Task](ps.get)
       rt <- Realms[Task](as.get, gt)
-      _ <- ps.complete(pt)
-      _ <- as.complete(at)
-      _ <- rs.complete(rt)
+      _  <- ps.complete(pt)
+      _  <- as.complete(at)
+      _  <- rs.complete(rt)
     } yield (pt, at, rt)
     deferred.runSyncUnsafe()(Scheduler.global, pm)
   }
 
   def bootstrapIndexers(acls: Acls[Task], realms: Realms[Task])(implicit as: ActorSystem, cfg: AppConfig): Unit = {
-    implicit val ac = cfg.acls
-    implicit val rc = cfg.realms
+    implicit val ac                = cfg.acls
+    implicit val rc                = cfg.realms
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
     Acls.indexer[Task](acls).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
     Realms.indexer[Task](realms).runSyncUnsafe()(Scheduler.global, CanBlock.permit)
@@ -93,14 +93,14 @@ object Main {
     setupMonitoring(config)
 
     implicit val appConfig = Settings(config).appConfig
-    implicit val as = ActorSystem(appConfig.description.fullName, config)
-    implicit val ec = as.dispatcher
+    implicit val as        = ActorSystem(appConfig.description.fullName, config)
+    implicit val ec        = as.dispatcher
 
     val cluster = Cluster(as)
     val seeds: List[Address] = appConfig.cluster.seeds.toList
       .flatMap(_.split(","))
       .map(addr => AddressFromURIString(s"akka.tcp://${appConfig.description.fullName}@$addr")) match {
-      case Nil => List(cluster.selfAddress)
+      case Nil      => List(cluster.selfAddress)
       case nonEmpty => nonEmpty
     }
 

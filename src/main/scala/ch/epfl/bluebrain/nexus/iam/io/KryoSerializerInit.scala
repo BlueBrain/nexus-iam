@@ -6,7 +6,6 @@ import io.altoo.akka.serialization.kryo.serializer.scala.ScalaKryo
 
 class KryoSerializerInit extends DefaultKryoInitializer {
 
-
   override def postInit(kryo: ScalaKryo): Unit = {
     super.postInit(kryo)
     kryo.register(classOf[JWKSet], new JWKSetSerializer)
