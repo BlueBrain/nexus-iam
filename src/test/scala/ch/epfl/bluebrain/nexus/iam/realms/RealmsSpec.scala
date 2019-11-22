@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.Date
 
 import akka.http.scaladsl.client.RequestBuilding._
-import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
@@ -47,10 +46,9 @@ class RealmsSpec
   implicit val http: HttpConfig = appConfig.http
   implicit val rc: RealmsConfig = appConfig.realms
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)
-  implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
-  implicit val caller: Caller         = Caller.anonymous
+  implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  implicit val timer: Timer[IO]      = IO.timer(ExecutionContext.global)
+  implicit val caller: Caller        = Caller.anonymous
 
   val instant: Instant = Instant.ofEpochMilli(5L)
   implicit val clock: Clock[IO] = {

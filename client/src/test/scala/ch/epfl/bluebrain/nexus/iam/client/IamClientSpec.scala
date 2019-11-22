@@ -8,7 +8,6 @@ import akka.http.scaladsl.client.RequestBuilding.{Get, Put}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
 import cats.effect.IO
 import cats.implicits._
@@ -47,8 +46,7 @@ class IamClientSpec
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(5 seconds, 15 milliseconds)
 
-  private implicit val mt: Materializer = ActorMaterializer()
-  private val clock                     = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
+  private val clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private val config =
     IamClientConfig(url"http://example.com/some/".value, url"http://internal.example.com/some/".value, "v1")
 

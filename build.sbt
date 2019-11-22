@@ -25,24 +25,24 @@ scalafmt: {
  */
 
 // Dependency versions
-val alpakkaVersion             = "1.1.1"
-val commonsVersion             = "0.17.15"
-val sourcingVersion            = "0.16.6"
-val akkaVersion                = "2.5.25"
-val akkaCorsVersion            = "0.4.1"
+val alpakkaVersion             = "1.1.2"
+val commonsVersion             = "0.18.0"
+val sourcingVersion            = "0.17.0"
+val akkaVersion                = "2.6.0"
+val akkaCorsVersion            = "0.4.2"
 val akkaHttpVersion            = "10.1.10"
-val akkaPersistenceCassVersion = "0.99"
+val akkaPersistenceCassVersion = "0.100"
 val akkaPersistenceMemVersion  = "2.5.15.2"
 val catsVersion                = "2.0.0"
-val circeVersion               = "0.12.1"
+val circeVersion               = "0.12.3"
 val journalVersion             = "3.0.19"
 val logbackVersion             = "1.2.3"
-val mockitoVersion             = "1.5.17"
-val monixVersion               = "3.0.0"
-val nimbusJoseJwtVersion       = "7.8"
-val pureconfigVersion          = "0.12.0"
+val mockitoVersion             = "1.7.1"
+val monixVersion               = "3.1.0"
+val nimbusJoseJwtVersion       = "8.2.1"
+val pureconfigVersion          = "0.12.1"
 val scalaTestVersion           = "3.0.8"
-val kryoVersion                = "0.5.2"
+val kryoVersion                = "1.0.0"
 
 // Dependencies modules
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion
@@ -74,7 +74,7 @@ lazy val nimbusJoseJwt        = "com.nimbusds"            % "nimbus-jose-jwt"   
 lazy val logbackClassic       = "ch.qos.logback"          % "logback-classic"             % logbackVersion
 lazy val pureconfig           = "com.github.pureconfig"   %% "pureconfig"                 % pureconfigVersion
 lazy val scalaTest            = "org.scalatest"           %% "scalatest"                  % scalaTestVersion
-lazy val kryo                 = "com.github.romix.akka"   %% "akka-kryo-serialization"    % kryoVersion
+lazy val kryo                 = "io.altoo"                %% "akka-kryo-serialization"    % kryoVersion
 
 lazy val iam = project
   .in(file("."))
@@ -115,7 +115,7 @@ lazy val iam = project
       mockitoScala       % Test,
       scalaTest          % Test
     ),
-    resolvers += "dnvriend" at "http://dl.bintray.com/dnvriend/maven",
+    resolvers += "dnvriend" at "https://dl.bintray.com/dnvriend/maven",
     mappings in Universal := {
       val universalMappings = (mappings in Universal).value
       universalMappings.foldLeft(Vector.empty[(File, String)]) {
@@ -153,6 +153,7 @@ lazy val client = project
 lazy val testSettings = Seq(
   Test / testOptions         += Tests.Argument(TestFrameworks.ScalaTest, "-o", "-u", "target/test-reports"),
   Test / parallelExecution   := false,
+  Test / fork                := true,
   coverageFailOnMinimum      := true,
   sourceDirectory in Jmh     := (sourceDirectory in Test).value,
   classDirectory in Jmh      := (classDirectory in Test).value,

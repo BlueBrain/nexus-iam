@@ -5,7 +5,6 @@ import java.net.URLDecoder
 import akka.actor.ActorSystem
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
 import akka.persistence.query.PersistenceQuery
-import akka.stream.ActorMaterializer
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
@@ -30,7 +29,7 @@ object RepairFromMessages {
       p: Permissions[Task],
       r: Realms[Task],
       a: Acls[Task]
-  )(implicit as: ActorSystem, mt: ActorMaterializer, sc: Scheduler, pm: CanBlock): Unit = {
+  )(implicit as: ActorSystem, sc: Scheduler, pm: CanBlock): Unit = {
     val pq = PersistenceQuery(as).readJournalFor[CassandraReadJournal](CassandraReadJournal.Identifier)
 
     pq.currentPersistenceIds()

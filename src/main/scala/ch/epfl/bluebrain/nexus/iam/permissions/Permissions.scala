@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import cats.Monad
 import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
@@ -149,7 +148,6 @@ object Permissions {
     */
   def aggregate[F[_]: Effect: Timer](
       implicit as: ActorSystem,
-      mt: ActorMaterializer,
       pc: PermissionsConfig
   ): F[Agg[F]] =
     AkkaAggregate.sharded[F](
@@ -184,7 +182,6 @@ object Permissions {
   def apply[F[_]: Effect: Timer](acls: F[Acls[F]])(
       implicit
       as: ActorSystem,
-      mt: ActorMaterializer,
       http: HttpConfig,
       pc: PermissionsConfig
   ): F[Permissions[F]] =

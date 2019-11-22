@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.iam.permissions
 
 import java.time.Instant
 
-import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
@@ -36,10 +35,9 @@ class PermissionsSpec
   implicit val http: HttpConfig      = appConfig.http
   implicit val pc: PermissionsConfig = appConfig.permissions
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)
-  implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
-  implicit val caller: Caller         = Caller.anonymous
+  implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  implicit val timer: Timer[IO]      = IO.timer(ExecutionContext.global)
+  implicit val caller: Caller        = Caller.anonymous
 
   val instant: Instant = Instant.ofEpochMilli(5L)
   implicit val clock: Clock[IO] = {
