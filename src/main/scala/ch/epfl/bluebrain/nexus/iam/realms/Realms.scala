@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
@@ -187,6 +186,7 @@ class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: Rea
         .catchNonFatal(proc.process(jwt, null))
         .leftMap(_ => TokenRejection.InvalidAccessToken)
     }
+    @SuppressWarnings(Array("UnnecessaryConversion"))
     def caller(claimsSet: JWTClaimsSet, realm: ActiveRealm, exp: Option[Instant]): F[Either[TokenRejection, Caller]] = {
       val authenticated     = Authenticated(realm.id.value)
       val preferredUsername = Try(claimsSet.getStringClaim("preferred_username")).filter(_ != null).toOption
@@ -296,7 +296,6 @@ object Realms {
     */
   def aggregate[F[_]: Effect: Timer: Clock](
       implicit as: ActorSystem,
-      mt: ActorMaterializer,
       rc: RealmsConfig,
       hc: HttpClient[F, Json]
   ): F[Agg[F]] =
@@ -336,7 +335,6 @@ object Realms {
   def apply[F[_]: Effect: Timer: Clock](acls: F[Acls[F]], groups: Groups[F])(
       implicit
       as: ActorSystem,
-      mt: ActorMaterializer,
       http: HttpConfig,
       hc: HttpClient[F, Json],
       rc: RealmsConfig

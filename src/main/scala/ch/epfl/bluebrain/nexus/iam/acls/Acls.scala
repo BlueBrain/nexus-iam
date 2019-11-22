@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
 import cats.{Applicative, Monad}
@@ -165,7 +164,7 @@ object Acls {
     */
   def aggregate[F[_]: Effect: Timer: Clock](
       perms: F[Permissions[F]]
-  )(implicit as: ActorSystem, mt: ActorMaterializer, ac: AclsConfig): F[Agg[F]] =
+  )(implicit as: ActorSystem, ac: AclsConfig): F[Agg[F]] =
     AkkaAggregate.sharded[F](
       "acls",
       AclState.Initial,
@@ -203,7 +202,6 @@ object Acls {
   def apply[F[_]: Effect: Timer: Clock](perms: F[Permissions[F]])(
       implicit
       as: ActorSystem,
-      mt: ActorMaterializer,
       http: HttpConfig,
       ac: AclsConfig,
       pc: PermissionsConfig

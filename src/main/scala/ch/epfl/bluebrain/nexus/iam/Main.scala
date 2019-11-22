@@ -8,7 +8,6 @@ import akka.cluster.Cluster
 import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.RouteResult
-import akka.stream.ActorMaterializer
 import cats.effect.Effect
 import cats.effect.concurrent.Deferred
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
@@ -53,19 +52,16 @@ object Main {
     }
   }
 
-  def bootstrap(
-      as: ActorSystem
-  )(implicit cfg: AppConfig, mt: ActorMaterializer): (Permissions[Task], Acls[Task], Realms[Task]) = {
+  def bootstrap()(implicit system: ActorSystem, cfg: AppConfig): (Permissions[Task], Acls[Task], Realms[Task]) = {
     implicit val eff: Effect[Task] = Task.catsEffect(Scheduler.global)
     import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-    implicit val system = as
-    implicit val pc     = cfg.permissions
-    implicit val ac     = cfg.acls
-    implicit val rc     = cfg.realms
-    implicit val gc     = cfg.groups
-    implicit val pm     = CanBlock.permit
-    implicit val cl     = HttpClient.untyped[Task]
-    import as.dispatcher
+    implicit val pc = cfg.permissions
+    implicit val ac = cfg.acls
+    implicit val rc = cfg.realms
+    implicit val gc = cfg.groups
+    implicit val pm = CanBlock.permit
+    implicit val cl = HttpClient.untyped[Task]
+    import system.dispatcher
     implicit val jc = HttpClient.withUnmarshaller[Task, Json]
 
     val deferred = for {
@@ -99,7 +95,6 @@ object Main {
     implicit val appConfig = Settings(config).appConfig
     implicit val as        = ActorSystem(appConfig.description.fullName, config)
     implicit val ec        = as.dispatcher
-    implicit val mt        = ActorMaterializer()
 
     val cluster = Cluster(as)
     val seeds: List[Address] = appConfig.cluster.seeds.toList
@@ -109,7 +104,7 @@ object Main {
       case nonEmpty => nonEmpty
     }
 
-    val (perms, acls, realms) = bootstrap(as)
+    val (perms, acls, realms) = bootstrap()
 
     val logger = Logging(as, getClass)
     System.setProperty(DocumentLoader.DISALLOW_REMOTE_CONTEXT_LOADING, "true")
@@ -118,7 +113,7 @@ object Main {
       logger.info("==== Cluster is Live ====")
 
       if (sys.env.getOrElse("REPAIR_FROM_MESSAGES", "false").toBoolean) {
-        RepairFromMessages.repair(perms, realms, acls)(as, mt, Scheduler.global, CanBlock.permit)
+        RepairFromMessages.repair(perms, realms, acls)(as, Scheduler.global, CanBlock.permit)
       }
 
       bootstrapIndexers(acls, realms)
@@ -148,4 +143,5 @@ object Main {
     }
   }
 }
+
 // $COVERAGE-ON$

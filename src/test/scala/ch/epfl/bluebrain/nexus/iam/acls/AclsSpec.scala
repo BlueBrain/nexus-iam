@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.Instant
 
-import akka.stream.ActorMaterializer
 import cats.effect.{Clock, ContextShift, IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
@@ -42,9 +41,8 @@ class AclsSpec
   val http                          = appConfig.http
   val pc                            = appConfig.permissions
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val ctx: ContextShift[IO]  = IO.contextShift(ExecutionContext.global)
-  implicit val timer: Timer[IO]       = IO.timer(ExecutionContext.global)
+  implicit val ctx: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
+  implicit val timer: Timer[IO]      = IO.timer(ExecutionContext.global)
 
   private val identities: List[Identity]   = List(User("sub", "realm"), Group("group", "realm"), Anonymous)
   private val permissions: Set[Permission] = List.fill(300)(Permission(genString(length = 6)).value).toSet

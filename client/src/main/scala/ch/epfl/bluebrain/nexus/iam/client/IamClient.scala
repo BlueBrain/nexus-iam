@@ -7,8 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, Materializer}
-import cats.effect.{Effect, IO, LiftIO}
+import cats.effect.{ContextShift, Effect, IO, LiftIO}
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -40,7 +39,7 @@ class IamClient[F[_]] private[client] (
     callerClient: HttpClient[F, Caller],
     permissionsClient: HttpClient[F, Permissions],
     jsonClient: HttpClient[F, Json]
-)(implicit F: Effect[F], mt: Materializer) {
+)(implicit F: Effect[F], as: ActorSystem) {
 
   /**
     * Fetches the service description information (name and version)
@@ -191,13 +190,13 @@ object IamClient {
   private def httpClient[F[_], A: ClassTag](
       implicit L: LiftIO[F],
       F: Effect[F],
+      as: ActorSystem,
       ec: ExecutionContext,
-      mt: Materializer,
       cl: UntypedHttpClient[F],
       um: FromEntityUnmarshaller[A]
   ): HttpClient[F, A] = new HttpClient[F, A] {
-    private val logger                = Logger(s"IamHttpClient[${implicitly[ClassTag[A]]}]")
-    private implicit val contextShift = IO.contextShift(ec)
+    private implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
+    private val logger                                  = Logger(s"IamHttpClient[${implicitly[ClassTag[A]]}]")
 
     private def handleError[B](req: HttpRequest): Throwable => F[B] = {
       case NonFatal(th) =>
@@ -253,7 +252,6 @@ object IamClient {
     * @return a new [[IamClient]]
     */
   final def apply[F[_]: Effect](implicit config: IamClientConfig, as: ActorSystem): IamClient[F] = {
-    implicit val mt: ActorMaterializer        = ActorMaterializer()
     implicit val ec: ExecutionContextExecutor = as.dispatcher
     implicit val ucl: UntypedHttpClient[F]    = HttpClient.untyped[F]
 
