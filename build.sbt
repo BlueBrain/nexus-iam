@@ -24,6 +24,7 @@ scalafmt: {
 }
  */
 import com.typesafe.sbt.packager.docker.DockerChmodType
+import com.typesafe.sbt.packager.docker.DockerVersion
 
 // Dependency versions
 val alpakkaVersion             = "1.1.2"
@@ -139,7 +140,8 @@ lazy val iam = project
     dockerExposedPorts   := Seq(8080, 2552),
     dockerUsername       := Some("bluebrain"),
     dockerUpdateLatest   := false,
-    dockerChmodType      := DockerChmodType.UserGroupWriteExecute
+    dockerChmodType      := DockerChmodType.UserGroupWriteExecute,
+    dockerVersion        := Some(DockerVersion(19, 3, 5, Some("ce")))
   )
 
 lazy val client = project
