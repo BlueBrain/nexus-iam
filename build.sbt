@@ -23,6 +23,7 @@ scalafmt: {
   ]
 }
  */
+import com.typesafe.sbt.packager.docker.DockerChmodType
 
 // Dependency versions
 val alpakkaVersion             = "1.1.2"
@@ -79,7 +80,7 @@ lazy val kryo                 = "io.altoo"                %% "akka-kryo-serializ
 lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
-  .enablePlugins(BuildInfoPlugin, ServicePackagingPlugin, JmhPlugin)
+  .enablePlugins(BuildInfoPlugin, JmhPlugin)
   .aggregate(client)
   .settings(
     name       := "iam",
@@ -115,7 +116,11 @@ lazy val iam = project
       mockitoScala       % Test,
       scalaTest          % Test
     ),
-    resolvers += "dnvriend" at "https://dl.bintray.com/dnvriend/maven",
+    resolvers += "dnvriend" at "https://dl.bintray.com/dnvriend/maven"
+  )
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, DockerPlugin)
+  .settings(
+    // package the kanela agent as a fixed name jar
     mappings in Universal := {
       val universalMappings = (mappings in Universal).value
       universalMappings.foldLeft(Vector.empty[(File, String)]) {
@@ -124,7 +129,17 @@ lazy val iam = project
         case (acc, other) =>
           acc :+ other
       }
-    }
+    },
+    // docker publishing settings
+    Docker / maintainer  := "Nexus Team <noreply@epfl.ch>",
+    Docker / packageName := "nexus-iam",
+    Docker / version     := "latest",
+    Docker / daemonUser  := "nexus",
+    dockerBaseImage      := "adoptopenjdk:11-jre-hotspot",
+    dockerExposedPorts   := Seq(8080, 2552),
+    dockerUsername       := Some("bluebrain"),
+    dockerUpdateLatest   := false,
+    dockerChmodType      := DockerChmodType.UserGroupWriteExecute
   )
 
 lazy val client = project

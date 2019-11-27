@@ -37,6 +37,10 @@ jobs:
           java-version: adopt@1.11
       - name: Publish
         run: sbt releaseEarly
+      - name: PublishLatestDocker
+        run: |
+          docker login --username ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
+          sbt docker:publishLocal
       - name: RecordCoverage
         run: sbt clean coverage test coverageReport coverageAggregate
       - uses: codecov/codecov-action@v1
