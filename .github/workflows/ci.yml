@@ -31,16 +31,19 @@ jobs:
       BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
       BINTRAY_PASS: ${{ secrets.BINTRAY_PASS }}
     steps:
-      - uses: actions/checkout@v1
-      - uses: olafurpg/setup-scala@v5
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: SetupSbt
+        uses: olafurpg/setup-scala@v5
         with:
           java-version: adopt@1.11
-      - name: Publish
+      - name: PublishToBintray
         run: sbt releaseEarly
-      - name: PublishDockerAsLatest
+      - name: PublishToDockerHub
         run: |
+          sbt docker:publishLocal
           docker login --username ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
-          sbt docker:publish
+          docker push bluebrain/nexus-iam:latest
       - name: RecordCoverage
         run: sbt clean coverage test coverageReport coverageAggregate
       - uses: codecov/codecov-action@v1
