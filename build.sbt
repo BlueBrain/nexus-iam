@@ -23,8 +23,6 @@ scalafmt: {
   ]
 }
  */
-import com.typesafe.sbt.packager.docker.DockerChmodType
-import com.typesafe.sbt.packager.docker.DockerVersion
 
 // Dependency versions
 val alpakkaVersion             = "1.1.2"
@@ -81,11 +79,13 @@ lazy val kryo                 = "io.altoo"                %% "akka-kryo-serializ
 lazy val iam = project
   .in(file("."))
   .settings(testSettings, buildInfoSettings)
-  .enablePlugins(BuildInfoPlugin, JmhPlugin)
+  .enablePlugins(BuildInfoPlugin, JmhPlugin, ServicePackagingPlugin)
   .aggregate(client)
   .settings(
-    name       := "iam",
-    moduleName := "iam",
+    name                 := "iam",
+    moduleName           := "iam",
+    Docker / packageName := "nexus-iam",
+    resolvers            += "dnvriend" at "https://dl.bintray.com/dnvriend/maven",
     libraryDependencies ++= Seq(
       commonsCore,
       commonsKamon,
@@ -116,32 +116,7 @@ lazy val iam = project
       commonsTest        % Test,
       mockitoScala       % Test,
       scalaTest          % Test
-    ),
-    resolvers += "dnvriend" at "https://dl.bintray.com/dnvriend/maven"
-  )
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, DockerPlugin)
-  .settings(
-    // package the kanela agent as a fixed name jar
-    mappings in Universal := {
-      val universalMappings = (mappings in Universal).value
-      universalMappings.foldLeft(Vector.empty[(File, String)]) {
-        case (acc, (file, filename)) if filename.contains("kanela-agent") =>
-          acc :+ (file, "lib/instrumentation-agent.jar")
-        case (acc, other) =>
-          acc :+ other
-      }
-    },
-    // docker publishing settings
-    Docker / maintainer  := "Nexus Team <noreply@epfl.ch>",
-    Docker / packageName := "nexus-iam",
-    Docker / version     := "latest",
-    Docker / daemonUser  := "nexus",
-    dockerBaseImage      := "adoptopenjdk:11-jre-hotspot",
-    dockerExposedPorts   := Seq(8080, 2552),
-    dockerUsername       := Some("bluebrain"),
-    dockerUpdateLatest   := false,
-    dockerChmodType      := DockerChmodType.UserGroupWriteExecute,
-    dockerVersion        := Some(DockerVersion(19, 3, 5, Some("ce")))
+    )
   )
 
 lazy val client = project
