@@ -39,7 +39,7 @@ jobs:
         run: sbt releaseEarly
       - name: PublishDockerAsLatest
         run: |
-          docker login --u sername ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
+          docker login --username ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
           sbt docker:publish
       - name: RecordCoverage
         run: sbt clean coverage test coverageReport coverageAggregate
