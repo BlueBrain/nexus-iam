@@ -39,9 +39,8 @@ jobs:
         run: sbt releaseEarly
       - name: PublishDockerAsLatest
         run: |
-          docker --version
-          docker login --username ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
-          sbt docker:publishLocal
+          docker login --u sername ${{ secrets.DOCKER_USER }} --password ${{ secrets.DOCKER_PASS }}
+          sbt docker:publish
       - name: RecordCoverage
         run: sbt clean coverage test coverageReport coverageAggregate
       - uses: codecov/codecov-action@v1
