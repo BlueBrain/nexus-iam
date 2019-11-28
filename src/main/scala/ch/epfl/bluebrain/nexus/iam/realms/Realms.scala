@@ -4,12 +4,14 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
+import akka.persistence.query.scaladsl.EventsByTagQuery
+import akka.persistence.query.{NoOffset, PersistenceQuery}
+import akka.stream.scaladsl.Source
+import cats.Monad
 import cats.data.EitherT
 import cats.effect._
 import cats.implicits._
-import cats.{Monad, MonadError}
-import ch.epfl.bluebrain.nexus.commons.cache.KeyValueStoreError._
-import ch.epfl.bluebrain.nexus.commons.cache.{KeyValueStore, KeyValueStoreConfig, KeyValueStoreError}
+import ch.epfl.bluebrain.nexus.commons.cache.{KeyValueStore, KeyValueStoreConfig}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.TokenRejection._
@@ -27,9 +29,8 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, Use
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
-import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressStorage.Volatile
-import ch.epfl.bluebrain.nexus.sourcing.projections.{ProjectionConfig, TagProjection}
-import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
+import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressFlow.{PairMsg, ProgressFlowElem}
+import ch.epfl.bluebrain.nexus.sourcing.projections.{Message, StreamSupervisor}
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
@@ -37,7 +38,9 @@ import com.nimbusds.jose.proc.{JWSVerificationKeySelector, SecurityContext}
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import io.circe.Json
+import retry.RetryPolicy
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 /**
@@ -48,11 +51,10 @@ import scala.util.Try
   * @param index an index implementation for realms
   * @tparam F    the effect type
   */
-class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
-    implicit http: HttpConfig
+class Realms[F[_]](val agg: Agg[F], acls: F[Acls[F]], index: RealmIndex[F], groups: Groups[F])(
+    implicit F: Effect[F],
+    http: HttpConfig
 ) {
-
-  private val F = implicitly[MonadThrowable[F]]
 
   /**
     * Creates a new realm using the provided configuration.
@@ -266,29 +268,13 @@ class Realms[F[_]: MonadThrowable](val agg: Agg[F], acls: F[Acls[F]], index: Rea
 
 object Realms {
 
-  private def mapError(cacheError: KeyValueStoreError): IamError =
-    cacheError match {
-      case e: ReadWriteConsistencyTimeout =>
-        OperationTimedOut(s"Timeout while interacting with the cache due to '${e.timeout}'")
-      case e: DistributedDataError => InternalError(e.reason)
-    }
-
   /**
     * Creates a new realm index.
     */
-  def index[F[_]: Timer](implicit as: ActorSystem, rc: RealmsConfig, F: Async[F]): RealmIndex[F] = {
+  def index[F[_]: Effect: Timer](implicit as: ActorSystem, rc: RealmsConfig): RealmIndex[F] = {
     implicit val cfg: KeyValueStoreConfig = rc.keyValueStore
-    implicit val monadError: MonadError[F, IamError] = new MonadError[F, IamError] {
-      override def handleErrorWith[A](fa: F[A])(f: IamError => F[A]): F[A] = F.recoverWith(fa) {
-        case t: IamError => f(t)
-      }
-      override def raiseError[A](e: IamError): F[A]                    = F.raiseError(e)
-      override def pure[A](x: A): F[A]                                 = F.pure(x)
-      override def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]         = F.flatMap(fa)(f)
-      override def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B] = F.tailRecM(a)(f)
-    }
-    val clock: (Long, Resource) => Long = (_, resource) => resource.rev
-    KeyValueStore.distributed("realms", clock, mapError)
+    val clock: (Long, Resource) => Long   = (_, resource) => resource.rev
+    KeyValueStore.distributed("realms", clock)
   }
 
   /**
@@ -298,17 +284,18 @@ object Realms {
       implicit as: ActorSystem,
       rc: RealmsConfig,
       hc: HttpClient[F, Json]
-  ): F[Agg[F]] =
+  ): F[Agg[F]] = {
+    implicit val retryPolicy: RetryPolicy[F] = rc.sourcing.retry.retryPolicy[F]
     AkkaAggregate.sharded[F](
       "realms",
       RealmState.Initial,
       next,
       evaluate[F],
       rc.sourcing.passivationStrategy(),
-      Retry(rc.sourcing.retry.retryStrategy),
       rc.sourcing.akkaSourcingConfig,
       rc.sourcing.shards
     )
+  }
 
   /**
     * Creates a new realms api using the provided aggregate, a lazy reference to the ACL api and a realm index reference.
@@ -318,7 +305,7 @@ object Realms {
     * @param index  a realm index reference
     * @param groups a groups provider reference
     */
-  def apply[F[_]: MonadThrowable](
+  def apply[F[_]: Effect](
       agg: Agg[F],
       acls: F[Acls[F]],
       index: RealmIndex[F],
@@ -349,7 +336,7 @@ object Realms {
     * @param index  a realm index reference
     * @param groups a groups provider reference
     */
-  def delay[F[_]: MonadThrowable](
+  def delay[F[_]: Effect](
       agg: F[Agg[F]],
       acls: F[Acls[F]],
       index: RealmIndex[F],
@@ -363,23 +350,28 @@ object Realms {
     * @param realms the realms API
     */
   def indexer[F[_]: Timer](realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig): F[Unit] = {
-    implicit val sc: SourcingConfig = rc.sourcing
+    implicit val sc: SourcingConfig   = rc.sourcing
+    implicit val ec: ExecutionContext = as.dispatcher
 
-    val indexFn = (resources: List[(Label, Resource)]) =>
-      resources.traverse { case (label, res) => index.put(label, res) } >> F.unit
+    val projectionId = "realm-index"
+    val source: Source[PairMsg[Any], _] = PersistenceQuery(as)
+      .readJournalFor[EventsByTagQuery](rc.sourcing.queryJournalPlugin)
+      .eventsByTag(TaggingAdapter.realmEventTag, NoOffset)
+      .map[PairMsg[Any]](e => Right(Message(e, projectionId)))
 
-    val cfg = ProjectionConfig
-      .builder[F]
-      .offset(Volatile)
-      .name("realm-index")
-      .batch(rc.indexing.batch, rc.indexing.batchTimeout)
-      .plugin(rc.sourcing.queryJournalPlugin)
-      .tag(TaggingAdapter.realmEventTag)
-      .retry(rc.indexing.retry.retryStrategy)
-      .mapping((ev: Event) => realms.fetchUnsafe(ev.id).map(_.map(ev.id -> _)))
-      .index(indexFn)
-      .build
-    TagProjection.delay(cfg) >> F.unit
+    val flow = ProgressFlowElem[F, Any]
+      .collectCast[Event]
+      .groupedWithin(rc.indexing.batch, rc.indexing.batchTimeout)
+      .distinct()
+      .mergeEmit()
+      .mapAsync(ev => realms.fetchUnsafe(ev.id).map(_.map(ev.id -> _)))
+      .collectSome[(Label, Resource)]
+      .mapAsync { case (label, res) => index.put(label, res) }
+      .flow
+      .map(_ => ())
+
+    F.delay[StreamSupervisor[F, Unit]](StreamSupervisor.startSingleton(F.delay(source.via(flow)), projectionId)) >> F.unit
+
   }
 
   private[realms] def next(state: State, event: Event): State = {
@@ -404,7 +396,7 @@ object Realms {
     }
   }
 
-  private def evaluate[F[_]: MonadThrowable: Clock: HttpJsonClient](state: State, cmd: Command): F[EventOrRejection] = {
+  private def evaluate[F[_]: Effect: Clock: HttpJsonClient](state: State, cmd: Command): F[EventOrRejection] = {
     val F = implicitly[Monad[F]]
     val C = implicitly[Clock[F]]
     def instantF: F[Instant] =

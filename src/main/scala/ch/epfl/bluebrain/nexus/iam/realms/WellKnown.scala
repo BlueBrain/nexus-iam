@@ -2,10 +2,11 @@ package ch.epfl.bluebrain.nexus.iam.realms
 
 import akka.http.scaladsl.client.RequestBuilding._
 import cats.data.EitherT
+import cats.effect.Effect
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
-import ch.epfl.bluebrain.nexus.iam.types.{GrantType, MonadThrowable}
+import ch.epfl.bluebrain.nexus.iam.types.GrantType
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import com.nimbusds.jose.jwk.{JWK, KeyType}
@@ -58,9 +59,8 @@ object WellKnown {
     *
     * @param address the address of the openid configuration
     */
-  def apply[F[_]: MonadThrowable](address: Url)(implicit cl: HttpClient[F, Json]): F[Either[Rejection, WellKnown]] = {
+  def apply[F[_]](address: Url)(implicit cl: HttpClient[F, Json], F: Effect[F]): F[Either[Rejection, WellKnown]] = {
     import GrantType.Snake._
-    val F = implicitly[MonadThrowable[F]]
     def fetchConfig: EitherT[F, Rejection, Json] =
       EitherT(cl(Get(address.asUri)).map[Either[Rejection, Json]](Right.apply).handleErrorWith {
         case NonFatal(_) => F.pure(Left(UnsuccessfulOpenIdConfigResponse(address)))

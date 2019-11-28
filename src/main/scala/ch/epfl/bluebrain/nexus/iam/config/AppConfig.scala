@@ -10,6 +10,7 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig
 import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig.RetryStrategyConfig
+import ch.epfl.bluebrain.nexus.sourcing.projections.IndexingConfig
 
 import scala.concurrent.duration._
 
@@ -98,15 +99,6 @@ object AppConfig {
     * @param queryJournalPlugin   plugin for querying journal events
     */
   final case class PersistenceConfig(journalPlugin: String, snapshotStorePlugin: String, queryJournalPlugin: String)
-
-  /**
-    * Indexing configuration
-    *
-    * @param batch        the maximum number of events taken on each batch
-    * @param batchTimeout the maximum amount of time to wait for the number of events to be taken on each batch
-    * @param retry        the retry configuration when indexing failures
-    */
-  final case class IndexingConfig(batch: Int, batchTimeout: FiniteDuration, retry: RetryStrategyConfig)
 
   /**
     * ACLs configuration

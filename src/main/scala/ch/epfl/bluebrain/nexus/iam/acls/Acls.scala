@@ -3,7 +3,11 @@ package ch.epfl.bluebrain.nexus.iam.acls
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+//import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.persistence.query.scaladsl.EventsByTagQuery
+import akka.persistence.query.{NoOffset, PersistenceQuery}
+import akka.stream.scaladsl.Source
 import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
 import cats.{Applicative, Monad}
@@ -19,18 +23,23 @@ import ch.epfl.bluebrain.nexus.iam.io.TaggingAdapter
 import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
-import ch.epfl.bluebrain.nexus.iam.types.{Caller, MonadThrowable, Permission}
+import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
-import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressStorage.Volatile
-import ch.epfl.bluebrain.nexus.sourcing.projections.{ProjectionConfig, TagProjection}
-import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
+import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressFlow.{PairMsg, ProgressFlowElem}
+import ch.epfl.bluebrain.nexus.sourcing.projections.{Message, StreamSupervisor}
+import retry.RetryPolicy
+//import retry.CatsEffect._
+//import retry._
+//import retry.syntax.all._
+
+import scala.concurrent.ExecutionContext
 
 //noinspection RedundantDefaultArgument
 class Acls[F[_]](
     val agg: Agg[F],
     private val index: AclsIndex[F]
-)(implicit F: MonadThrowable[F], http: HttpConfig, pc: PermissionsConfig) {
+)(implicit F: Effect[F], http: HttpConfig, pc: PermissionsConfig) {
 
   /**
     * Overrides ''acl'' on a ''path''.
@@ -164,17 +173,18 @@ object Acls {
     */
   def aggregate[F[_]: Effect: Timer: Clock](
       perms: F[Permissions[F]]
-  )(implicit as: ActorSystem, ac: AclsConfig): F[Agg[F]] =
+  )(implicit as: ActorSystem, ac: AclsConfig): F[Agg[F]] = {
+    implicit val retryPolicy: RetryPolicy[F] = ac.sourcing.retry.retryPolicy[F]
     AkkaAggregate.sharded[F](
       "acls",
       AclState.Initial,
       next,
       evaluate[F](perms),
       ac.sourcing.passivationStrategy(),
-      Retry(ac.sourcing.retry.retryStrategy),
       ac.sourcing.akkaSourcingConfig,
       ac.sourcing.shards
     )
+  }
 
   /**
     * Constructs an ACL index.
@@ -188,7 +198,7 @@ object Acls {
     * @param agg   the acl aggregate
     * @param index an acl index
     */
-  def apply[F[_]: MonadThrowable](
+  def apply[F[_]: Effect](
       agg: Agg[F],
       index: AclsIndex[F]
   )(implicit http: HttpConfig, pc: PermissionsConfig): Acls[F] =
@@ -214,7 +224,7 @@ object Acls {
     * @param agg   the acl aggregate
     * @param index an acl index
     */
-  def delay[F[_]: MonadThrowable](
+  def delay[F[_]: Effect](
       agg: F[Agg[F]],
       index: AclsIndex[F]
   )(implicit http: HttpConfig, pc: PermissionsConfig): F[Acls[F]] =
@@ -226,23 +236,28 @@ object Acls {
     * @param acls the acls API
     */
   def indexer[F[_]: Timer](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
-    implicit val sc: SourcingConfig = ac.sourcing
+    implicit val sc: SourcingConfig   = ac.sourcing
+    implicit val ec: ExecutionContext = as.dispatcher
 
-    val indexFn = (resources: List[(Path, Resource)]) =>
-      resources.traverse { case (path, res) => acls.index.replace(path, res) } >> F.unit
+    val projectionId: String = "acl-index"
+    val source: Source[PairMsg[Any], _] = PersistenceQuery(as)
+      .readJournalFor[EventsByTagQuery](ac.sourcing.queryJournalPlugin)
+      .eventsByTag(TaggingAdapter.aclEventTag, NoOffset)
+      .map[PairMsg[Any]](e => Right(Message(e, projectionId)))
 
-    val cfg = ProjectionConfig
-      .builder[F]
-      .name("acl-index")
-      .offset(Volatile)
-      .batch(ac.indexing.batch, ac.indexing.batchTimeout)
-      .plugin(ac.sourcing.queryJournalPlugin)
-      .tag(TaggingAdapter.aclEventTag)
-      .retry(ac.indexing.retry.retryStrategy)
-      .mapping((ev: Event) => acls.fetchUnsafe(ev.path).map(_.map(ev.path -> _)))
-      .index(indexFn)
-      .build
-    TagProjection.delay(cfg) >> F.unit
+    val flow = ProgressFlowElem[F, Any]
+      .collectCast[Event]
+      .groupedWithin(ac.indexing.batch, ac.indexing.batchTimeout)
+      .distinct()
+      .mergeEmit()
+      .mapAsync(ev => acls.fetchUnsafe(ev.path).map(_.map(ev.path -> _)))
+      .collectSome[(Path, Resource)]
+      .mapAsync { case (path, res) => acls.index.replace(path, res) }
+      .flow
+      .map(_ => ())
+
+    F.delay[StreamSupervisor[F, Unit]](StreamSupervisor.startSingleton(F.delay(source.via(flow)), projectionId)) >> F.unit
+
   }
 
   private[acls] def next(state: State, event: Event): AclState = {
