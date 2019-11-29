@@ -26,8 +26,8 @@ scalafmt: {
 
 // Dependency versions
 val alpakkaVersion             = "1.1.2"
-val commonsVersion             = "0.18.0"
-val sourcingVersion            = "0.17.0"
+val commonsVersion             = "0.19.1"
+val sourcingVersion            = "0.18.0"
 val akkaVersion                = "2.6.0"
 val akkaCorsVersion            = "0.4.2"
 val akkaHttpVersion            = "10.1.10"
@@ -42,7 +42,7 @@ val monixVersion               = "3.1.0"
 val nimbusJoseJwtVersion       = "8.2.1"
 val pureconfigVersion          = "0.12.1"
 val scalaTestVersion           = "3.0.8"
-val kryoVersion                = "1.0.0"
+val kryoVersion                = "1.1.0"
 
 // Dependencies modules
 lazy val sourcingCore         = "ch.epfl.bluebrain.nexus" %% "sourcing-core"              % sourcingVersion

@@ -11,7 +11,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.pattern.{ask, AskTimeoutException}
 import akka.util.Timeout
-import cats.effect.{Async, IO, Timer}
+import cats.effect.{Async, ContextShift, Effect, IO, Timer}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
@@ -20,11 +20,14 @@ import ch.epfl.bluebrain.nexus.iam.realms.Groups._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{InternalError, OperationTimedOut}
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
 import ch.epfl.bluebrain.nexus.iam.types.{IamError, Label}
-import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
-import ch.epfl.bluebrain.nexus.sourcing.retry.syntax._
 import com.nimbusds.jwt.JWTClaimsSet
 import io.circe.{Decoder, HCursor, Json}
 import journal.Logger
+import retry.RetryPolicy
+import ch.epfl.bluebrain.nexus.iam.instances._
+import retry.CatsEffect._
+import retry._
+import retry.syntax.all._
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -36,19 +39,17 @@ import scala.util.control.NonFatal
   *
   * @param ref the underlying cluster sharding actor ref proxy
   */
-class Groups[F[_]](ref: ActorRef)(
+class Groups[F[_]: Timer](ref: ActorRef)(
     implicit as: ActorSystem,
     cfg: GroupsConfig,
     hc: HttpClient[F, Json],
-    F: Async[F],
-    T: Timer[F]
+    F: Effect[F]
 ) {
 
-  private[this] val logger = Logger[this.type]
-
-  private implicit val tm: Timeout                = Timeout(cfg.askTimeout)
-  private implicit val retry: Retry[F, Throwable] = Retry(cfg.retry.retryStrategy)
-  private implicit val contextShift               = IO.contextShift(as.dispatcher)
+  private[this] val logger                            = Logger[this.type]
+  private implicit val tm: Timeout                    = Timeout(cfg.askTimeout)
+  private implicit val contextShift: ContextShift[IO] = IO.contextShift(as.dispatcher)
+  private implicit val policy: RetryPolicy[F]         = cfg.retry.retryPolicy[F]
 
   /**
     * Returns the caller group set either from the claimset, in cache or from the user info endpoint of the provided
@@ -82,7 +83,7 @@ class Groups[F[_]](ref: ActorRef)(
       case Some(set) => F.pure(set)
       case None =>
         for {
-          set <- fetch(token, realm).retry
+          set <- fetch(token, realm).retryingOnAllErrors[Throwable]
           _   <- toRef(token, set, exp.getOrElse(Instant.now().plusMillis(cfg.passivationTimeout.toMillis)))
         } yield set
     }
@@ -146,7 +147,7 @@ object Groups {
   /**
     * Constructs a Groups instance with its underlying cache from the provided implicit args.
     */
-  def apply[F[_]: Async: Timer](
+  def apply[F[_]: Effect: Timer](
       shardingSettings: Option[ClusterShardingSettings] = None
   )(implicit as: ActorSystem, cfg: GroupsConfig, hc: HttpClient[F, Json]): F[Groups[F]] = {
     val settings = shardingSettings.getOrElse(ClusterShardingSettings(as))

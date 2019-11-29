@@ -18,7 +18,7 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedIniti
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
-import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
+import retry.RetryPolicy
 
 /**
   * Permissions API.
@@ -28,11 +28,10 @@ import ch.epfl.bluebrain.nexus.sourcing.retry.Retry
   * @param http the application http configuration
   * @tparam F   the effect type
   */
-class Permissions[F[_]: MonadThrowable](
+class Permissions[F[_]](
     val agg: Agg[F],
     acls: F[Acls[F]]
-)(implicit http: HttpConfig, pc: PermissionsConfig) {
-  private val F = implicitly[MonadThrowable[F]]
+)(implicit F: Effect[F], http: HttpConfig, pc: PermissionsConfig) {
 
   /**
     * The persistence id of the permissions singleton.
@@ -149,17 +148,18 @@ object Permissions {
   def aggregate[F[_]: Effect: Timer](
       implicit as: ActorSystem,
       pc: PermissionsConfig
-  ): F[Agg[F]] =
+  ): F[Agg[F]] = {
+    implicit val retryPolicy: RetryPolicy[F] = pc.sourcing.retry.retryPolicy[F]
     AkkaAggregate.sharded[F](
       "permissions",
       PermissionsState.Initial,
       next(pc),
       evaluate[F](pc),
       pc.sourcing.passivationStrategy(),
-      Retry(pc.sourcing.retry.retryStrategy),
       pc.sourcing.akkaSourcingConfig,
       pc.sourcing.shards
     )
+  }
 
   /**
     * Creates a new permissions api using the provided aggregate and a lazy reference to the ACL api.
@@ -167,7 +167,7 @@ object Permissions {
     * @param agg  the permissions aggregate
     * @param acls a lazy reference to the ACL api
     */
-  def apply[F[_]: MonadThrowable](agg: Agg[F], acls: F[Acls[F]])(
+  def apply[F[_]: Effect](agg: Agg[F], acls: F[Acls[F]])(
       implicit
       http: HttpConfig,
       pc: PermissionsConfig
@@ -193,7 +193,7 @@ object Permissions {
     * @param agg  a lazy reference to the permissions aggregate
     * @param acls a lazy reference to the ACL api
     */
-  def delay[F[_]: MonadThrowable](agg: F[Agg[F]], acls: F[Acls[F]])(
+  def delay[F[_]: Effect](agg: F[Agg[F]], acls: F[Acls[F]])(
       implicit
       http: HttpConfig,
       pc: PermissionsConfig
