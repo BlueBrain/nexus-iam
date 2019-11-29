@@ -48,11 +48,18 @@ jobs:
           docker push bluebrain/nexus-iam:latest
       - name: TriggerIntegrationTests
         run: |
+          echo '${{ secrets.JOB_DELETION_MANIFEST }}' | curl -s \
+            -XDELETE \
+            -H"Authorization: Bearer ${{ secrets.JOB_TOKEN }}" \
+            -H"Content-Type: application/yaml" \
+            --data-binary @- \
+            -o /dev/null \
+            ${{ secrets.JOB_ADDRESS }}/test-runner-iam-latest
           echo '${{ secrets.JOB_MANIFEST }}' | sed -e 's/{VERSION}/latest/g' -e 's/{SERVICE}/iam/g' | curl -s \
             -XPOST \
             -H"Authorization: Bearer ${{ secrets.JOB_TOKEN }}" \
             -H"Content-Type: application/yaml" \
-            -d @- \
+            --data-binary @- \
             -o /dev/null \
             ${{ secrets.JOB_ADDRESS }}
       - name: RecordCoverage
