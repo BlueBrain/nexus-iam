@@ -48,7 +48,7 @@ jobs:
           docker push bluebrain/nexus-iam:latest
       - name: TriggerIntegrationTests
         run: |
-          echo ${{ secrets.JOB_MANIFEST }} | sed -e 's/{VERSION}/latest/g' -e 's/{SERVICE}/iam/g' | curl -s \
+          echo '${{ secrets.JOB_MANIFEST }}' | sed -e 's/{VERSION}/latest/g' -e 's/{SERVICE}/iam/g' | curl -s \
             -XPOST \
             -H"Authorization: Bearer ${{ secrets.JOB_TOKEN }}" \
             -H"Content-Type: application/yaml" \
