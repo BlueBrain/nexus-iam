@@ -1,10 +1,13 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
+import ch.epfl.bluebrain.nexus.commons.test.EitherValues
 import ch.epfl.bluebrain.nexus.iam.types.GrantType._
 import io.circe.{Decoder, Encoder, Json}
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.Inspectors
 
-class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class GrantTypeSpec extends AnyWordSpecLike with Matchers with Inspectors with EitherValues {
 
   "A GrantType" when {
     "using Camel encoders" should {
@@ -28,12 +31,12 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
         val decoder = implicitly[Decoder[GrantType]]
         forAll(map.toList) {
           case (expected, gt) =>
-            decoder.decodeJson(Json.fromString(gt)).right.value shouldEqual expected
+            decoder.decodeJson(Json.fromString(gt)).rightValue shouldEqual expected
         }
       }
       "fail to decode for unknown string" in {
         val decoder = implicitly[Decoder[GrantType]]
-        decoder.decodeJson(Json.fromString("incorrect")).left.value
+        decoder.decodeJson(Json.fromString("incorrect")).leftValue
       }
     }
     "using Snake encoders" should {
@@ -57,12 +60,12 @@ class GrantTypeSpec extends WordSpecLike with Matchers with Inspectors with Eith
         val decoder = implicitly[Decoder[GrantType]]
         forAll(map.toList) {
           case (expected, gtString) =>
-            decoder.decodeJson(Json.fromString(gtString)).right.value shouldEqual expected
+            decoder.decodeJson(Json.fromString(gtString)).rightValue shouldEqual expected
         }
       }
       "fail to decode for unknown string" in {
         val decoder = implicitly[Decoder[GrantType]]
-        decoder.decodeJson(Json.fromString("incorrect")).left.value
+        decoder.decodeJson(Json.fromString("incorrect")).leftValue
       }
     }
   }

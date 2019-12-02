@@ -77,7 +77,7 @@ class InMemoryAclsTree[F[_]] private (tree: ConcurrentHashMap[Path, Set[Path]], 
         if (ancestors)
           result.removeEmpty
         else
-          AccessControlLists(result.value.filterKeys(_.size == path.size)).removeEmpty
+          AccessControlLists(result.value.view.filterKeys(_.size == path.size).toMap).removeEmpty
       }
     }
   }

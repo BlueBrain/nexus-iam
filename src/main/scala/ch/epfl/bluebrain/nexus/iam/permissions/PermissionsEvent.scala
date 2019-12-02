@@ -7,6 +7,7 @@ import ch.epfl.bluebrain.nexus.iam.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission}
 import ch.epfl.bluebrain.nexus.rdf.syntax._
+import com.github.ghik.silencer.silent
 import io.circe.Encoder
 import io.circe.generic.extras.Configuration
 
@@ -94,16 +95,16 @@ object PermissionsEvent {
   object JsonLd {
     import io.circe.generic.extras.semiauto._
 
-    private implicit val config: Configuration = Configuration.default
-      .withDiscriminator("@type")
-      .copy(transformMemberNames = {
-        case "rev"     => "_rev"
-        case "instant" => "_instant"
-        case "subject" => "_subject"
-        case other     => other
-      })
-
+    @silent // defined implicits are not recognized as being used
     implicit def permissionsEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
+      implicit val config: Configuration = Configuration.default
+        .withDiscriminator("@type")
+        .copy(transformMemberNames = {
+          case "rev"     => "_rev"
+          case "instant" => "_instant"
+          case "subject" => "_subject"
+          case other     => other
+        })
       implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
       deriveConfiguredEncoder[Event]
         .mapJson { json =>

@@ -67,9 +67,10 @@ object IamError {
     */
   final case object NotFound extends IamError("The requested resource could not be found.")
 
+  private[IamError] implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+
   implicit val iamErrorEncoder: Encoder[IamError] = {
-    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveConfiguredEncoder[IamError].mapJson(_ addContext errorCtxUri)
+    val enc = deriveConfiguredEncoder[IamError].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 }

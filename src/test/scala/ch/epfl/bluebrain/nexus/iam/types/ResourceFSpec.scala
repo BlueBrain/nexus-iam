@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.types
 
 import java.time.{Clock, Instant, ZoneId}
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.testsyntax._
@@ -11,10 +11,12 @@ import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Printer
 import io.circe.syntax._
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
+import org.scalatest.Inspectors
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 //noinspection TypeAnnotation
-class ResourceFSpec extends WordSpecLike with Matchers with Inspectors with EitherValues with Resources {
+class ResourceFSpec extends AnyWordSpecLike with Matchers with Inspectors with EitherValues with Resources {
 
   "A ResourceMetadata" should {
     val user          = User("mysubject", "myrealm")

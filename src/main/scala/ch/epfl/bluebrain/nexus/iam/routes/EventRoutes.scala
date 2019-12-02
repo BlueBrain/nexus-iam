@@ -91,7 +91,7 @@ class EventRoutes(acls: Acls[Task], realms: Realms[Task])(
   ): Source[ServerSentEvent, NotUsed] = {
     pq.eventsByTag(tag, offset)
       .flatMapConcat(ee => Source(toSse(ee).toList))
-      .keepAlive(10 seconds, () => ServerSentEvent.heartbeat)
+      .keepAlive(10.seconds, () => ServerSentEvent.heartbeat)
   }
 
   private def lastEventId: Directive1[Offset] =

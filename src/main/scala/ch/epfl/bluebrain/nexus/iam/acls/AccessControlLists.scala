@@ -27,8 +27,8 @@ final case class AccessControlLists(value: Map[Path, Resource]) {
   def ++(acls: AccessControlLists): AccessControlLists = {
     val toAddKeys   = acls.value.keySet -- value.keySet
     val toMergeKeys = acls.value.keySet -- toAddKeys
-    val added       = value ++ acls.value.filterKeys(toAddKeys.contains)
-    val merged = value.filterKeys(toMergeKeys.contains).map {
+    val added       = value ++ acls.value.view.filterKeys(toAddKeys.contains)
+    val merged = value.view.filterKeys(toMergeKeys.contains).map {
       case (p, currResourceAcl) => p -> currResourceAcl.map(_ ++ acls.value(p).value)
     }
     AccessControlLists(added ++ merged)

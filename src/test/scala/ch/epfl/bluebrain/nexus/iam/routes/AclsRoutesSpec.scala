@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import ch.epfl.bluebrain.nexus.commons.test
-import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Randomness}
 import ch.epfl.bluebrain.nexus.iam.ExpectedException
 import ch.epfl.bluebrain.nexus.iam.acls._
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
@@ -26,14 +26,16 @@ import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import monix.eval.Task
 import org.mockito.{ArgumentMatchersSugar, IdiomaticMockito, Mockito}
-import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.{BeforeAndAfter, OptionValues}
 
 import scala.concurrent.duration._
 
 //noinspection NameBooleanParameters
 class AclsRoutesSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with EitherValues
     with OptionValues
@@ -45,7 +47,7 @@ class AclsRoutesSpec
     with Randomness
     with ScalaFutures {
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3.seconds, 100.milliseconds)
 
   private val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
   private implicit val appConfig: AppConfig = new Settings(ConfigFactory.parseResources("app.conf").resolve()).appConfig
@@ -98,7 +100,7 @@ class AclsRoutesSpec
     )
 
     val aclsFetch =
-      AccessControlLists(Path("/one/two").right.value -> resourceAcl1, Path("/one").right.value -> resourceAcl2)
+      AccessControlLists(Path("/one/two").rightValue -> resourceAcl1, Path("/one").rightValue -> resourceAcl2)
 
     def response(rev: Long, createdBy: Identity, updatedBty: Identity, path: Path): Json =
       jsonContentOf(
@@ -167,7 +169,7 @@ class AclsRoutesSpec
     }
 
     "get ACL self = true with path containing *" in {
-      acls.list(Path("/myorg/*").right.value, ancestors = false, self = true) shouldReturn Task.pure(aclsFetch)
+      acls.list(Path("/myorg/*").rightValue, ancestors = false, self = true) shouldReturn Task.pure(aclsFetch)
       Get(s"/acls/myorg/*") ~> addCredentials(token) ~> routes ~> check {
         responseAs[Json] shouldEqual jsonContentOf("/acls/acls.json")
         status shouldEqual StatusCodes.OK

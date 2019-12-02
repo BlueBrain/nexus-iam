@@ -9,6 +9,7 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.instances._
 import ch.epfl.bluebrain.nexus.rdf.syntax._
+import com.github.ghik.silencer.silent
 import io.circe.Encoder
 import io.circe.generic.extras.Configuration
 
@@ -110,17 +111,17 @@ object AclEvent {
   object JsonLd {
     import io.circe.generic.extras.semiauto._
 
-    private implicit val config: Configuration = Configuration.default
-      .withDiscriminator("@type")
-      .copy(transformMemberNames = {
-        case "rev"     => "_rev"
-        case "instant" => "_instant"
-        case "subject" => "_subject"
-        case "path"    => "_path"
-        case other     => other
-      })
-
+    @silent // defined implicits are not recognized as being used
     implicit def aclEventEncoder(implicit httpConfig: HttpConfig): Encoder[AclEvent] = {
+      implicit val config: Configuration = Configuration.default
+        .withDiscriminator("@type")
+        .copy(transformMemberNames = {
+          case "rev"     => "_rev"
+          case "instant" => "_instant"
+          case "subject" => "_subject"
+          case "path"    => "_path"
+          case other     => other
+        })
       implicit val arrayEncoder: Encoder[AccessControlList] = AccessControlList.aclArrayEncoder
       implicit val subjectEncoder: Encoder[Subject]         = Identity.subjectIdEncoder
       deriveConfiguredEncoder[AclEvent]

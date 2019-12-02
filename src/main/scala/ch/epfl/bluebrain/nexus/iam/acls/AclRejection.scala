@@ -7,6 +7,7 @@ import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceRejection}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.syntax._
 import ch.epfl.bluebrain.nexus.rdf.instances._
+import com.github.ghik.silencer.silent
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
 import io.circe.{Encoder, Json}
@@ -67,6 +68,7 @@ object AclRejection {
         s"Some of the permissions specified are not known: '${permissions.mkString("\"", ", ", "\"")}'"
       )
 
+  @silent // rejectionConfig is not recognized as being used
   implicit val aclRejectionEncoder: Encoder[AclRejection] = {
     implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
     val enc                                     = deriveConfiguredEncoder[AclRejection].mapJson(_ addContext errorCtxUri)

@@ -1,11 +1,12 @@
 package ch.epfl.bluebrain.nexus.iam.types
 
 import ch.epfl.bluebrain.nexus.commons.test.Randomness
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.util.Random
 
-class PermissionSpec extends WordSpec with Matchers with Randomness {
+class PermissionSpec extends AnyWordSpecLike with Matchers with Randomness {
   "A Permission" should {
     "be constructed correctly for valid strings" in {
       for (_ <- 1 to 100) {

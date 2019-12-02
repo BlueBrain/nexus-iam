@@ -2,7 +2,7 @@ package ch.epfl.bluebrain.nexus.iam.client.types.events
 
 import java.time.Instant
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.client.types.GrantType._
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity.{Anonymous, User}
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event._
@@ -10,10 +10,11 @@ import ch.epfl.bluebrain.nexus.iam.client.types.{AccessControlList, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import io.circe.Json
-import org.scalatest.{EitherValues, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 //noinspection TypeAnnotation
-class EventDecodersSpec extends WordSpecLike with Matchers with Resources with EitherValues {
+class EventDecodersSpec extends AnyWordSpecLike with Matchers with Resources with EitherValues {
 
   "Encoders and decoders" when {
     val read: Permission   = Permission.unsafe("read")
@@ -29,26 +30,26 @@ class EventDecodersSpec extends WordSpecLike with Matchers with Resources with E
       "decode acl replaced event" in {
         val expected: AclEvent = AclReplaced("one" / "two", acl, 1L, instant, subject)
         val json               = jsonContentOf("/events/acl-replaced.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode acl appended event" in {
         val appendAcls         = AccessControlList(User("some", "myrealm") -> Set(create, read))
         val expected: AclEvent = AclAppended("one" / "two", appendAcls, 2L, instant, subject)
         val json               = jsonContentOf("/events/acl-appended.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode acl subtracted event" in {
         val expected: AclEvent = AclSubtracted(/, AccessControlList(Anonymous -> Set(read)), 2L, instant, subject)
         val json               = jsonContentOf("/events/acl-subtracted.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode acl deleted event" in {
         val expected: AclEvent = AclDeleted("one" / "two", 3L, instant, subject)
         val json               = jsonContentOf("/events/acl-deleted.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
     }
 
@@ -57,25 +58,25 @@ class EventDecodersSpec extends WordSpecLike with Matchers with Resources with E
       "decode permissions replaced event" in {
         val expected: PermissionsEvent = PermissionsReplaced(Set(read, write), 1L, instant, subject)
         val json                       = jsonContentOf("/events/permissions-replaced.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode permissions appended event" in {
         val expected: PermissionsEvent = PermissionsAppended(Set(read), 2L, instant, subject)
         val json                       = jsonContentOf("/events/permissions-appended.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode permissions subtracted event" in {
         val expected: PermissionsEvent = PermissionsSubtracted(Set(read, create), 3L, instant, subject)
         val json                       = jsonContentOf("/events/permissions-subtracted.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode permissions deleted event" in {
         val expected: PermissionsEvent = PermissionsDeleted(4L, instant, subject)
         val json                       = jsonContentOf("/events/permissions-deleted.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
     }
 
@@ -89,14 +90,14 @@ class EventDecodersSpec extends WordSpecLike with Matchers with Resources with E
         "n"   -> Json.fromString("nvalue"),
         "use" -> Json.fromString("sig")
       )
-      val openIdConfig = Iri.url("http://nexus.example.com/auth/realms/myrealm/openid-configuration").right.value
+      val openIdConfig = Iri.url("http://nexus.example.com/auth/realms/myrealm/openid-configuration").rightValue
       val authorization =
-        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/auth").right.value
-      val token = Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/token").right.value
+        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/auth").rightValue
+      val token = Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/token").rightValue
       val userInfo =
-        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/userinfo").right.value
+        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/userinfo").rightValue
       val endSession =
-        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/logout").right.value
+        Iri.url("http://nexus.example.com/auth/realms/myrealm/protocol/openid-connect/logout").rightValue
       val issuer = "http://nexus.example.com/auth/realms/myrealm"
 
       "decode realm created event" in {
@@ -118,7 +119,7 @@ class EventDecodersSpec extends WordSpecLike with Matchers with Resources with E
           subject
         )
         val json = jsonContentOf("/events/realm-created.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode realm updated event" in {
@@ -140,13 +141,13 @@ class EventDecodersSpec extends WordSpecLike with Matchers with Resources with E
           subject
         )
         val json = jsonContentOf("/events/realm-updated.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
 
       "decode realm deprecated event" in {
         val expected: RealmEvent = RealmDeprecated("nexusdev", 3L, instant, subject)
         val json                 = jsonContentOf("/events/realm-deprecated.json")
-        json.as[Event].right.value shouldEqual expected
+        json.as[Event].rightValue shouldEqual expected
       }
     }
   }

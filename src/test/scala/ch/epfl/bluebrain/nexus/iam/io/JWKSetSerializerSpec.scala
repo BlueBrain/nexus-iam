@@ -5,11 +5,13 @@ import akka.serialization.Serialization
 import akka.testkit.TestKit
 import com.nimbusds.jose.jwk.JWKSet
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{Matchers, TryValues, WordSpecLike}
+import org.scalatest.TryValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class JWKSetSerializerSpec
     extends TestKit(ActorSystem("JWKSetSerializerSpec", ConfigFactory.load("akka-test.conf")))
-    with WordSpecLike
+    with AnyWordSpecLike
     with Matchers
     with TryValues {
 

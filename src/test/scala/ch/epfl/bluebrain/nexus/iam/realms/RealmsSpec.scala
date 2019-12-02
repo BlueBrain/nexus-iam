@@ -5,8 +5,7 @@ import java.util.Date
 
 import akka.http.scaladsl.client.RequestBuilding._
 import cats.effect.{Clock, ContextShift, IO, Timer}
-import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
-import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.{ActorSystemFixture, Randomness}
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
@@ -26,7 +25,7 @@ import com.nimbusds.jose.{JWSAlgorithm, JWSHeader}
 import com.nimbusds.jwt.{JWTClaimsSet, SignedJWT}
 import org.mockito.ArgumentMatchersSugar._
 import org.mockito.IdiomaticMockito
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -40,7 +39,7 @@ class RealmsSpec
     with Randomness
     with IdiomaticMockito {
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3.seconds, 50.milliseconds)
 
   val appConfig: AppConfig      = Settings(system).appConfig
   implicit val http: HttpConfig = appConfig.http
@@ -84,7 +83,7 @@ class RealmsSpec
 
   val first      = Label.unsafe("first")
   val firstName  = "The First"
-  val logoUrl    = Url("http://localhost/some/logo").right.value
+  val logoUrl    = Url("http://localhost/some/logo").rightValue
   val second     = Label.unsafe("second")
   val secondName = "The Second"
   val depr       = Label.unsafe("deprecated")

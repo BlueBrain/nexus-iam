@@ -9,7 +9,7 @@ import akka.persistence.query.{NoOffset, PersistenceQuery}
 import akka.stream.scaladsl.Source
 import cats.Monad
 import cats.data.EitherT
-import cats.effect._
+import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.cache.{KeyValueStore, KeyValueStoreConfig}
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient

@@ -3,18 +3,21 @@ package ch.epfl.bluebrain.nexus.iam.io
 import java.time.Instant
 
 import akka.persistence.journal.Tagged
+import ch.epfl.bluebrain.nexus.commons.test.EitherValues
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.AclDeleted
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.PermissionsDeleted
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.RealmDeprecated
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import org.scalatest.{EitherValues, Inspectors, Matchers, WordSpecLike}
+import org.scalatest.Inspectors
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-class TaggingAdapterSpec extends WordSpecLike with Matchers with Inspectors with EitherValues {
+class TaggingAdapterSpec extends AnyWordSpecLike with Matchers with Inspectors with EitherValues {
 
   private val pd = PermissionsDeleted(2L, Instant.EPOCH, Anonymous)
-  private val ad = AclDeleted(Path("/a/b/c").right.value, 2L, Instant.EPOCH, Anonymous)
+  private val ad = AclDeleted(Path("/a/b/c").rightValue, 2L, Instant.EPOCH, Anonymous)
   private val rd = RealmDeprecated(Label.unsafe("blah"), 2L, Instant.EPOCH, Anonymous)
 
   private val data = Map[AnyRef, (String, AnyRef)](

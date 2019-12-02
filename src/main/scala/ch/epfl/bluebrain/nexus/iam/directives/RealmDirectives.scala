@@ -27,11 +27,11 @@ trait RealmDirectives {
     * @return the extracted search parameters from the request query parameters.
     */
   def searchParams: Directive1[SearchParams] =
-    (parameter('deprecated.as[Boolean].?) &
-      parameter('rev.as[Long].?) &
-      parameter('createdBy.as[AbsoluteIri].?) &
-      parameter('updatedBy.as[AbsoluteIri].?) &
-      parameter('type.as[AbsoluteIri].*)).tmap {
+    (parameter("deprecated".as[Boolean].?) &
+      parameter("rev".as[Long].?) &
+      parameter("createdBy".as[AbsoluteIri].?) &
+      parameter("updatedBy".as[AbsoluteIri].?) &
+      parameter("type".as[AbsoluteIri].*)).tmap {
       case (deprecated, rev, createdBy, updatedBy, types) =>
         SearchParams(deprecated, rev, createdBy, updatedBy, types.toSet)
     }

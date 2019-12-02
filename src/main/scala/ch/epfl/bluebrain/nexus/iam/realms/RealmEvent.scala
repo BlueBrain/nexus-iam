@@ -134,7 +134,7 @@ object RealmEvent {
     import ch.epfl.bluebrain.nexus.iam.types.GrantType.Camel._
     import io.circe.generic.extras.semiauto._
 
-    private implicit val config: Configuration = Configuration.default
+    private[JsonLd] implicit val config: Configuration = Configuration.default
       .withDiscriminator("@type")
       .copy(transformMemberNames = {
         case "id"                    => nxv.label.prefix
@@ -152,9 +152,11 @@ object RealmEvent {
         case other                   => other
       })
 
+    private[JsonLd] implicit def subjectEncoder(implicit http: HttpConfig): Encoder[Subject] =
+      Identity.subjectIdEncoder
+
     implicit def realmEventEncoder(implicit http: HttpConfig): Encoder[Event] = {
       Encoder.encodeJson.contramap[Event] { ev =>
-        implicit val subjectEncoder: Encoder[Subject] = Identity.subjectIdEncoder
         deriveConfiguredEncoder[Event]
           .mapJson { json =>
             val id = Json.obj("@id" -> Json.fromString((http.realmsIri + ev.id.value).asUri))

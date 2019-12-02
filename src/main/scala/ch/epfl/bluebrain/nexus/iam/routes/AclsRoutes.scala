@@ -51,7 +51,7 @@ class AclsRoutes(acls: Acls[Task], realms: Realms[Task])(implicit hc: HttpConfig
                   }
                 )
               },
-              (get & parameter("rev".as[Long] ?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
+              (get & parameter("rev".as[Long].?) & parameter("ancestors" ? false) & parameter("self" ? true)) {
                 case (Some(_), true, _) =>
                   reject(simultaneousRevAndAncestorsRejection)
                 case (Some(_), _, _) if path.segments.contains(any) =>

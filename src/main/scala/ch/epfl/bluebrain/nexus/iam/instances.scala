@@ -1,7 +1,7 @@
 package ch.epfl.bluebrain.nexus.iam
 
 import cats.effect.Effect
-import journal.Logger
+import com.typesafe.scalalogging.Logger
 import retry.RetryDetails
 
 object instances {

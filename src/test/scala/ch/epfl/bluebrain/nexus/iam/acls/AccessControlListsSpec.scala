@@ -2,19 +2,20 @@ package ch.epfl.bluebrain.nexus.iam.acls
 
 import java.time.{Clock, Instant, ZoneId}
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types.{Permission, ResourceF}
-import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
+import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import io.circe.syntax._
-import org.scalatest.{EitherValues, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 //noinspection TypeAnnotation,NameBooleanParameters
-class AccessControlListsSpec extends WordSpecLike with Matchers with Resources with EitherValues {
+class AccessControlListsSpec extends AnyWordSpecLike with Matchers with Resources with EitherValues {
   private val clock: Clock  = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private implicit val http = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
 
@@ -69,16 +70,16 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
     }
     "sort ACLs" in {
       AccessControlLists(
-        "aa" / "bb"            -> acl,
-        /                      -> acl3,
-        "a" / "b"              -> acl.map(_ => AccessControlList.empty),
-        Path("/a").right.value -> acl2
+        "aa" / "bb"           -> acl,
+        /                     -> acl3,
+        "a" / "b"             -> acl.map(_ => AccessControlList.empty),
+        Path("/a").rightValue -> acl2
       ).sorted shouldEqual
         AccessControlLists(
-          /                      -> acl3,
-          Path("/a").right.value -> acl2,
-          "a" / "b"              -> acl.map(_ => AccessControlList.empty),
-          "aa" / "bb"            -> acl
+          /                     -> acl3,
+          Path("/a").rightValue -> acl2,
+          "a" / "b"             -> acl.map(_ => AccessControlList.empty),
+          "aa" / "bb"           -> acl
         )
     }
 
@@ -111,8 +112,8 @@ class AccessControlListsSpec extends WordSpecLike with Matchers with Resources w
     "converts ACL to Json" in {
       val acls =
         AccessControlLists(
-          Path("/one/two").right.value -> acl.map(_ => AccessControlList(user  -> readWrite, group -> manage)),
-          Path("/one").right.value     -> acl2.map(_ => AccessControlList(user -> readWrite))
+          Path("/one/two").rightValue -> acl.map(_ => AccessControlList(user  -> readWrite, group -> manage)),
+          Path("/one").rightValue     -> acl2.map(_ => AccessControlList(user -> readWrite))
         )
       val json = jsonContentOf("/acls/acls.json")
       acls.asJson shouldEqual json

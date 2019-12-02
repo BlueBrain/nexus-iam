@@ -3,7 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.io
 import java.time.Instant
 
 import akka.actor.ExtendedActorSystem
-import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
+import ch.epfl.bluebrain.nexus.commons.test.{ActorSystemFixture, EitherValues}
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.AclDeleted
 import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsEvent.PermissionsDeleted
 import ch.epfl.bluebrain.nexus.iam.realms.RealmEvent.RealmDeprecated
@@ -11,7 +11,8 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import io.circe.parser._
-import org.scalatest.{EitherValues, Inspectors, Matchers}
+import org.scalatest.Inspectors
+import org.scalatest.matchers.should.Matchers
 
 class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matchers with Inspectors with EitherValues {
 
@@ -27,7 +28,7 @@ class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matc
        |  "@type": "PermissionsDeleted"
        |}""".stripMargin
 
-  private val ad = AclDeleted(Path("/a/b/c").right.value, 2L, Instant.EPOCH, Anonymous)
+  private val ad = AclDeleted(Path("/a/b/c").rightValue, 2L, Instant.EPOCH, Anonymous)
   private val adString =
     """|{
        |  "path": "/a/b/c",
@@ -72,7 +73,7 @@ class EventSerializerSpec extends ActorSystemFixture("SerializerSpec") with Matc
     "correctly serialize known events" in {
       forAll(data.toList) {
         case (event, (_, repr)) =>
-          parse(new String(serializer.toBinary(event))).right.value shouldEqual parse(repr).right.value
+          parse(new String(serializer.toBinary(event))).rightValue shouldEqual parse(repr).rightValue
       }
     }
 

@@ -137,9 +137,10 @@ object RealmRejection {
   final case class NoValidKeysFound(document: Url)
       extends RealmRejection(s"Failed to find a valid RSA JWK key at '${document.asUri}'.")
 
+  private[RealmRejection] implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
+
   implicit val realmRejectionEncoder: Encoder[RealmRejection] = {
-    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveConfiguredEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
+    val enc = deriveConfiguredEncoder[RealmRejection].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 

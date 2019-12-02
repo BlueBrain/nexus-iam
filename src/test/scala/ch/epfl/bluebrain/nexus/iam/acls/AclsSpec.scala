@@ -19,7 +19,8 @@ import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
 import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.mockito.IdiomaticMockito
-import org.scalatest._
+import org.scalatest.Inspectors
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -35,7 +36,7 @@ class AclsSpec
     with Inspectors
     with IdiomaticMockito {
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3.seconds, 50.milliseconds)
 
   implicit val appConfig: AppConfig = Settings(system).appConfig
   val http                          = appConfig.http
@@ -70,7 +71,7 @@ class AclsSpec
     val createdBy: Subject = User("sub", "realm")
     implicit val caller    = Caller(createdBy, Set[Identity](Group("admin", "realm"), Anonymous))
     val path: Path         = genString(length = 4) / genString(length = 4)
-    val id: AbsoluteIri    = Iri.absolute("http://127.0.0.1:8080/v1/acls/").right.value + path.asString
+    val id: AbsoluteIri    = Iri.absolute("http://127.0.0.1:8080/v1/acls/").rightValue + path.asString
     val user1              = identities(genInt(max = 1))
     val user2              = identities.filterNot(_ == user1).head
     val permsUser1         = Random.shuffle(permissions).take(1 + genInt(max = 299))

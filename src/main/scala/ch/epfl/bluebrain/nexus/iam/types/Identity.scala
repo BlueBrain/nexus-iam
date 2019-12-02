@@ -68,7 +68,7 @@ object Identity {
       http.publicIri + (http.prefix / "realms" / realm / "authenticated")
   }
 
-  private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+  private[Identity] implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
 
   implicit def identityEncoder(implicit http: HttpConfig): Encoder[Identity] = {
     val enc = deriveConfiguredEncoder[Identity]
@@ -121,5 +121,10 @@ object Identity {
       case (acc @ Right(_), _) => acc
       case (_, f)              => f(hc)
     }
+  }
+
+  object JsonLd {
+    implicit def subjectAsIriEncoder(implicit httpConfig: HttpConfig): Encoder[Subject] =
+      subjectIdEncoder(httpConfig)
   }
 }
