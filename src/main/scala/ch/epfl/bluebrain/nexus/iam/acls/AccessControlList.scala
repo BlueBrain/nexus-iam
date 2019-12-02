@@ -22,8 +22,8 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
   def ++(acl: AccessControlList): AccessControlList = {
     val toAddKeys   = acl.value.keySet -- value.keySet
     val toMergeKeys = acl.value.keySet -- toAddKeys
-    val added       = value ++ acl.value.filterKeys(toAddKeys.contains)
-    val merged = value.filterKeys(toMergeKeys.contains).map {
+    val added       = value ++ acl.value.view.filterKeys(toAddKeys.contains)
+    val merged = value.view.filterKeys(toMergeKeys.contains).map {
       case (ident, perms) => ident -> (perms ++ acl.value.getOrElse(ident, Set.empty))
     }
     AccessControlList(added ++ merged)
@@ -60,7 +60,7 @@ final case class AccessControlList(value: Map[Identity, Set[Permission]]) {
     * @param identities the identities to be filtered
     */
   def filter(identities: Set[Identity]): AccessControlList =
-    AccessControlList(value.filterKeys(identities.contains))
+    AccessControlList(value.view.filterKeys(identities.contains).toMap)
 
   /**
     * Determines if this contains the argument ''permission'' for at least one of the provided ''identities''.
@@ -115,5 +115,10 @@ object AccessControlList {
         acl <- arr.foldM(Map.empty[Identity, Set[Permission]]) { case (acc, j) => inner(j.hcursor).map(acc + _) }
       } yield AccessControlList(acl)
     }
+  }
+
+  object JsonLd {
+    implicit def aclAsArrayEncoder(implicit http: HttpConfig): Encoder[AccessControlList] =
+      aclArrayEncoder(http)
   }
 }

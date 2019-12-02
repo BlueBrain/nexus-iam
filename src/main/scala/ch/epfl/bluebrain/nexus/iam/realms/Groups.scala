@@ -22,9 +22,9 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
 import ch.epfl.bluebrain.nexus.iam.types.{IamError, Label}
 import com.nimbusds.jwt.JWTClaimsSet
 import io.circe.{Decoder, HCursor, Json}
-import journal.Logger
 import retry.RetryPolicy
 import ch.epfl.bluebrain.nexus.iam.instances._
+import com.typesafe.scalalogging.Logger
 import retry.CatsEffect._
 import retry._
 import retry.syntax.all._
@@ -66,7 +66,7 @@ class Groups[F[_]: Timer](ref: ActorRef)(
   }
 
   private def fromClaimSet(claimsSet: JWTClaimsSet, realmId: Label): Set[Group] = {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val strings = Try(claimsSet.getStringListClaim("groups").asScala.toList)
       .filter(_ != null)
       .map(_.map(_.trim))
@@ -152,7 +152,7 @@ object Groups {
   )(implicit as: ActorSystem, cfg: GroupsConfig, hc: HttpClient[F, Json]): F[Groups[F]] = {
     val settings = shardingSettings.getOrElse(ClusterShardingSettings(as))
     val shardExtractor: ExtractShardId = {
-      case msg: Msg => math.abs(msg.token.value.hashCode) % cfg.shards toString
+      case msg: Msg => (math.abs(msg.token.value.hashCode) % cfg.shards).toString
     }
     val entityExtractor: ExtractEntityId = {
       case msg: Msg => (msg.token.value, msg)

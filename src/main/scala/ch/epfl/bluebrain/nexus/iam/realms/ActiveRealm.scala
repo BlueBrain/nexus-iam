@@ -48,23 +48,23 @@ final case class ActiveRealm(
     val jwks = keys.foldLeft(Set.empty[JWK]) {
       case (acc, e) => Try(JWK.parse(e.noSpaces)).map(acc + _).getOrElse(acc)
     }
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     new JWKSet(jwks.toList.asJava)
   }
 }
 
 object ActiveRealm {
+  private[ActiveRealm] implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
+    case "issuer"                => nxv.issuer.prefix
+    case "grantTypes"            => nxv.grantTypes.prefix
+    case "authorizationEndpoint" => nxv.authorizationEndpoint.prefix
+    case "tokenEndpoint"         => nxv.tokenEndpoint.prefix
+    case "userInfoEndpoint"      => nxv.userInfoEndpoint.prefix
+    case "revocationEndpoint"    => nxv.revocationEndpoint.prefix
+    case "endSessionEndpoint"    => nxv.endSessionEndpoint.prefix
+    case other                   => other
+  })
   implicit val activeEncoder: Encoder[ActiveRealm] = {
-    implicit val config: Configuration = Configuration.default.copy(transformMemberNames = {
-      case "issuer"                => nxv.issuer.prefix
-      case "grantTypes"            => nxv.grantTypes.prefix
-      case "authorizationEndpoint" => nxv.authorizationEndpoint.prefix
-      case "tokenEndpoint"         => nxv.tokenEndpoint.prefix
-      case "userInfoEndpoint"      => nxv.userInfoEndpoint.prefix
-      case "revocationEndpoint"    => nxv.revocationEndpoint.prefix
-      case "endSessionEndpoint"    => nxv.endSessionEndpoint.prefix
-      case other                   => other
-    })
     val default = deriveConfiguredEncoder[ActiveRealm]
     Encoder
       .instance[ActiveRealm] { realm =>

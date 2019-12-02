@@ -5,7 +5,7 @@ import java.time.{Clock, Instant, ZoneId}
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import cats.Id
-import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Randomness}
 import ch.epfl.bluebrain.nexus.iam.acls.{State => _, _}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
@@ -14,7 +14,6 @@ import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import org.openjdk.jmh.annotations._
-import org.scalatest.EitherValues
 
 import scala.util.Random
 
@@ -84,7 +83,7 @@ class InMemoryAclsTreeBenchmark
       )
       genInt(max = 2) match {
         case 0 => index.replace(/, acl.copy(rev = v.toLong))
-        case 1 => index.replace(Path(org).right.value, acl.copy(rev = v.toLong))
+        case 1 => index.replace(Path(org).rightValue, acl.copy(rev = v.toLong))
         case 2 => index.replace(org / project, acl.copy(rev = v.toLong))
       }
     }
@@ -93,7 +92,7 @@ class InMemoryAclsTreeBenchmark
   def listSmallAclOrgs(): Unit = {
     implicit val identities: Set[Identity] = Random.shuffle(users1).take(10).toSet
 
-    val _ = index1.get(Path("*").right.value, ancestors = false, self = false)
+    val _ = index1.get(Path("*").rightValue, ancestors = false, self = false)
   }
 
   @Benchmark
@@ -127,7 +126,7 @@ class InMemoryAclsTreeBenchmark
   def listBigAclOrgs(): Unit = {
     implicit val identities: Set[Identity] = Random.shuffle(users2).take(10).toSet
 
-    val _ = index2.get(Path("*").right.value, ancestors = false, self = false)
+    val _ = index2.get(Path("*").rightValue, ancestors = false, self = false)
   }
 
   @Benchmark

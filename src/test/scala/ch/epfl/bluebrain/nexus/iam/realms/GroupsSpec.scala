@@ -21,7 +21,7 @@ import io.circe.Json
 import io.circe.parser._
 import org.mockito.ArgumentMatchersSugar.isA
 import org.mockito.IdiomaticMockito
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext
 
@@ -49,7 +49,7 @@ class GroupsSpec
     RealmsSpec.token(genString())
 
   val ar: ActiveRealm = ActiveRealm(
-    Label("realm").right.value,
+    Label("realm").rightValue,
     "The Realm",
     openIdUrl,
     issuer,
@@ -123,9 +123,9 @@ class GroupsSpec
 
 //noinspection TypeAnnotation
 object GroupsSpec {
-  import org.scalatest.EitherValues._
+  import ch.epfl.bluebrain.nexus.commons.test.EitherValues._
 
-  val userInfoUrl = Url("https://localhost/auth/userinfo").right.value
+  val userInfoUrl = Url("https://localhost/auth/userinfo").rightValue
 
   val userinfoArrayGroupsString =
     """{
@@ -144,7 +144,7 @@ object GroupsSpec {
       |  "email": "noreply@epfl.ch"
       |}
     """.stripMargin
-  val userinfoArrayGroups = parse(userinfoArrayGroupsString).right.value
+  val userinfoArrayGroups = parse(userinfoArrayGroupsString).rightValue
 
   val userinfoCsvGroupsString =
     """{
@@ -158,7 +158,7 @@ object GroupsSpec {
       |  "email": "noreply@epfl.ch"
       |}
     """.stripMargin
-  val userinfoCsvGroups = parse(userinfoCsvGroupsString).right.value
+  val userinfoCsvGroups = parse(userinfoCsvGroupsString).rightValue
 
   val userinfoNoGroupsString =
     """{
@@ -171,7 +171,7 @@ object GroupsSpec {
       |  "email": "noreply@epfl.ch"
       |}
     """.stripMargin
-  val userinfoNoGroups = parse(userinfoNoGroupsString).right.value
+  val userinfoNoGroups = parse(userinfoNoGroupsString).rightValue
 
   val userinfoWrongGroupsString =
     """{
@@ -185,5 +185,5 @@ object GroupsSpec {
       |  "email": "noreply@epfl.ch"
       |}
     """.stripMargin
-  val userinfoWrongGroups = parse(userinfoWrongGroupsString).right.value
+  val userinfoWrongGroups = parse(userinfoWrongGroupsString).rightValue
 }

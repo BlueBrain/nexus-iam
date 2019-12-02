@@ -3,6 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.config
 import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import akka.http.scaladsl.model.Uri
 import ch.epfl.bluebrain.nexus.iam.types.Permission
+import com.github.ghik.silencer.silent
 import com.typesafe.config.Config
 import pureconfig.generic.auto._
 import pureconfig.ConvertHelpers._
@@ -17,9 +18,11 @@ import pureconfig._
 @SuppressWarnings(Array("LooksLikeInterpolatedString"))
 class Settings(config: Config) extends Extension {
 
+  @silent // not recognized as used... but it is below
   private implicit val uriConverter: ConfigConvert[Uri] =
     ConfigConvert.viaString[Uri](catchReadError(Uri(_)), _.toString)
 
+  @silent // not recognized as used... but it is below
   private implicit val permissionConverter: ConfigConvert[Permission] =
     ConfigConvert.viaString[Permission](optF(Permission(_)), _.toString)
 

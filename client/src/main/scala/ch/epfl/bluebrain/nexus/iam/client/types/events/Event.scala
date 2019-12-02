@@ -268,7 +268,7 @@ object Event {
       subject: Subject
   ) extends RealmEvent
 
-  private implicit val config: Configuration = Configuration.default
+  private[events] implicit val config: Configuration = Configuration.default
     .withDiscriminator("@type")
     .copy(transformMemberNames = {
       case "label"                 => "_label"
@@ -287,7 +287,7 @@ object Event {
       case other                   => other
     })
 
-  private implicit val subjectDecoder: Decoder[Subject] =
+  private[events] implicit val subjectDecoder: Decoder[Subject] =
     Decoder.decodeString.flatMap { id =>
       Iri.absolute(id) match {
         case Left(_) => Decoder.failedWithMessage(s"Couldn't convert id '$id' to Absolute Iri")
@@ -305,7 +305,7 @@ object Event {
   implicit val eventDecoder: Decoder[Event] =
     deriveConfiguredDecoder[Event]
 
-  private implicit val aclDecoder: Decoder[AccessControlList] =
+  private[events] implicit val aclDecoder: Decoder[AccessControlList] =
     Decoder.instance { hc =>
       for {
         arr <- hc.focus.flatMap(_.asArray).toRight(DecodingFailure("acl field not found", hc.history))

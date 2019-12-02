@@ -3,8 +3,7 @@ package ch.epfl.bluebrain.nexus.iam.permissions
 import java.time.Instant
 
 import cats.effect.{Clock, ContextShift, IO, Timer}
-import ch.epfl.bluebrain.nexus.commons.test.ActorSystemFixture
-import ch.epfl.bluebrain.nexus.commons.test.Randomness
+import ch.epfl.bluebrain.nexus.commons.test.{ActorSystemFixture, Randomness}
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.{HttpConfig, PermissionsConfig}
@@ -15,7 +14,7 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity.Anonymous
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission, ResourceF}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
 import org.mockito.IdiomaticMockito
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -29,7 +28,7 @@ class PermissionsSpec
     with Randomness
     with IdiomaticMockito {
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3 seconds, 50 milliseconds)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(3.seconds, 50.milliseconds)
 
   val appConfig: AppConfig           = Settings(system).appConfig
   implicit val http: HttpConfig      = appConfig.http

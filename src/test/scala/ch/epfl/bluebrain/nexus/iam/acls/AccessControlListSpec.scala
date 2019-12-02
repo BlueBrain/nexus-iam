@@ -1,14 +1,16 @@
 package ch.epfl.bluebrain.nexus.iam.acls
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
 import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types.{Identity, Permission}
 import io.circe.syntax._
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.{Inspectors, OptionValues}
 
 class AccessControlListSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with Inspectors
     with EitherValues
@@ -20,7 +22,8 @@ class AccessControlListSpec
     val group: Identity = Group("mygroup", "myrealm")
     val readWrite       = Set(Permission("acls/read").value, Permission("acls/write").value)
     val manage          = Set(Permission("acls/manage").value)
-    implicit val http   = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
+
+    implicit val http: HttpConfig = HttpConfig("some", 8080, "v1", "http://nexus.example.com")
 
     "converted to Json" in {
       val acls = AccessControlList(user -> readWrite, group -> manage)
@@ -30,7 +33,7 @@ class AccessControlListSpec
     "convert from Json" in {
       val acls = AccessControlList(user -> readWrite, group -> manage)
       val json = jsonContentOf("/acls/acl.json")
-      json.as[AccessControlList].right.value shouldEqual acls
+      json.as[AccessControlList].rightValue shouldEqual acls
     }
 
     "remove ACL" in {

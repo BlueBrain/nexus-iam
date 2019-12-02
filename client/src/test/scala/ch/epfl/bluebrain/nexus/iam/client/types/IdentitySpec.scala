@@ -1,15 +1,17 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.syntax._
-import org.scalatest._
+import org.scalatest.{Inspectors, OptionValues}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 class IdentitySpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with Inspectors
     with OptionValues
@@ -17,7 +19,7 @@ class IdentitySpec
     with EitherValues {
 
   "An identity" should {
-    implicit val config =
+    implicit val config: IamClientConfig =
       IamClientConfig(url"http://nexus.example.com".value, url"http://internal.nexus.example.com".value, "v1")
     val user          = User("mysubject", "myrealm")
     val group         = Group("mygroup", "myrealm")
@@ -64,9 +66,9 @@ class IdentitySpec
         List(user -> userJson, group -> groupJson, Anonymous -> anonymousJson, authenticated -> authenticatedJson)
       forAll(cases) {
         case (model: Subject, json) =>
-          json.as[Subject].right.value shouldEqual model
-          json.as[Identity].right.value shouldEqual (model: Identity)
-        case (model: Identity, json) => json.as[Identity].right.value shouldEqual model
+          json.as[Subject].rightValue shouldEqual model
+          json.as[Identity].rightValue shouldEqual (model: Identity)
+        case (model: Identity, json) => json.as[Identity].rightValue shouldEqual model
       }
     }
   }

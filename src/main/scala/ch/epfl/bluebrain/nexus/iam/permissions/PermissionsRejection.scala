@@ -77,9 +77,11 @@ object PermissionsRejection {
         s"Incorrect revision '$provided' provided, expected '$expected', permissions may have been updated since last seen."
       )
 
+  private[PermissionsRejection] implicit val rejectionConfig: Configuration =
+    Configuration.default.withDiscriminator("@type")
+
   implicit val permissionRejectionEncoder: Encoder[PermissionsRejection] = {
-    implicit val rejectionConfig: Configuration = Configuration.default.withDiscriminator("@type")
-    val enc                                     = deriveConfiguredEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
+    val enc = deriveConfiguredEncoder[PermissionsRejection].mapJson(_ addContext errorCtxUri)
     Encoder.instance(r => enc(r) deepMerge Json.obj("reason" -> Json.fromString(r.msg)))
   }
 

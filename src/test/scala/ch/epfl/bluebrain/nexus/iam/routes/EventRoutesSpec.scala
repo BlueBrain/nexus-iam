@@ -10,7 +10,7 @@ import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.persistence.query.{EventEnvelope, NoOffset, Offset, Sequence}
 import akka.stream.scaladsl.Source
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.acls.AclEvent.{AclAppended, AclDeleted, AclReplaced, AclSubtracted}
 import ch.epfl.bluebrain.nexus.iam.acls.{AccessControlList, Acls}
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
@@ -30,14 +30,16 @@ import io.circe.Json
 import monix.eval.Task
 import org.mockito.matchers.MacroBasedMatchers
 import org.mockito.{IdiomaticMockito, Mockito}
-import org.scalatest._
+import org.scalatest.{BeforeAndAfter, Inspectors, OptionValues}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
 //noinspection TypeAnnotation
 class EventRoutesSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with ScalatestRouteTest
     with BeforeAndAfter
@@ -49,7 +51,7 @@ class EventRoutesSpec
     with Inspectors
     with IdiomaticMockito {
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3.second, 100.milliseconds)
 
   override def testConfig: Config = ConfigFactory.load("test.conf")
 
@@ -76,16 +78,16 @@ class EventRoutesSpec
   val instant      = Instant.EPOCH
   val name         = "The Realm"
   val issuer       = "issuer"
-  val openIdConfig = Url("http://localhost:8080/myrealm").right.value
+  val openIdConfig = Url("http://localhost:8080/myrealm").rightValue
   val grantTypes   = Set[GrantType](GrantType.Implicit)
   val keys         = Set[Json](jsonContentOf("/events/realm-key.json"))
-  val logo         = Some(Url("http://localhost:8080/myrealm/logo").right.value)
+  val logo         = Some(Url("http://localhost:8080/myrealm/logo").rightValue)
 
-  val authorizationEndpoint = Url("https://localhost/auth").right.value
-  val tokenEndpoint         = Url("https://localhost/auth/token").right.value
-  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").right.value
-  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").right.value)
-  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").right.value)
+  val authorizationEndpoint = Url("https://localhost/auth").rightValue
+  val tokenEndpoint         = Url("https://localhost/auth/token").rightValue
+  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").rightValue
+  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").rightValue)
+  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").rightValue)
 
   val aclEvents = List(
     AclReplaced(path, acl, rev, instant, subject),
@@ -145,7 +147,7 @@ class EventRoutesSpec
       .map {
         case (json, idx) =>
           val data  = json.sort.noSpaces
-          val event = json.hcursor.get[String]("@type").right.value
+          val event = json.hcursor.get[String]("@type").rightValue
           val id    = idx
           s"""data:$data
            |event:$event

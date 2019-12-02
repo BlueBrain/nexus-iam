@@ -22,10 +22,10 @@ import ch.epfl.bluebrain.nexus.iam.client.types._
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event.{AclEvent, PermissionsEvent, RealmEvent}
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
+import com.typesafe.scalalogging.Logger
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json, ParsingFailure}
-import journal.Logger
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
@@ -93,11 +93,12 @@ class IamClient[F[_]] private[client] (
   def putAcls(path: Path, acl: AccessControlList, rev: Option[Long] = None)(
       implicit credentials: Option[AuthToken]
   ): F[Unit] = {
-    implicit val _ = config
-    val endpoint   = config.aclsIri + path
-    val entity     = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
-    val query      = rev.map(r => Query("rev" -> r.toString)).getOrElse(Query.Empty)
-    val request    = Put(endpoint.toAkkaUri.withQuery(query), entity)
+    implicit val iamClientConfig: IamClientConfig = config
+
+    val endpoint = config.aclsIri + path
+    val entity   = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
+    val query    = rev.map(r => Query("rev" -> r.toString)).getOrElse(Query.Empty)
+    val request  = Put(endpoint.toAkkaUri.withQuery(query), entity)
     val requestWithCredentials =
       credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
     jsonClient(requestWithCredentials) *> F.unit

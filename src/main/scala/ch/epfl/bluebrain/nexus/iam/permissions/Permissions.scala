@@ -238,7 +238,7 @@ object Permissions {
     def replace(c: ReplacePermissions): F[EventOrRejection] =
       if (c.rev != state.rev) reject(IncorrectRev(c.rev, state.rev))
       else if (c.permissions.isEmpty) reject(CannotReplaceWithEmptyCollection)
-      else if (c.permissions -- pc.minimum isEmpty) reject(CannotReplaceWithEmptyCollection)
+      else if ((c.permissions -- pc.minimum).isEmpty) reject(CannotReplaceWithEmptyCollection)
       else accept(PermissionsReplaced(c.rev + 1, c.permissions, _, c.subject))
     def append(c: AppendPermissions): F[EventOrRejection] = state match {
       case _ if state.rev != c.rev    => reject(IncorrectRev(c.rev, state.rev))

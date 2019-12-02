@@ -13,7 +13,7 @@ import cats.effect.IO
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.test.Resources
-import ch.epfl.bluebrain.nexus.commons.test.io.IOValues
+import ch.epfl.bluebrain.nexus.commons.test.io.IOEitherValues
 import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity.{Anonymous, User}
@@ -26,7 +26,9 @@ import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
 import io.circe.Json
 import org.mockito.{ArgumentMatchersSugar, IdiomaticMockito, Mockito}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfter, EitherValues, Matchers, WordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -34,17 +36,16 @@ import scala.util.Random
 //noinspection ScalaUnnecessaryParentheses,TypeAnnotation,RedundantDefaultArgument
 class IamClientSpec
     extends TestKit(ActorSystem("IamClientSpec"))
-    with WordSpecLike
+    with AnyWordSpecLike
     with Matchers
     with BeforeAndAfter
     with IdiomaticMockito
     with ArgumentMatchersSugar
-    with IOValues
-    with EitherValues
+    with IOEitherValues
     with Resources
     with Eventually {
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(5 seconds, 15 milliseconds)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(5.seconds, 15.milliseconds)
 
   private val clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private val config =
@@ -300,7 +301,7 @@ class IamClientSpec
           "/events/realm-deprecated.json"
         )
 
-        val eventsSource = Source(Random.shuffle(resources).map(jsonContentOf(_).as[Event].right.value))
+        val eventsSource = Source(Random.shuffle(resources).map(jsonContentOf(_).as[Event].rightValue))
       }
 
       "apply function when new acl event is received" in new Ctx {
@@ -310,7 +311,7 @@ class IamClientSpec
           case _: AclSubtracted => IO(count.addAndGet(3)) *> IO.unit
           case _: AclDeleted    => IO(count.addAndGet(4)) *> IO.unit
         }
-        val eventsIri = Iri.url("http://internal.example.com/some/v1/acls/events").right.value
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/acls/events").rightValue
         source(eventsIri, None) shouldReturn eventsSource
         client.aclEvents(f)
         eventually(count.get() shouldEqual 10)
@@ -323,7 +324,7 @@ class IamClientSpec
           case _: PermissionsSubtracted => IO(count.addAndGet(3)) *> IO.unit
           case _: PermissionsDeleted    => IO(count.addAndGet(4)) *> IO.unit
         }
-        val eventsIri = Iri.url("http://internal.example.com/some/v1/permissions/events").right.value
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/permissions/events").rightValue
         source(eventsIri, None) shouldReturn eventsSource
         client.permissionEvents(f)
         eventually(count.get() shouldEqual 10)
@@ -335,7 +336,7 @@ class IamClientSpec
           case _: RealmUpdated    => IO(count.addAndGet(2)) *> IO.unit
           case _: RealmDeprecated => IO(count.addAndGet(3)) *> IO.unit
         }
-        val eventsIri = Iri.url("http://internal.example.com/some/v1/realms/events").right.value
+        val eventsIri = Iri.url("http://internal.example.com/some/v1/realms/events").rightValue
         source(eventsIri, None) shouldReturn eventsSource
         client.realmEvents(f)
         eventually(count.get() shouldEqual 6)

@@ -5,7 +5,7 @@ import java.util.regex.Pattern.quote
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import ch.epfl.bluebrain.nexus.commons.test.Resources
+import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.marshallers.instances._
@@ -20,13 +20,15 @@ import monix.eval.Task
 import org.mockito.matchers.MacroBasedMatchers
 import org.mockito.{IdiomaticMockito, Mockito}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, EitherValues, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.BeforeAndAfter
 
 import scala.concurrent.duration._
 
 //noinspection TypeAnnotation,NameBooleanParameters
 class RealmsRoutesSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with ScalatestRouteTest
     with BeforeAndAfter
@@ -36,7 +38,7 @@ class RealmsRoutesSpec
     with EitherValues
     with IdiomaticMockito {
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3 second, 100 milliseconds)
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(3.second, 100.milliseconds)
 
   override def testConfig: Config = ConfigFactory.load("test.conf")
 
@@ -50,11 +52,11 @@ class RealmsRoutesSpec
     realms.caller(any[AccessToken]) shouldReturn Task.pure(Caller.anonymous)
   }
 
-  val authorizationEndpoint = Url("https://localhost/auth").right.value
-  val tokenEndpoint         = Url("https://localhost/auth/token").right.value
-  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").right.value
-  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").right.value)
-  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").right.value)
+  val authorizationEndpoint = Url("https://localhost/auth").rightValue
+  val tokenEndpoint         = Url("https://localhost/auth/token").rightValue
+  val userInfoEndpoint      = Url("https://localhost/auth/userinfo").rightValue
+  val revocationEndpoint    = Some(Url("https://localhost/auth/revoke").rightValue)
+  val endSessionEndpoint    = Some(Url("https://localhost/auth/logout").rightValue)
 
   def response(label: Label, rev: Long, deprecated: Boolean): Json =
     jsonContentOf(
@@ -108,8 +110,8 @@ class RealmsRoutesSpec
     val routes       = Routes.wrap(new RealmsRoutes(realms).routes)
     val label        = Label.unsafe("therealm")
     val name         = "The Realm"
-    val openIdConfig = Url("http://localhost:8080/realm").right.get
-    val logo         = Url("http://localhost:8080/realm/logo").right.get
+    val openIdConfig = Url("http://localhost:8080/realm").rightValue
+    val logo         = Url("http://localhost:8080/realm/logo").rightValue
     "create a new realm" in {
       realms.create(any[Label], any[String], any[Url], any[Option[Url]])(any[Caller]) shouldReturn Task.pure(
         Right(meta(label, 1L, false))

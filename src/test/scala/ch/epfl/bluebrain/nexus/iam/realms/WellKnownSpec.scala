@@ -6,6 +6,7 @@ import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.HttpResponse
 import cats.effect.IO
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
+import ch.epfl.bluebrain.nexus.commons.test.EitherValues
 import ch.epfl.bluebrain.nexus.commons.test.io.IOEitherValues
 import ch.epfl.bluebrain.nexus.iam.realms.RealmRejection._
 import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
@@ -16,11 +17,13 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import io.circe.Json
 import io.circe.parser._
 import org.mockito.IdiomaticMockito
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.{Inspectors, OptionValues}
 
 //noinspection TypeAnnotation
 class WellKnownSpec
-    extends WordSpecLike
+    extends AnyWordSpecLike
     with Matchers
     with OptionValues
     with EitherValues
@@ -181,22 +184,22 @@ class WellKnownSpec
 //noinspection TypeAnnotation
 object WellKnownSpec {
   import EitherValues._
-  def genUrl = Url(s"https://localhost/auth/realms/master/.well-known/${UUID.randomUUID()}").right.value
+  def genUrl = Url(s"https://localhost/auth/realms/master/.well-known/${UUID.randomUUID()}").rightValue
 
   val openIdUrlString = "https://localhost/auth/realms/master/.well-known/openid-configuration"
-  val openIdUrl       = Url(openIdUrlString).right.value
+  val openIdUrl       = Url(openIdUrlString).rightValue
   val openIdUrl2      = genUrl
   val openIdUrl3      = genUrl
   val jwksUrlString   = "https://localhost/auth/realms/master/protocol/openid-connect/certs"
-  val jwksUrl         = Url(jwksUrlString).right.value
+  val jwksUrl         = Url(jwksUrlString).rightValue
   val issuer          = "https://localhost/auth/realms/master"
   val deprUrlString   = "https://localhost/auth/realms/deprecated/.well-known/openid-configuration"
 
-  val authorizationUrl = Url("https://localhost/auth").right.value
-  val tokenUrl         = Url("https://localhost/auth/token").right.value
-  val userInfoUrl      = Url("https://localhost/auth/userinfo").right.value
-  val revocationUrl    = Url("https://localhost/auth/revoke").right.value
-  val endSessionUrl    = Url("https://localhost/auth/logout").right.value
+  val authorizationUrl = Url("https://localhost/auth").rightValue
+  val tokenUrl         = Url("https://localhost/auth/token").rightValue
+  val userInfoUrl      = Url("https://localhost/auth/userinfo").rightValue
+  val revocationUrl    = Url("https://localhost/auth/revoke").rightValue
+  val endSessionUrl    = Url("https://localhost/auth/logout").rightValue
 
   val validOpenIdConfigString =
     s"""
@@ -215,7 +218,7 @@ object WellKnownSpec {
       |   "userinfo_endpoint": "${userInfoUrl.asUri}"
       | }
     """.stripMargin
-  val validOpenIdConfig = parse(validOpenIdConfigString).right.value
+  val validOpenIdConfig = parse(validOpenIdConfigString).rightValue
 
   val fullOpenIdConfigString =
     s"""
@@ -236,7 +239,7 @@ object WellKnownSpec {
        |   "end_session_endpoint": "${endSessionUrl.asUri}"
        | }
     """.stripMargin
-  val fullOpenIdConfig = parse(fullOpenIdConfigString).right.value
+  val fullOpenIdConfig = parse(fullOpenIdConfigString).rightValue
 
   val deprecatedOpenIdConfigString =
     s"""
@@ -255,7 +258,7 @@ object WellKnownSpec {
        |   "userinfo_endpoint": "${userInfoUrl.asUri}"
        | }
     """.stripMargin
-  val deprecatedOpenIdConfig = parse(deprecatedOpenIdConfigString).right.value
+  val deprecatedOpenIdConfig = parse(deprecatedOpenIdConfigString).rightValue
 
   val (kid, privateKey, publicKey) = {
     val rsaJWK = new RSAKeyGenerator(2048)
@@ -264,7 +267,7 @@ object WellKnownSpec {
     (rsaJWK.getKeyID, rsaJWK.toRSAPrivateKey, rsaJWK.toPublicJWK.toJSONString)
   }
 
-  val publicKeyJson = parse(publicKey).right.value
+  val publicKeyJson = parse(publicKey).rightValue
 
   val validJwksString =
     s"""
@@ -275,7 +278,7 @@ object WellKnownSpec {
     | }
   """.stripMargin
 
-  val validJwks = parse(validJwksString).right.value
+  val validJwks = parse(validJwksString).rightValue
 
   val grantTypes = Set(AuthorizationCode, Implicit, RefreshToken, Password, ClientCredentials)
 

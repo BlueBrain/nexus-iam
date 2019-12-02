@@ -10,7 +10,7 @@ import ch.epfl.bluebrain.nexus.iam.permissions.Permissions
 import ch.epfl.bluebrain.nexus.iam.realms.Realms
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import journal.Logger
+import com.typesafe.scalalogging.Logger
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.execution.schedulers.CanBlock

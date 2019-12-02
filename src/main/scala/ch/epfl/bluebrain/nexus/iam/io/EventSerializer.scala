@@ -28,21 +28,21 @@ class EventSerializer(system: ExtendedActorSystem) extends SerializerWithStringM
 
   private val printer = Printer.noSpaces.copy(dropNullValues = true)
 
-  private implicit val http: HttpConfig = Settings(system).appConfig.http
+  private[io] implicit val http: HttpConfig = Settings(system).appConfig.http
 
-  private implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
+  private[io] implicit val config: Configuration = Configuration.default.withDiscriminator("@type")
 
-  private implicit val urlEncoder: Encoder[Url] =
+  private[io] implicit val urlEncoder: Encoder[Url] =
     Encoder.encodeString.contramap(_.asUri)
-  private implicit val urlDecoder: Decoder[Url] =
+  private[io] implicit val urlDecoder: Decoder[Url] =
     Decoder.decodeString.emap(Url.apply)
 
-  private implicit val permissionEventEncoder: Encoder[PermissionsEvent] = deriveConfiguredEncoder[PermissionsEvent]
-  private implicit val permissionEventDecoder: Decoder[PermissionsEvent] = deriveConfiguredDecoder[PermissionsEvent]
-  private implicit val aclEventEncoder: Encoder[AclEvent]                = deriveConfiguredEncoder[AclEvent]
-  private implicit val aclEventDecoder: Decoder[AclEvent]                = deriveConfiguredDecoder[AclEvent]
-  private implicit val realmEventEncoder: Encoder[RealmEvent]            = deriveConfiguredEncoder[RealmEvent]
-  private implicit val realmEventDecoder: Decoder[RealmEvent]            = deriveConfiguredDecoder[RealmEvent]
+  private[io] implicit val permissionEventEncoder: Encoder[PermissionsEvent] = deriveConfiguredEncoder[PermissionsEvent]
+  private[io] implicit val permissionEventDecoder: Decoder[PermissionsEvent] = deriveConfiguredDecoder[PermissionsEvent]
+  private[io] implicit val aclEventEncoder: Encoder[AclEvent]                = deriveConfiguredEncoder[AclEvent]
+  private[io] implicit val aclEventDecoder: Decoder[AclEvent]                = deriveConfiguredDecoder[AclEvent]
+  private[io] implicit val realmEventEncoder: Encoder[RealmEvent]            = deriveConfiguredEncoder[RealmEvent]
+  private[io] implicit val realmEventDecoder: Decoder[RealmEvent]            = deriveConfiguredDecoder[RealmEvent]
 
   override val identifier: Int = 1225
 

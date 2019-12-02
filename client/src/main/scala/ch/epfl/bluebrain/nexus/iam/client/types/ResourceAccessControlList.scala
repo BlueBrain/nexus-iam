@@ -2,7 +2,6 @@ package ch.epfl.bluebrain.nexus.iam.client.types
 
 import java.time.Instant
 
-import cats.syntax.either._
 import ch.epfl.bluebrain.nexus.iam.client.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.config.Vocabulary._
@@ -84,7 +83,7 @@ object ResourceAccessControlList {
       } yield ResourceAccessControlList(id, rev, types, createdAt, createdBy, updatedAt, updatedBy, acl)
     }
 
-  private implicit class AbsoluteIriSyntax(private val iri: AbsoluteIri) extends AnyVal {
+  private[ResourceAccessControlList] implicit class AbsoluteIriSyntax(private val iri: AbsoluteIri) extends AnyVal {
     def lastSegment: Option[String] =
       iri.path.head match {
         case segment: String => Some(segment)
