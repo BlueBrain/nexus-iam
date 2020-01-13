@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import akka.persistence.query.scaladsl.EventsByTagQuery
 import akka.persistence.query.{NoOffset, PersistenceQuery}
 import akka.stream.scaladsl.Source
+import akka.util.Timeout
 import cats.Monad
 import cats.data.EitherT
 import cats.effect.{Clock, Effect, Timer}
@@ -28,7 +29,7 @@ import ch.epfl.bluebrain.nexus.iam.types.IamError._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.{Anonymous, Authenticated, User}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{Path, Url}
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
+import ch.epfl.bluebrain.nexus.sourcing.akka.aggregate.{AggregateConfig, AkkaAggregate}
 import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressFlow.{PairMsg, ProgressFlowElem}
 import ch.epfl.bluebrain.nexus.sourcing.projections.{Message, StreamSupervisor}
 import com.nimbusds.jose.JWSAlgorithm
@@ -285,15 +286,15 @@ object Realms {
       rc: RealmsConfig,
       hc: HttpClient[F, Json]
   ): F[Agg[F]] = {
-    implicit val retryPolicy: RetryPolicy[F] = rc.sourcing.retry.retryPolicy[F]
+    implicit val retryPolicy: RetryPolicy[F] = rc.aggregate.retry.retryPolicy[F]
     AkkaAggregate.sharded[F](
       "realms",
       RealmState.Initial,
       next,
       evaluate[F],
-      rc.sourcing.passivationStrategy(),
-      rc.sourcing.akkaSourcingConfig,
-      rc.sourcing.shards
+      rc.aggregate.passivationStrategy(),
+      rc.aggregate.akkaAggregateConfig,
+      rc.aggregate.shards
     )
   }
 
@@ -350,12 +351,13 @@ object Realms {
     * @param realms the realms API
     */
   def indexer[F[_]: Timer](realms: Realms[F])(implicit F: Effect[F], as: ActorSystem, rc: RealmsConfig): F[Unit] = {
-    implicit val sc: SourcingConfig   = rc.sourcing
+    implicit val ac: AggregateConfig  = rc.aggregate
     implicit val ec: ExecutionContext = as.dispatcher
+    implicit val tm: Timeout          = ac.askTimeout
 
     val projectionId = "realm-index"
     val source: Source[PairMsg[Any], _] = PersistenceQuery(as)
-      .readJournalFor[EventsByTagQuery](rc.sourcing.queryJournalPlugin)
+      .readJournalFor[EventsByTagQuery](rc.aggregate.queryJournalPlugin)
       .eventsByTag(TaggingAdapter.realmEventTag, NoOffset)
       .map[PairMsg[Any]](e => Right(Message(e, projectionId)))
 

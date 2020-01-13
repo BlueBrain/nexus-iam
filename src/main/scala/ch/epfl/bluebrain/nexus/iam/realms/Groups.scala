@@ -1,55 +1,44 @@
 package ch.epfl.bluebrain.nexus.iam.realms
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout}
-import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId, Passivate}
-import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.pattern.{ask, AskTimeoutException}
-import akka.util.Timeout
-import cats.effect.{Async, ContextShift, Effect, IO, Timer}
+import cats.Monad
+import cats.effect.{Effect, Timer}
 import cats.implicits._
 import ch.epfl.bluebrain.nexus.commons.http.{HttpClient, UnexpectedUnsuccessfulHttpResponse}
 import ch.epfl.bluebrain.nexus.iam.auth.{AccessToken, TokenRejection}
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.GroupsConfig
-import ch.epfl.bluebrain.nexus.iam.realms.Groups._
-import ch.epfl.bluebrain.nexus.iam.types.IamError.{InternalError, OperationTimedOut}
+import ch.epfl.bluebrain.nexus.iam.instances._
+import ch.epfl.bluebrain.nexus.iam.realms.GroupsCache.Write
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
 import ch.epfl.bluebrain.nexus.iam.types.{IamError, Label}
+import ch.epfl.bluebrain.nexus.sourcing.StateMachine
+import ch.epfl.bluebrain.nexus.sourcing.akka.StopStrategy
+import ch.epfl.bluebrain.nexus.sourcing.akka.statemachine.{AkkaStateMachine, StateMachineConfig => GroupsConfig}
+import ch.epfl.bluebrain.nexus.sourcing.syntax._
 import com.nimbusds.jwt.JWTClaimsSet
-import io.circe.{Decoder, HCursor, Json}
-import retry.RetryPolicy
-import ch.epfl.bluebrain.nexus.iam.instances._
 import com.typesafe.scalalogging.Logger
+import io.circe.{Decoder, HCursor, Json}
 import retry.CatsEffect._
-import retry._
+import retry.RetryPolicy
 import retry.syntax.all._
 
-import scala.concurrent.duration.Duration
-import scala.reflect.ClassTag
+import scala.concurrent.duration._
 import scala.util.Try
-import scala.util.control.NonFatal
 
 /**
   * Extracts and caches caller group set using the access token or the realm user info endpoint as sources.
   *
-  * @param ref the underlying cluster sharding actor ref proxy
+  * @param cache the groups cache
   */
-class Groups[F[_]: Timer](ref: ActorRef)(
-    implicit as: ActorSystem,
-    cfg: GroupsConfig,
-    hc: HttpClient[F, Json],
-    F: Effect[F]
-) {
+class Groups[F[_]: Timer](cache: GroupsCache[F])(implicit cfg: GroupsConfig, hc: HttpClient[F, Json], F: Effect[F]) {
 
-  private[this] val logger                            = Logger[this.type]
-  private implicit val tm: Timeout                    = Timeout(cfg.askTimeout)
-  private implicit val contextShift: ContextShift[IO] = IO.contextShift(as.dispatcher)
-  private implicit val policy: RetryPolicy[F]         = cfg.retry.retryPolicy[F]
+  private[this] val logger                    = Logger[this.type]
+  private implicit val policy: RetryPolicy[F] = cfg.retry.retryPolicy[F]
+  private val sinceLast                       = cfg.invalidation.lapsedSinceLastInteraction.getOrElse(0.millis).toMillis
 
   /**
     * Returns the caller group set either from the claimset, in cache or from the user info endpoint of the provided
@@ -79,21 +68,15 @@ class Groups[F[_]: Timer](ref: ActorRef)(
   }
 
   private def fromUserInfo(token: AccessToken, realm: ActiveRealm, exp: Option[Instant]): F[Set[Group]] = {
-    fromRef(token).flatMap {
+    cache.get(token).flatMap {
       case Some(set) => F.pure(set)
       case None =>
         for {
           set <- fetch(token, realm).retryingOnAllErrors[Throwable]
-          _   <- toRef(token, set, exp.getOrElse(Instant.now().plusMillis(cfg.passivationTimeout.toMillis)))
+          _   <- cache.put(token, set, exp.getOrElse(Instant.now().plusMillis(sinceLast)))
         } yield set
     }
   }
-
-  private def fromRef(token: AccessToken): F[Option[Set[Group]]] =
-    send(Read(token), (r: Response) => r.groups)
-
-  private def toRef(token: AccessToken, groups: Set[Group], exp: Instant): F[Unit] =
-    send(Write(token, groups, exp), (_: Ack) => ())
 
   private def fetch(token: AccessToken, realm: ActiveRealm): F[Set[Group]] = {
     def fromSet(cursor: HCursor): Decoder.Result[Set[String]] =
@@ -120,25 +103,46 @@ class Groups[F[_]: Timer](ref: ActorRef)(
           }
       }
   }
+}
 
-  private def send[Reply, A](msg: Msg, f: Reply => A)(implicit Reply: ClassTag[Reply]): F[A] = {
-    val genericError  = InternalError("The system experienced an unexpected error, please try again later.")
-    val timedOutError = OperationTimedOut("Timed out while waiting for a reply from the group cache.")
-    val future        = IO(ref ? msg)
-    val fa            = IO.fromFuture(future).to[F]
-    fa.flatMap[A] {
-        case Reply(value) => F.pure(f(value))
-        case other =>
-          logger.error(s"Received unexpected reply from the group cache: '$other'")
-          F.raiseError(genericError)
-      }
-      .recoverWith {
-        case _: AskTimeoutException =>
-          F.raiseError(timedOutError)
-        case NonFatal(th) =>
-          logger.error("Exception caught while exchanging messages with the groups cache", th)
-          F.raiseError(genericError)
-      }
+private[realms] class GroupsCache[F[_]](ref: StateMachine[F, String, GroupsCache.State, GroupsCache.Command, Unit])(
+    implicit F: Monad[F]
+) {
+
+  def put(token: AccessToken, groups: Set[Group], exp: Instant): F[Unit] =
+    ref.evaluate(token.value, Write(groups, exp)) >> F.unit
+
+  def get(token: AccessToken): F[GroupsCache.State] =
+    ref.currentState(token.value)
+}
+
+private[realms] object GroupsCache {
+
+  type State   = Option[Set[Group]]
+  type Command = Write
+
+  final case class Write(groups: Set[Group], exp: Instant)
+
+  private val evaluate: (State, Command) => State = { case (_, cmd) => Some(cmd.groups) }
+
+  final def apply[F[_]: Effect: Timer](implicit as: ActorSystem, cfg: GroupsConfig): F[GroupsCache[F]] = {
+    val sinceLast                            = cfg.invalidation.lapsedSinceLastInteraction
+    implicit val retryPolicy: RetryPolicy[F] = cfg.retry.retryPolicy[F]
+
+    val invalidationStrategy: StopStrategy[State, Command] =
+      StopStrategy(
+        sinceLast, {
+          case (_, _, _, None)      => None
+          case (_, _, _, Some(cmd)) =>
+            // passivate with the minimum duration (either the token expiry or the passivation timeout)
+            val now   = Instant.now().toEpochMilli
+            val delta = Math.max(0L, Math.min(cmd.exp.toEpochMilli - now, sinceLast.getOrElse(0.millis).toMillis))
+            Some(delta.millis)
+        }
+      )
+    AkkaStateMachine
+      .sharded[F]("groups", None, evaluate.toEitherF[F], invalidationStrategy, cfg.akkaStateMachineConfig, cfg.shards)
+      .map(new GroupsCache(_))
   }
 }
 
@@ -147,58 +151,10 @@ object Groups {
   /**
     * Constructs a Groups instance with its underlying cache from the provided implicit args.
     */
-  def apply[F[_]: Effect: Timer](
-      shardingSettings: Option[ClusterShardingSettings] = None
-  )(implicit as: ActorSystem, cfg: GroupsConfig, hc: HttpClient[F, Json]): F[Groups[F]] = {
-    val settings = shardingSettings.getOrElse(ClusterShardingSettings(as))
-    val shardExtractor: ExtractShardId = {
-      case msg: Msg => (math.abs(msg.token.value.hashCode) % cfg.shards).toString
-    }
-    val entityExtractor: ExtractEntityId = {
-      case msg: Msg => (msg.token.value, msg)
-    }
-    val props = Props(new GroupCache(cfg))
-    val F     = implicitly[Async[F]]
-    F.delay {
-      val ref = ClusterSharding(as).start("groups", props, settings, entityExtractor, shardExtractor)
-      new Groups[F](ref)
-    }
-  }
-
-  sealed trait Msg extends Product with Serializable {
-    def token: AccessToken
-  }
-  final case class Read(token: AccessToken)                                    extends Msg
-  final case class Write(token: AccessToken, groups: Set[Group], exp: Instant) extends Msg
-  final case class Response(token: AccessToken, groups: Option[Set[Group]])    extends Msg
-  final case class Ack(token: AccessToken)                                     extends Msg
-
-  private class GroupCache(cfg: GroupsConfig) extends Actor with ActorLogging {
-
-    //noinspection ActorMutableStateInspection
-    private var groups: Option[Set[Group]] = None
-
-    // shutdown actor automatically after the default timeout
-    override def preStart(): Unit = {
-      super.preStart()
-      context.setReceiveTimeout(cfg.passivationTimeout)
-    }
-
-    def receive: Receive = {
-      case Read(token) =>
-        sender() ! Response(token, groups)
-      case Write(token, gs, exp) =>
-        groups = Some(gs)
-        sender() ! Ack(token)
-        // passivate with the minimum duration (either the token expiry or the passivation timeout)
-        val delta = Math.min(exp.toEpochMilli - Instant.now().toEpochMilli, cfg.passivationTimeout.toMillis)
-        if (delta > 1L) {
-          context.setReceiveTimeout(Duration(delta, TimeUnit.MILLISECONDS))
-        } else {
-          context.parent ! Passivate(PoisonPill)
-        }
-      case ReceiveTimeout =>
-        context.parent ! Passivate(PoisonPill)
-    }
-  }
+  final def apply[F[_]: Effect: Timer]()(
+      implicit as: ActorSystem,
+      cfg: GroupsConfig,
+      hc: HttpClient[F, Json]
+  ): F[Groups[F]] =
+    GroupsCache[F].map(new Groups(_))
 }
