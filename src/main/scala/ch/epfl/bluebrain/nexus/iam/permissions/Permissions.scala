@@ -17,7 +17,7 @@ import ch.epfl.bluebrain.nexus.iam.permissions.PermissionsState.{Current, Initia
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.sourcing.akka.AkkaAggregate
+import ch.epfl.bluebrain.nexus.sourcing.akka.aggregate.AkkaAggregate
 import retry.RetryPolicy
 
 /**
@@ -149,15 +149,15 @@ object Permissions {
       implicit as: ActorSystem,
       pc: PermissionsConfig
   ): F[Agg[F]] = {
-    implicit val retryPolicy: RetryPolicy[F] = pc.sourcing.retry.retryPolicy[F]
+    implicit val retryPolicy: RetryPolicy[F] = pc.aggregate.retry.retryPolicy[F]
     AkkaAggregate.sharded[F](
       "permissions",
       PermissionsState.Initial,
       next(pc),
       evaluate[F](pc),
-      pc.sourcing.passivationStrategy(),
-      pc.sourcing.akkaSourcingConfig,
-      pc.sourcing.shards
+      pc.aggregate.passivationStrategy(),
+      pc.aggregate.akkaAggregateConfig,
+      pc.aggregate.shards
     )
   }
 

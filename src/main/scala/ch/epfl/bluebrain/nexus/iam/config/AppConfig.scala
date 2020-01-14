@@ -8,8 +8,8 @@ import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
-import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig
-import ch.epfl.bluebrain.nexus.sourcing.akka.SourcingConfig.RetryStrategyConfig
+import ch.epfl.bluebrain.nexus.sourcing.akka.aggregate.AggregateConfig
+import ch.epfl.bluebrain.nexus.sourcing.akka.statemachine.StateMachineConfig
 import ch.epfl.bluebrain.nexus.sourcing.projections.IndexingConfig
 
 import scala.concurrent.duration._
@@ -36,7 +36,7 @@ final case class AppConfig(
     acls: AclsConfig,
     permissions: PermissionsConfig,
     realms: RealmsConfig,
-    groups: GroupsConfig
+    groups: StateMachineConfig
 )
 
 object AppConfig {
@@ -103,41 +103,30 @@ object AppConfig {
   /**
     * ACLs configuration
     *
-    * @param sourcing the acls sourcing configuration
+    * @param aggregate the acls aggregate configuration
     * @param indexing the indexing configuration
     */
-  final case class AclsConfig(sourcing: SourcingConfig, indexing: IndexingConfig)
+  final case class AclsConfig(aggregate: AggregateConfig, indexing: IndexingConfig)
 
   /**
     * Permissions configuration.
     *
-    * @param sourcing the permissions sourcing configuration
+    * @param aggregate the permissions aggregate configuration
     * @param minimum  the minimum set of permissions
     */
-  final case class PermissionsConfig(sourcing: SourcingConfig, minimum: Set[Permission])
+  final case class PermissionsConfig(aggregate: AggregateConfig, minimum: Set[Permission])
 
   /**
     * Realms configuration.
     *
-    * @param sourcing      the realms sourcing configuration
+    * @param aggregate      the realms aggregate configuration
     * @param keyValueStore the key value store configuration
     * @param indexing      the indexing configuration
     */
-  final case class RealmsConfig(sourcing: SourcingConfig, keyValueStore: KeyValueStoreConfig, indexing: IndexingConfig)
-
-  /**
-    * Group cache configuration.
-    *
-    * @param passivationTimeout actor passivation timeout
-    * @param askTimeout         timeout for the message exchange with the actor
-    * @param shards             the number of shards for the groups config
-    * @param retry              the retry strategy for getting the user information
-    */
-  final case class GroupsConfig(
-      passivationTimeout: FiniteDuration,
-      askTimeout: FiniteDuration,
-      shards: Int,
-      retry: RetryStrategyConfig
+  final case class RealmsConfig(
+      aggregate: AggregateConfig,
+      keyValueStore: KeyValueStoreConfig,
+      indexing: IndexingConfig
   )
 
   val orderedKeys = OrderedKeys(

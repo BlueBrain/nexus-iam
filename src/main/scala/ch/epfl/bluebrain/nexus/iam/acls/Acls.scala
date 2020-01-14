@@ -3,11 +3,11 @@ package ch.epfl.bluebrain.nexus.iam.acls
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-//import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.query.scaladsl.EventsByTagQuery
 import akka.persistence.query.{NoOffset, PersistenceQuery}
 import akka.stream.scaladsl.Source
+import akka.util.Timeout
 import cats.effect.{Clock, Effect, Timer}
 import cats.implicits._
 import cats.{Applicative, Monad}
@@ -25,13 +25,10 @@ import ch.epfl.bluebrain.nexus.iam.syntax._
 import ch.epfl.bluebrain.nexus.iam.types.IamError.{AccessDenied, UnexpectedInitialState}
 import ch.epfl.bluebrain.nexus.iam.types.{Caller, Permission}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.sourcing.akka.{AkkaAggregate, SourcingConfig}
+import ch.epfl.bluebrain.nexus.sourcing.akka.aggregate.{AggregateConfig, AkkaAggregate}
 import ch.epfl.bluebrain.nexus.sourcing.projections.ProgressFlow.{PairMsg, ProgressFlowElem}
 import ch.epfl.bluebrain.nexus.sourcing.projections.{Message, StreamSupervisor}
 import retry.RetryPolicy
-//import retry.CatsEffect._
-//import retry._
-//import retry.syntax.all._
 
 import scala.concurrent.ExecutionContext
 
@@ -174,16 +171,18 @@ object Acls {
   def aggregate[F[_]: Effect: Timer: Clock](
       perms: F[Permissions[F]]
   )(implicit as: ActorSystem, ac: AclsConfig): F[Agg[F]] = {
-    implicit val retryPolicy: RetryPolicy[F] = ac.sourcing.retry.retryPolicy[F]
-    AkkaAggregate.sharded[F](
-      "acls",
-      AclState.Initial,
-      next,
-      evaluate[F](perms),
-      ac.sourcing.passivationStrategy(),
-      ac.sourcing.akkaSourcingConfig,
-      ac.sourcing.shards
-    )
+    implicit val retryPolicy: RetryPolicy[F] = ac.aggregate.retry.retryPolicy[F]
+    AkkaAggregate
+      .sharded[F]
+      .apply(
+        "acls",
+        AclState.Initial,
+        next,
+        evaluate[F](perms),
+        ac.aggregate.passivationStrategy(),
+        ac.aggregate.akkaAggregateConfig,
+        ac.aggregate.shards
+      )
   }
 
   /**
@@ -236,12 +235,13 @@ object Acls {
     * @param acls the acls API
     */
   def indexer[F[_]: Timer](acls: Acls[F])(implicit F: Effect[F], as: ActorSystem, ac: AclsConfig): F[Unit] = {
-    implicit val sc: SourcingConfig   = ac.sourcing
-    implicit val ec: ExecutionContext = as.dispatcher
+    implicit val aggc: AggregateConfig = ac.aggregate
+    implicit val ec: ExecutionContext  = as.dispatcher
+    implicit val timeout: Timeout      = aggc.askTimeout
 
     val projectionId: String = "acl-index"
     val source: Source[PairMsg[Any], _] = PersistenceQuery(as)
-      .readJournalFor[EventsByTagQuery](ac.sourcing.queryJournalPlugin)
+      .readJournalFor[EventsByTagQuery](ac.aggregate.queryJournalPlugin)
       .eventsByTag(TaggingAdapter.aclEventTag, NoOffset)
       .map[PairMsg[Any]](e => Right(Message(e, projectionId)))
 

@@ -9,10 +9,11 @@ import cats.effect.{IO, Timer}
 import ch.epfl.bluebrain.nexus.commons.test.{ActorSystemFixture, Randomness}
 import ch.epfl.bluebrain.nexus.commons.test.io.{IOEitherValues, IOOptionValues}
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
-import ch.epfl.bluebrain.nexus.iam.config.AppConfig.GroupsConfig
+import ch.epfl.bluebrain.nexus.sourcing.akka.statemachine.{StateMachineConfig => GroupsConfig}
 import ch.epfl.bluebrain.nexus.iam.config.{AppConfig, Settings}
 import ch.epfl.bluebrain.nexus.iam.realms.GroupsSpec._
-import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec.{userInfoUrl => _, _}
+import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec.userInfoUrl
+import ch.epfl.bluebrain.nexus.iam.realms.WellKnownSpec._
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Group
 import ch.epfl.bluebrain.nexus.iam.types.Label
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
