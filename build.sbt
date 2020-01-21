@@ -42,6 +42,7 @@ val nimbusJoseJwtVersion       = "8.4"
 val pureconfigVersion          = "0.12.2"
 val scalaLoggingVersion        = "3.9.2"
 val scalaTestVersion           = "3.1.0"
+val splitBrainLithiumVersion   = "0.10.0"
 val kryoVersion                = "1.1.0"
 
 // Dependencies modules
@@ -73,6 +74,7 @@ lazy val nimbusJoseJwt        = "com.nimbusds"               % "nimbus-jose-jwt"
 lazy val pureconfig           = "com.github.pureconfig"      %% "pureconfig"                 % pureconfigVersion
 lazy val scalaLogging         = "com.typesafe.scala-logging" %% "scala-logging"              % scalaLoggingVersion
 lazy val scalaTest            = "org.scalatest"              %% "scalatest"                  % scalaTestVersion
+lazy val splitBrainLithium    = "com.swissborg"              %% "lithium"                    % splitBrainLithiumVersion
 lazy val kryo                 = "io.altoo"                   %% "akka-kryo-serialization"    % kryoVersion
 
 lazy val iam = project
@@ -84,7 +86,7 @@ lazy val iam = project
     name                 := "iam",
     moduleName           := "iam",
     Docker / packageName := "nexus-iam",
-    resolvers            += "dnvriend" at "https://dl.bintray.com/dnvriend/maven",
+    resolvers            ++= Seq("dnvriend" at "https://dl.bintray.com/dnvriend/maven", "swissborg" at "https://dl.bintray.com/swissborg/maven"),
     libraryDependencies ++= Seq(
       commonsCore,
       commonsKamon,
@@ -107,6 +109,7 @@ lazy val iam = project
       nimbusJoseJwt,
       pureconfig,
       scalaLogging,
+      splitBrainLithium,
       akkaTestKit        % Test,
       akkaHttpTestKit    % Test,
       akkaStreamTestKit  % Test,
