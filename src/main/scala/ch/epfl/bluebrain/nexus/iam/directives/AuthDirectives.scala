@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.Credentials
 import akka.http.scaladsl.server.{Directive0, Directive1}
 import cats.implicits._
-import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import ch.epfl.bluebrain.nexus.iam.acls.Acls
 import ch.epfl.bluebrain.nexus.iam.auth.AccessToken
 import ch.epfl.bluebrain.nexus.iam.config.AppConfig.HttpConfig
@@ -37,7 +37,7 @@ object AuthDirectives {
     * Extracts the current selected resource address.
     */
   def extractResourceAddress(implicit hc: HttpConfig): Directive1[AbsoluteIri] =
-    extractMatchedPath.map(p => hc.publicIri + p.toIriPath)
+    extractMatchedPath.map(p => hc.publicIri + p.asIriPath)
 
   /**
     * Tests whether the caller has the argument permission positioned at the root level '/'.

@@ -28,7 +28,7 @@ package object permissions {
   /**
     * The constant collection of permissions types.
     */
-  final val types: Set[AbsoluteIri] = Set(nxv.Permissions.value)
+  final val types: Set[AbsoluteIri] = Set(nxv.Permissions)
 
   /* Constant permissions */
   final val read  = Permission.unsafe("permissions/read")

@@ -5,7 +5,7 @@ import cats.syntax.show._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
 import ch.epfl.bluebrain.nexus.rdf.Node.IriNode
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 
 /**
   * Constant vocabulary values
@@ -16,14 +16,14 @@ object Vocabulary {
     * Nexus vocabulary.
     */
   object nxv {
-    val base: Iri.AbsoluteIri                         = url"https://bluebrain.github.io/nexus/vocabulary/".value
+    val base: Iri.AbsoluteIri                         = url"https://bluebrain.github.io/nexus/vocabulary/"
     private[Vocabulary] implicit val iriNode: IriNode = IriNode(base)
 
     /**
       * @param suffix the segment to suffix to the base
-      * @return an [[IriNode]] composed by the ''base'' plus the provided ''suffix''
+      * @return an [[AbsoluteIri]] composed by the ''base'' plus the provided ''suffix''
       */
-    def withSuffix(suffix: String): IriNode = IriNode(base + suffix)
+    def withSuffix(suffix: String): AbsoluteIri = base + suffix
 
     // Metadata vocabulary
     val rev                   = PrefixMapping("rev")
@@ -78,7 +78,7 @@ object Vocabulary {
       *                    vocabulary term
       */
     def apply(lastSegment: String)(implicit base: IriNode): PrefixMapping =
-      PrefixMapping("_" + lastSegment, url"${base.value.show + lastSegment}".value)
+      PrefixMapping("_" + lastSegment, url"${base.value.show + lastSegment}")
 
     implicit def pmIriNode(m: PrefixMapping): IriNode         = IriNode(m.value)
     implicit def pmAbsoluteIri(m: PrefixMapping): AbsoluteIri = m.value

@@ -22,7 +22,7 @@ import ch.epfl.bluebrain.nexus.iam.client.types.events.Event
 import ch.epfl.bluebrain.nexus.iam.client.types.events.Event._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import io.circe.Json
 import org.mockito.{ArgumentMatchersSugar, IdiomaticMockito, Mockito}
 import org.scalatest.concurrent.Eventually
@@ -49,7 +49,7 @@ class IamClientSpec
 
   private val clock = Clock.fixed(Instant.ofEpochSecond(3600), ZoneId.systemDefault())
   private val config =
-    IamClientConfig(url"http://example.com/some/".value, url"http://internal.example.com/some/".value, "v1")
+    IamClientConfig(url"http://example.com/some/", url"http://internal.example.com/some/", "v1")
 
   private val aclsClient        = mock[HttpClient[IO, AccessControlLists]]
   private val callerClient      = mock[HttpClient[IO, Caller]]
@@ -88,7 +88,7 @@ class IamClientSpec
     "fetching ACLs and authorizing" should {
       val acl = AccessControlList(Anonymous -> Set(Permission.unsafe("create"), Permission.unsafe("read")))
       val aclWithMeta = ResourceAccessControlList(
-        url"http://example.com/id".value,
+        url"http://example.com/id",
         7L,
         Set.empty,
         clock.instant(),

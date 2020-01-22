@@ -15,7 +15,7 @@ import cats.syntax.functor._
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient
 import ch.epfl.bluebrain.nexus.commons.http.HttpClient._
 import ch.epfl.bluebrain.nexus.commons.http.JsonLdCirceSupport._
-import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import ch.epfl.bluebrain.nexus.iam.client.IamClientError.{Forbidden, Unauthorized, UnknownError, UnmarshallingError}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types._
@@ -45,7 +45,7 @@ class IamClient[F[_]] private[client] (
     * Fetches the service description information (name and version)
     */
   def serviceDescription: F[ServiceDescription] =
-    serviceDescClient(Get(config.internalIri.toAkkaUri))
+    serviceDescClient(Get(config.internalIri.asAkka))
 
   /**
     * Retrieve the current ''acls'' for some particular ''path''.
@@ -98,7 +98,7 @@ class IamClient[F[_]] private[client] (
     val endpoint = config.aclsIri + path
     val entity   = HttpEntity(ContentTypes.`application/json`, acl.asJson.noSpaces)
     val query    = rev.map(r => Query("rev" -> r.toString)).getOrElse(Query.Empty)
-    val request  = Put(endpoint.toAkkaUri.withQuery(query), entity)
+    val request  = Put(endpoint.asAkka.withQuery(query), entity)
     val requestWithCredentials =
       credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
     jsonClient(requestWithCredentials) *> F.unit
@@ -179,7 +179,7 @@ class IamClient[F[_]] private[client] (
       .run()
 
   private def requestFrom(iri: AbsoluteIri, query: Query = Query.Empty)(implicit credentials: Option[AuthToken]) = {
-    val request = Get(iri.toAkkaUri.withQuery(query))
+    val request = Get(iri.asAkka.withQuery(query))
     credentials.map(token => request.addCredentials(OAuth2BearerToken(token.value))).getOrElse(request)
   }
 

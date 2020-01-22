@@ -1,11 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.client.types
 
-import ch.epfl.bluebrain.nexus.commons.circe.syntax._
 import ch.epfl.bluebrain.nexus.iam.client.config.Contexts._
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path
-import ch.epfl.bluebrain.nexus.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import io.circe._
 import io.circe.syntax._
 
@@ -76,7 +75,6 @@ object AccessControlLists {
 
   implicit def aclsDecoder: Decoder[AccessControlLists] = {
     import cats.implicits._
-    import ch.epfl.bluebrain.nexus.rdf.instances._
 
     def jsonToPathedAcl(hc: HCursor): Either[DecodingFailure, (Path, ResourceAccessControlList)] =
       for {

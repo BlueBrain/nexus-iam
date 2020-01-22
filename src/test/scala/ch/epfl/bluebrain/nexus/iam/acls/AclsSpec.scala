@@ -17,7 +17,6 @@ import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
 import org.mockito.IdiomaticMockito
 import org.scalatest.Inspectors
 import org.scalatest.matchers.should.Matchers

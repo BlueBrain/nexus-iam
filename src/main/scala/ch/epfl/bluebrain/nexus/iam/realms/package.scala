@@ -31,7 +31,7 @@ package object realms {
   /**
     * The constant collection of realm types.
     */
-  final val types: Set[AbsoluteIri] = Set(nxv.Realm.value)
+  final val types: Set[AbsoluteIri] = Set(nxv.Realm)
 
   /* Constant permissions */
   final val read  = Permission.unsafe("realms/read")

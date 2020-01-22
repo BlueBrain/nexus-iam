@@ -1,10 +1,10 @@
 package ch.epfl.bluebrain.nexus.iam.client.config
 
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 
 object Contexts {
-  val base = url"https://bluebrain.github.io/nexus/contexts/".value
+  val base = url"https://bluebrain.github.io/nexus/contexts/"
 
   val resourceCtxUri: AbsoluteIri = base + "resource.json"
   val iamCtxUri: AbsoluteIri      = base + "iam.json"

@@ -20,8 +20,7 @@ import ch.epfl.bluebrain.nexus.iam.types.Identity._
 import ch.epfl.bluebrain.nexus.iam.types._
 import ch.epfl.bluebrain.nexus.rdf.Iri.Path._
 import ch.epfl.bluebrain.nexus.rdf.Iri.{AbsoluteIri, Path}
-import ch.epfl.bluebrain.nexus.rdf.Vocabulary._
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import monix.eval.Task
@@ -75,7 +74,7 @@ class AclsRoutesSpec
 
     implicit val caller: Caller = Caller(user, Set(user, group))
 
-    val id   = url"https://bluebrain.github.io/nexus/acls/myorg/myproj".value
+    val id   = url"https://bluebrain.github.io/nexus/acls/myorg/myproj"
     val path = "myorg" / "myproj"
 
     val resourceAcl1 = ResourceF(
