@@ -11,7 +11,7 @@ import akka.stream.scaladsl.Source
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.AuthToken
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.commons.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import com.typesafe.scalalogging.Logger
 import io.circe.Decoder
 import io.circe.parser.decode
@@ -59,7 +59,7 @@ object EventSource {
       override def apply(iri: AbsoluteIri, offset: Option[String])(
           implicit cred: Option[AuthToken]
       ): Source[A, NotUsed] =
-        SSESource(iri.toAkkaUri, send, offset, config.sseRetryDelay).flatMapConcat { sse =>
+        SSESource(iri.asAkka, send, offset, config.sseRetryDelay).flatMapConcat { sse =>
           decode[A](sse.data) match {
             case Right(ev) => Source.single(ev)
             case Left(err) =>

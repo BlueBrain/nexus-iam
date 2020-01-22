@@ -8,8 +8,7 @@ import ch.epfl.bluebrain.nexus.iam.config.Vocabulary.nxv
 import ch.epfl.bluebrain.nexus.iam.types.Identity.Subject
 import ch.epfl.bluebrain.nexus.iam.types.{GrantType, Identity, Label}
 import ch.epfl.bluebrain.nexus.rdf.Iri.Url
-import ch.epfl.bluebrain.nexus.rdf.instances._
-import ch.epfl.bluebrain.nexus.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import io.circe.generic.extras.Configuration
 import io.circe.{Encoder, Json}
 

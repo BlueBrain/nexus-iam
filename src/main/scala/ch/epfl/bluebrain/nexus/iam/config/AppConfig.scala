@@ -7,7 +7,7 @@ import ch.epfl.bluebrain.nexus.iam.config.AppConfig._
 import ch.epfl.bluebrain.nexus.iam.config.Vocabulary._
 import ch.epfl.bluebrain.nexus.iam.types.Permission
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import ch.epfl.bluebrain.nexus.sourcing.akka.aggregate.AggregateConfig
 import ch.epfl.bluebrain.nexus.sourcing.akka.statemachine.StateMachineConfig
 import ch.epfl.bluebrain.nexus.sourcing.projections.IndexingConfig
@@ -69,11 +69,11 @@ object AppConfig {
     * @param publicUri  public URI of the service
     */
   final case class HttpConfig(interface: String, port: Int, prefix: String, publicUri: Uri) {
-    lazy val publicIri: AbsoluteIri      = url"$publicUri".value
-    lazy val prefixIri: AbsoluteIri      = url"$publicUri/$prefix".value
-    lazy val aclsIri: AbsoluteIri        = url"$publicUri/$prefix/acls".value
-    lazy val permissionsIri: AbsoluteIri = url"$publicUri/$prefix/permissions".value
-    lazy val realmsIri: AbsoluteIri      = url"$publicUri/$prefix/realms".value
+    lazy val publicIri: AbsoluteIri      = url"$publicUri"
+    lazy val prefixIri: AbsoluteIri      = url"$publicUri/$prefix"
+    lazy val aclsIri: AbsoluteIri        = url"$publicUri/$prefix/acls"
+    lazy val permissionsIri: AbsoluteIri = url"$publicUri/$prefix/permissions"
+    lazy val realmsIri: AbsoluteIri      = url"$publicUri/$prefix/realms"
   }
 
   /**

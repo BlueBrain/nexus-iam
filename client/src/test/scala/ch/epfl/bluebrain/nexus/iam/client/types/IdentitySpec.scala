@@ -4,7 +4,7 @@ import ch.epfl.bluebrain.nexus.commons.test.{EitherValues, Resources}
 import ch.epfl.bluebrain.nexus.iam.client.config.IamClientConfig
 import ch.epfl.bluebrain.nexus.iam.client.types.Identity._
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.syntax.node.unsafe._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import io.circe.syntax._
 import org.scalatest.{Inspectors, OptionValues}
 import org.scalatest.matchers.should.Matchers
@@ -20,21 +20,21 @@ class IdentitySpec
 
   "An identity" should {
     implicit val config: IamClientConfig =
-      IamClientConfig(url"http://nexus.example.com".value, url"http://internal.nexus.example.com".value, "v1")
+      IamClientConfig(url"http://nexus.example.com", url"http://internal.nexus.example.com", "v1")
     val user          = User("mysubject", "myrealm")
     val group         = Group("mygroup", "myrealm")
     val authenticated = Authenticated("myrealm")
 
     "be created from ids" in {
       val cases = List[(AbsoluteIri, Identity)](
-        url"http://nexus.example.com/v1/realms/myrealm/users/mysubject".value -> user,
-        url"https://random.com/v1/realms/myrealm/users/mysubject".value       -> user,
-        url"http://nexus.example.com/v1/realms/myrealm/groups/mygroup".value  -> group,
-        url"https://random.com/v1/realms/myrealm/groups/mygroup".value        -> group,
-        url"http://nexus.example.com/v1/realms/myrealm/authenticated".value   -> authenticated,
-        url"https://random.com/v1/realms/myrealm/authenticated".value         -> authenticated,
-        url"http://nexus.example.com/v1/anonymous".value                      -> Anonymous,
-        url"https://random.com/v1/anonymous".value                            -> Anonymous
+        url"http://nexus.example.com/v1/realms/myrealm/users/mysubject" -> user,
+        url"https://random.com/v1/realms/myrealm/users/mysubject"       -> user,
+        url"http://nexus.example.com/v1/realms/myrealm/groups/mygroup"  -> group,
+        url"https://random.com/v1/realms/myrealm/groups/mygroup"        -> group,
+        url"http://nexus.example.com/v1/realms/myrealm/authenticated"   -> authenticated,
+        url"https://random.com/v1/realms/myrealm/authenticated"         -> authenticated,
+        url"http://nexus.example.com/v1/anonymous"                      -> Anonymous,
+        url"https://random.com/v1/anonymous"                            -> Anonymous
       )
       forAll(cases) {
         case (iri, identity) => Identity(iri).value shouldEqual identity

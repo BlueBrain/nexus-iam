@@ -10,8 +10,7 @@ import ch.epfl.bluebrain.nexus.commons.test.EitherValues
 import ch.epfl.bluebrain.nexus.iam.directives.RealmDirectives._
 import ch.epfl.bluebrain.nexus.iam.routes.SearchParams
 import ch.epfl.bluebrain.nexus.rdf.Iri.AbsoluteIri
-import ch.epfl.bluebrain.nexus.rdf.instances._
-import ch.epfl.bluebrain.nexus.rdf.syntax._
+import ch.epfl.bluebrain.nexus.rdf.implicits._
 import io.circe.generic.auto._
 import org.mockito.IdiomaticMockito
 import org.scalatest.concurrent.ScalaFutures
@@ -37,10 +36,10 @@ class RealmDirectivesSpec
 
   "Realm directives" should {
     "return query params" in {
-      val createdBy: AbsoluteIri = url"http://example.com/created".value
-      val updatedBy: AbsoluteIri = url"http://example.com/updated".value
-      val tpe: AbsoluteIri       = url"http://example.com/tpe".value
-      val tpe2: AbsoluteIri      = url"http://example.com/tpe2".value
+      val createdBy: AbsoluteIri = url"http://example.com/created"
+      val updatedBy: AbsoluteIri = url"http://example.com/updated"
+      val tpe: AbsoluteIri       = url"http://example.com/tpe"
+      val tpe2: AbsoluteIri      = url"http://example.com/tpe2"
       Get(
         s"/?rev=2&deprecated=true&type=${encode(tpe)}&type=${encode(tpe2)}&createdBy=${encode(createdBy)}&updatedBy=${encode(updatedBy)}"
       ) ~> route ~> check {
