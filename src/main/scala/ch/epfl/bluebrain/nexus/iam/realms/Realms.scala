@@ -372,7 +372,7 @@ object Realms {
       .flow
       .map(_ => ())
 
-    F.delay[StreamSupervisor[F, Unit]](StreamSupervisor.startSingleton(F.delay(source.via(flow)), projectionId)) >> F.unit
+    F.delay[StreamSupervisor[F, Unit]](StreamSupervisor.start(F.delay(source.via(flow)), projectionId)) >> F.unit
 
   }
 
